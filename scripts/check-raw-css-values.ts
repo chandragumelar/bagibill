@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 export interface RawCssValueMatch {
   line: number;
@@ -88,3 +89,21 @@ export function findRawCssValueViolations(rootDir: string): RawCssValueViolation
     scanCssText(readFileSync(file, "utf8")).map((match) => ({ file, ...match })),
   );
 }
+
+function runCheck(): void {
+  const srcDir = path.resolve(import.meta.dirname, "../src");
+  const violations = findRawCssValueViolations(srcDir);
+  if (violations.length === 0) {
+    console.log("check-raw-css-values: nol nilai mentah di src/.");
+    return;
+  }
+  console.error(`check-raw-css-values: ${violations.length} nilai mentah ketemu di src/.`);
+  for (const violation of violations) {
+    const relativeFile = path.relative(srcDir, violation.file);
+    console.error(`  src/${relativeFile}:${violation.line} — ${violation.kind} "${violation.value}"`);
+  }
+  process.exit(1);
+}
+
+const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMain) runCheck();

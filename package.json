@@ -2,9 +2,10 @@
   "name": "bagibill",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.18.0",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && node scripts/check-locale-keys.ts && vite build",
+    "build": "tsc --noEmit && node scripts/check-locale-keys.ts && node scripts/check-raw-css-values.ts && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
