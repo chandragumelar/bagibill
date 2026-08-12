@@ -25,7 +25,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 
 ### F0. Fondasi
 - [x] F0-01 Scaffold repo dan toolchain
-- [ ] F0-02 Inventaris mockup
+- [x] F0-02 Inventaris mockup
 - [ ] F0-03 Token masuk aplikasi
 - [ ] F0-04 Infrastruktur i18n
 - [ ] F0-05 Komponen dasar dan halaman `/dev/ui`
@@ -236,6 +236,7 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-14 SELESAI 11 Ags 2026 — `--ease` ditambahkan ke `packages/tokens` sebagai alias `var(--ease-standard)`, mengikuti pemakaian di `Detail_Grup_Transaksi.html`, `Detail_Grup_Saldo.html`, dan `Lapisan_Sistem.html`. Nilainya identik, jadi ini penamaan, bukan nilai baru. Komponen boleh memakai nama pendek. Aturan umumnya: token digenerate dari mockup, jadi kalau mockup memakai nama yang belum ada, tokennya yang menyusul, bukan mockupnya yang disesuaikan.
 - K-15 SELESAI 12 Ags 2026 — TypeScript dipin ke `^6.0.3`, ESLint ke `^9.39.5`, bukan versi mayor terbaru (TypeScript 7 dan ESLint 10 sudah rilis). Alasan: `typescript-eslint@8.67` mensyaratkan `typescript <6.1.0`, dan `eslint-plugin-import@2.32` belum menyatakan dukungan ESLint 10 di peer dependency-nya. Naikkan lagi kalau kedua plugin itu sudah update peer range-nya, jangan dipaksa duluan.
 - K-16 SELESAI 12 Ags 2026 — `eslint-import-resolver-typescript` ditambah sebagai dev dependency, di luar daftar awal. Alasan: rule `import/no-internal-modules` (larangan cross-feature import selain lewat `index.ts`) diam-diam tidak pernah nyala tanpa resolver ini, karena eslint-plugin-import mengklasifikasikan import alias `@/...` sebagai "unknown" tanpa resolver yang paham `tsconfig.json`, dan rule cuma cek tipe `parent/index/sibling/external/internal`. Sudah diverifikasi manual dengan file cross-feature sungguhan sebelum dihapus lagi — rule kena, bukan cuma keaktifin config doang.
+- K-17 SELESAI 12 Ags 2026 — Sebelas file mockup di-rename dari nama dengan spasi dan `&` (mis. `Buat Grup & Kelola Member.html`) ke nama underscore tanpa ampersand (`Buat_Grup___Kelola_Member.html`), pakai `git mv` supaya histori ikut. Alasan: nama di disk sudah sejak awal beda dari nama yang dirujuk `docs/mockups/README.md`, `plan.md`, `progress.md`, dan `CLAUDE.md` — dokumen-dokumen itu tidak salah, filenya yang belum disamakan. `docs/mockups/README.md` sudah lama pakai nama target ini di tabelnya jadi isinya tidak berubah, cuma filenya yang sekarang benar-benar cocok.
 - K-11 TERBUKA — Bentuk protokol sync, sequence number, dan resolusi konflik per field. Tidak memblokir gelombang 1.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.

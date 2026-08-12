@@ -16,7 +16,7 @@ Singkatan layar: **BR** Beranda, **BG** Buat Grup dan Kelola Member, **TP** Tamb
 
 | Komponen | Keadaan | Muncul di |
 |---|---|---|
-| Header grup | normal, dengan kartu posisi kamu, tanpa kartu (grup baru) | DT, DS |
+| Header grup | normal dengan kartu posisi kamu, kartu bernilai nol (grup baru, bukan hilang) | DT, DS |
 | Baris tab | Transaksi aktif, Saldo aktif, Ringkasan (mati) | DT, DS |
 | Topbar layar penuh | dengan tombol kembali, dengan aksi kanan, judul bisa diedit | TP, BG, KI |
 | Bilah tombol bawah | satu tombol primer, primer plus sekunder, disabled | TP, BG, KI |
@@ -97,22 +97,43 @@ Semua lunas bukan keadaan kosong yang sama dengan belum ada transaksi. Yang pert
 
 ## 2. Token
 
-`tokens.css` sudah mencakup risk, state, offline, sync, fail, warn, dan durasi lapisan sistem.
+Disisir ulang 12 Agustus 2026 dengan cara jalan setiap custom property (`--xxx`), definisi maupun pemakaian `var()`, di sebelas file mockup hasil ekstraksi (lihat bagian 4), lalu dibandingkan satu-satu terhadap `packages/tokens/tokens.css` yang berlaku sekarang. Hasilnya jauh lebih panjang dari catatan lama: banyak token yang catatan desain tiap mockup minta "menyusul ke tokens.css" ternyata sudah masuk, cuma belum pernah dicatat di sini.
 
-Aturan arahnya: token digenerate dari mockup. Kalau mockup memakai nama atau nilai yang belum ada di token, tokennya yang menyusul, bukan mockupnya yang disesuaikan. Yang tetap tidak boleh adalah komponen menulis nilai mentah atau menyalin blok `:root` lokal milik satu mockup.
+Aturan arahnya tetap: token digenerate dari mockup. Kalau mockup memakai nama atau nilai yang belum ada di token, tokennya yang menyusul, bukan mockupnya yang disesuaikan. Yang tetap tidak boleh adalah komponen menulis nilai mentah atau menyalin blok `:root` lokal milik satu mockup.
 
 ### 2.1 Sudah ditambahkan ke `tokens.css`
 
-| Nama | Nilai | Dipakai untuk | Layar |
-|---|---|---|---|
-| `--graph-bg` | `#F6F7F9` terang, `#12161C` gelap | latar kanvas diagram jaringan transfer | DS |
-| `--ease` | `var(--ease-standard)` | alias pendek, nilainya identik. Dipakai di DT, DS, LS |
+Dikelompokkan per catatan desain mockup yang memintanya. Nilai dicek sama persis terang dan gelap kecuali disebut beda.
+
+| Nama | Diminta di catatan desain | Layar |
+|---|---|---|
+| `--graph-bg` | latar kanvas diagram jaringan transfer | DS |
+| `--ease` | alias pendek `var(--ease-standard)`, nilai identik | DT, DS, LS |
+| `--scrim` | dim di belakang sheet/dialog | DS ("Token: ... --scrim"), KI ("TOKEN yang perlu DITAMBAH: --scrim") |
+| `--num-xl` | ukuran nominal hero 48px, muat 9 digit di 360px | DS |
+| `--route`, `--route-text`, `--route-tint` | aksen "lewat perantara", chip rute | DS |
+| `--route-line` | warna garis rute di diagram jaringan | DS |
+| `--warn`, `--warn-text`, `--warn-tint` | kondisi ragu/kurang di mode Nominal & Persen | TP |
+| `--state-under`, `-text`, `-tint` | alokasi kurang (kuning) | TP |
+| `--state-exact`, `-text`, `-tint` | alokasi pas (hijau) | TP |
+| `--state-over`, `-text`, `-tint` | alokasi lebih (merah) | TP |
+| `--risk-low`, `-tint` | tangga bahaya: aksi reversible | LS |
+| `--risk-high`, `-strong`, `-tint`, `-text` | tangga bahaya: aksi permanen | LS |
+| `--risk-locked`, `-tint` | tangga bahaya: aksi terkunci | LS |
+| `--offline-fg`, `-bg`, `-dot` | pita offline, netral | LS |
+| `--sync-fg`, `-bg` | pita "lagi mengirim" | LS |
+| `--syncdone-fg`, `-bg` | pita "tersinkron" | LS |
+| `--fail-fg`, `-bg`, `-border` | blok gagal butuh-tindakan | LS |
+| `--focus-ring`, `--focus-ring-width` | cincin fokus keyboard konsisten | LS |
+| `--dur-undo`, `--dur-toast`, `--dur-move`, `--dur-hold` | empat durasi lapisan sistem, sengaja terpisah dari `--dur-base` | LS |
+
+Yang berubah dari catatan lama: sebelumnya cuma `--graph-bg` dan `--ease` yang tercatat di sini. Sisanya (17 baris di atas) sudah lama masuk `tokens.css` tapi tidak pernah dipindah dari status "diminta" ke "selesai" di dokumen ini — verifikasi F0-02 ini yang pertama kali mencocokkannya balik ke catatan desain aslinya.
 
 ### 2.2 Belum ditambahkan, menunggu layarnya
 
 | Nama | Dipakai untuk | Catatan |
 |---|---|---|
-| `--cat-food` sampai `--cat-other` | warna kategori di Ringkasan, filter, dan bagan | Delapan token. Boleh menyusul waktu tab Ringkasan dikerjakan, tapi lebih baik dibuat sekarang supaya `--cat` per elemen tidak terlanjur menyebar ke komponen. Ingat aturan K-08: token ini haram di layar yang menampilkan orang. |
+| `--cat-food` sampai `--cat-other` | warna kategori di Ringkasan, filter, dan bagan | Delapan nama dan delapan kunci ini datang dari `spec.md` 12.3 (K-09), **bukan** dari mockup manapun — tidak ada satu mockup pun yang menulis literal `--cat-food` dkk. Yang benar-benar dipakai mockup (DT, BG, LS, BC) adalah `--cat` generik per elemen yang diisi `var(--m-N)` dari palet member, sama sifatnya dengan `--c`/`--av`/`--stage` di 2.4 — lihat catatan di DT: "Kalau kategori mau jadi elemen tetap, sebaiknya tambah set token khusus, mis. `--cat-makan`, `--cat-transport`, dst." (usulan, bukan pemakaian). Delapan token baru boleh menyusul waktu tab Ringkasan dikerjakan. Ingat aturan K-08: token kategori berwarna haram di layar yang menampilkan orang — DT, BG, KI wajib tetap pakai fallback monokrom/`var(--m-N)`, bukan `--cat-*`. |
 
 ### 2.3 Milik layar gelombang 2, jangan ditambahkan sekarang
 
@@ -126,6 +147,10 @@ Aturan arahnya: token digenerate dari mockup. Kalau mockup memakai nama atau nil
 
 `--c`, `--av`, dan `--stage` adalah variabel per elemen yang di-set inline sebagai perancah, bukan nilai desain. `--stage` khusus latar panel dev dan tidak pernah muncul di app.
 
+`--graph-grid` didefinisikan di blok `:root` lokal `Detail_Grup_Saldo.html` (terang `#E1E5EA`, gelap `#242A34`, sepasang dengan `--graph-bg`) tapi tidak pernah dipakai lewat `var()` maupun dibaca lewat JS di file itu sendiri — mati di mockup-nya sendiri. Bukan kandidat token sampai ada garis grid yang benar-benar dirender di diagram jaringan.
+
+`--cat` generik (lihat 2.2) juga scaffold sejenis `--c`, bukan token — dicatat di 2.2 karena berkaitan langsung dengan keputusan `--cat-*` yang tertunda, bukan diulang di sini.
+
 ---
 
 ## 3. Temuan yang menyentuh kode
@@ -138,6 +163,8 @@ Aturan arahnya: token digenerate dari mockup. Kalau mockup memakai nama atau nil
 
 **Ikon Lucide di-inline sebagai SVG**, tidak lewat paket. Delapan ikon kategori plus ikon UI. Satu keluarga, stroke seragam 1.75.
 
+**Dua mockup dibangun dengan format beda dari sisanya.** `Buat_Grup___Kelola_Member.html` dan `Tambah_Pengeluaran.html` pakai pola komponen `x-dc` / `sc-if` / `sc-for` dengan logic state di `class Component extends DCLogic` — bukan HTML statis + `document.querySelector` seperti sembilan file lain. Isinya sama-sama valid untuk dibaca (semua state ada di `buatPreset`/`kelolaPreset` dan `renderVals()`), tapi jangan coba grep nama kelas CSS langsung dari markup `sc-for`/`sc-if` karena isinya template binding (`{{ x }}`), bukan HTML final. Baca lewat definisi preset dan style function di `<script type="text/x-dc">`.
+
 **Enam mode di TP berbagi satu kerangka layar.** Header, field nominal, judul, pemilih mode, daftar peserta, panel hasil. Yang berbeda cuma isi daftar peserta dan bentuk visualisasi di panel. Menulisnya sebagai enam layar terpisah adalah kesalahan yang akan mahal.
 
 **Tiga isi DS adalah sheet, bukan tab.** Telusuri satu angka, catatan bayar, dan susun pesan tagih. Jangan mencoba memuatnya di dalam tab.
@@ -146,4 +173,11 @@ Aturan arahnya: token digenerate dari mockup. Kalau mockup memakai nama atau nil
 
 ## 4. Cara memverifikasi dokumen ini
 
-Waktu F0-02 dikerjakan, yang dicek: setiap komponen di bagian 1 benar-benar ada di mockup yang disebut, setiap nama di bagian 2.1 memang belum ada di `packages/tokens` yang sekarang, dan tidak ada komponen di mockup yang belum masuk daftar. Yang berubah dicatat di sini, bukan dibuat dokumen baru.
+File mockup bukan HTML polos — isi aslinya dibungkus sebagai string JSON di dalam `<script type="__bundler/template">`. Grep langsung ke file mentahnya meleset atau kena string yang sudah di-escape. Verifikasi F0-02 (12 Agustus 2026) jalan lewat langkah ini:
+
+1. Ekstrak `__bundler/template` tiap sebelas file lewat `JSON.parse`, tulis HTML mentahnya ke folder sementara di luar repo. Hasil ekstraksi tidak di-commit.
+2. Baca (bukan grep nama kelas) kedelapan mockup gelombang 1 — tujuh layar aktif plus `Saldo___Settle_Up.html` sebagai arsip rujukan F3-07 — dan cocokkan tiap baris komponen/keadaan di bagian 1 terhadap isinya. Prefix kelas beda tiap file (`h-`, `k-`, `s-`, `j-`, dst) jadi yang sama secara visual tidak selalu sama nama classnya; kecocokan diputuskan dengan membaca markup dan `renderVals()`/state preset-nya, bukan mencocokkan string.
+3. Untuk token: jalan setiap `--nama` (definisi lewat regex `--x(?=:)` dan pemakaian lewat `var(--x`) di sebelas file hasil ekstraksi, dedup, lalu diff terhadap daftar `--nama` yang benar-benar terdefinisi di `packages/tokens/tokens.css`. Hasil mentah disaring manual dari false positive: modifier kelas BEM seperti `.btn--ghost`/`.btn--primary`/`.btn--secondary` ikut kena regex `--x(?=:)` karena diikuti `:hover` tapi bukan custom property, begitu juga literal di template string JS (`` `--m-${i}` ``) dan teks prosa di catatan desain (`--m-N` sebagai contoh nama, bukan deklarasi).
+4. Tiap nama yang lolos dicek dua arah: kalau sudah ada di `tokens.css`, masuk 2.1 dengan catatan desain mockup mana yang memintanya; kalau belum, masuk 2.2/2.3/2.4 sesuai statusnya (menunggu layar, milik gelombang 2, atau scaffold bukan token).
+
+Kalau F0-02 diulang lagi nanti (mis. sesudah mockup baru masuk), ulangi keempat langkah ini, jangan cuma grep file mentah atau percaya catatan desain di dalam mockup sebagai kebenaran akhir — catatan desain kadang sudah basi (`--scrim` di Klaim_Item masih bilang "perlu ditambah" padahal sudah lama ada di token).
