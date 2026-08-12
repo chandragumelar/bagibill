@@ -20,5 +20,5 @@
     "allowImportingTsExtensions": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "scripts", "vite.config.ts", "vitest.config.ts", ".size-limit.json"]
+  "include": ["src", "scripts", "packages/split-engine", "vite.config.ts", "vitest.config.ts", ".size-limit.json"]
 }
