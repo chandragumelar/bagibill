@@ -1,0 +1,40 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--scrim);
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  background: var(--surface);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  padding: var(--sp-4) var(--sp-5) var(--sp-6);
+  max-height: var(--size-sheet-max-h);
+  overflow-y: auto;
+  box-shadow: var(--elev-3);
+}
+
+.grab {
+  width: var(--size-grab-w);
+  height: var(--size-grab-h);
+  border-radius: var(--r-pill);
+  background: var(--n-4);
+  margin: 0 auto var(--sp-4);
+}
+
+.title {
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-bold);
+  line-height: var(--line-tight);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: var(--fs-footnote);
+  color: var(--text-secondary);
+  margin-top: var(--sp-2);
+  line-height: var(--line-relaxed);
+}

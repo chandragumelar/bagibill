@@ -1,0 +1,39 @@
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  font-weight: var(--fw-semibold);
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.normal {
+  width: var(--size-avatar);
+  height: var(--size-avatar);
+  font-size: var(--fs-footnote);
+}
+
+.small {
+  width: var(--size-avatar-sm);
+  height: var(--size-avatar-sm);
+  font-size: var(--fs-caption2);
+}
+
+.active {
+  color: var(--on-member);
+}
+
+.inactive {
+  background: transparent;
+  border: var(--border-width-thick) dashed currentColor;
+}
+
+.repeatRing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  border: var(--border-width-thick) dashed var(--n-4);
+  padding: var(--border-width-thick);
+}

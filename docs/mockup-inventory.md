@@ -20,10 +20,12 @@ Singkatan layar: **BR** Beranda, **BG** Buat Grup dan Kelola Member, **TP** Tamb
 | Baris tab | Transaksi aktif, Saldo aktif, Ringkasan (mati) | DT, DS |
 | Topbar layar penuh | dengan tombol kembali, dengan aksi kanan, judul bisa diedit | TP, BG, KI |
 | Bilah tombol bawah | satu tombol primer, primer plus sekunder, disabled | TP, BG, KI |
-| Sheet dari bawah | biasa, berat (aksi permanen), penuh layar | DS, LS |
+| Sheet dari bawah | biasa, berat (aksi permanen) | DS, LS |
 | Panel keadaan dev | — | semua |
 
 Kartu posisi kamu di header grup adalah satu-satunya ringkasan posisi pribadi di seluruh app. Tab Saldo tidak boleh mengulangnya. Ini invarian, bukan preferensi tata letak.
+
+**Koreksi F0-05 12 Ags 2026** — baris Sheet dari bawah sebelumnya menulis tiga keadaan termasuk "penuh layar". Dicek ulang langsung ke `Lapisan_Sistem.html` dan `Detail_Grup_Saldo.html`: "penuh layar" itu bukan varian Sheet, melainkan overlay gagal-muat/skeleton (`.overlay`/`.loadfail`) yang render penuh `#screenBody` tanpa scrim dan tanpa rounded-top — mekanisme beda total dari `.sheet`. Sudah punya baris sendiri di 1.5 ("Layar gagal muat", "Skeleton"). Salah kelompok di F0-02, bukan salah baca mockup di F0-05 — dibetulkan di sini, bukan diam-diam.
 
 ### 1.2 Identitas
 
@@ -128,6 +130,27 @@ Dikelompokkan per catatan desain mockup yang memintanya. Nilai dicek sama persis
 | `--dur-undo`, `--dur-toast`, `--dur-move`, `--dur-hold` | empat durasi lapisan sistem, sengaja terpisah dari `--dur-base` | LS |
 
 Yang berubah dari catatan lama: sebelumnya cuma `--graph-bg` dan `--ease` yang tercatat di sini. Sisanya (17 baris di atas) sudah lama masuk `tokens.css` tapi tidak pernah dipindah dari status "diminta" ke "selesai" di dokumen ini — verifikasi F0-02 ini yang pertama kali mencocokkannya balik ke catatan desain aslinya.
+
+### 2.1b Ditambahkan F0-05
+
+Beda sumber dari 2.1: bukan dari audit `var(--x)` F0-02, tapi dari nilai literal (px/%/hex) di CSS mockup waktu 7 komponen dasar dibangun — nilai yang sama persis dipakai berulang di 2+ mockup (bukan kebetulan), atau langsung dari aturan aksesibilitas eksplisit CLAUDE.md.
+
+| Nama | Nilai | Sumber |
+|---|---|---|
+| `--size-avatar` | 38px | `avatar()` BG — diameter avatar standalone |
+| `--size-avatar-sm` | 22px | `.k-avatar--sm` KI |
+| `--size-control` | 50px | `.btn`/`.k-btn` min-height, identik DS + LS + KI |
+| `--size-touch-min` | 44px | Target sentuh minimum, CLAUDE.md Aksesibilitas (bukan dari mockup) |
+| `--r-sheet` | 20px | `.sheet` border-radius atas, identik DS + LS |
+| `--size-grab-w`, `--size-grab-h` | 36px, 5px | `.grab` handle sheet, identik DS + LS |
+| `--size-sheet-max-h` | 90% | `.sheet` max-height, identik DS + LS |
+| `--on-member` | #FFFFFF | Teks avatar terisi, `color:#fff` identik di `avatar()` BG, `.avstack .av` DT + DS. Tetap putih di light & dark (beda dari `--on-brand` yang ganti gelap di dark), sesuai K-07. |
+| `--brand-on-dark` | #8FB0FF | `[data-theme="light"] .toast .tundo` LS — link di atas chip toast yang selalu gelap terlepas tema app. Disederhanakan jadi satu nilai dipakai di kedua tema (mockup aslinya beda nilai per tema untuk kebutuhan yang sama), bukan direplikasi tiga tingkat. |
+| `--border-width-thick` | 2px | Cincin avatar nonaktif (`avatar()` BG: `border:2px dashed`) dan cincin pengulangan warna ke-13 (K-07, tidak ada contoh render di mockup manapun — 13 member tidak pernah didemokan — jadi visualnya interpretasi dari teks keputusan, bukan piksel yang diverifikasi). |
+| `--size-visually-hidden` | 1px | Teknik CSS visually-hidden buat label TextInput/MoneyInput (kontrol wajib punya nama yang terbaca screen reader, tapi mockup BG tidak menampilkan label terlihat) |
+| `--toast-chip-mix` | 22% (light) / 18% (dark) | `.cd .track` + `.cnt` LS — opasitas overlay netral di atas toast, beda per tema karena kontras dasarnya beda |
+
+Catatan tambahan yang bukan token tapi keputusan implementasi F0-05: field TextInput/MoneyInput dinormalisasi ke `--r-field` (10px) dan `--size-touch-min` (44px) walau BG/TP menulis literal inline 12px/46px/40px — nilai-nilai itu satu-off inline style di format `x-dc` (bukan `var(--x)` berulang lintas file), jadi diselaraskan ke token yang sudah ada ketimbang menambah token baru untuk satu kejadian.
 
 ### 2.2 Belum ditambahkan, menunggu layarnya
 

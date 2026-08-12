@@ -37,6 +37,7 @@
 
   /* Radius */
   --r-btn: 10px; --r-card: 14px; --r-field: 10px; --r-pill: 999px;
+  --r-sheet: 20px; /* radius atas sheet dari bawah, identik DS + LS */
 
   /* Motion */
   --dur-tap: 120ms; --dur-base: 200ms; --dur-sheet: 320ms;
@@ -61,6 +62,30 @@
   /* Warna kategori TIDAK punya token sendiri. Turunkan dari palet member:
      set --cat:var(--m-N) di elemen, lalu
      background:color-mix(in srgb, var(--cat) 16%, transparent); */
+  /* Teks di atas avatar terisi — putih tetap di light & dark (beda dari
+     --on-brand, yang berubah gelap di dark karena --brand jadi terang).
+     Sumber: color:#fff identik di avatar() BG, .avstack .av DT+DS. */
+  --on-member: #FFFFFF;
+  /* Warna tautan di atas permukaan gelap (toast), sama di light & dark
+     karena permukaan toast sendiri selalu gelap terlepas dari tema app.
+     Sumber: [data-theme="light"] .toast .tundo di Lapisan_Sistem.html. */
+  --brand-on-dark: #8FB0FF;
+  /* Lebar border tebal dekoratif (cincin nonaktif, cincin pengulangan warna). */
+  --border-width-thick: 2px;
+  /* Ukuran kotak 1x1 pada teknik visually-hidden (label TextInput/MoneyInput). */
+  --size-visually-hidden: 1px;
+
+  /* Ukuran komponen — bukan skala spacing, ukuran intrinsik kontrol.
+     Nilai literal berulang identik lintas mockup (F0-05), bukan var(--x)
+     jadi tidak ke-audit F0-02. --size-touch-min dari aturan aksesibilitas
+     eksplisit CLAUDE.md, sisanya dari kecocokan nilai di 2+ mockup. */
+  --size-avatar: 38px;      /* avatar() BG */
+  --size-avatar-sm: 22px;   /* .k-avatar--sm KI */
+  --size-control: 50px;     /* .btn min-height, identik DS + LS + KI */
+  --size-touch-min: 44px;   /* target sentuh minimum, CLAUDE.md Aksesibilitas */
+  --size-grab-w: 36px;      /* .grab lebar, identik DS + LS */
+  --size-grab-h: 5px;       /* .grab tinggi, identik DS + LS */
+  --size-sheet-max-h: 90%;  /* .sheet max-height, identik DS + LS */
 }
 
 /* ---------------- Light ---------------- */
@@ -108,6 +133,10 @@
 
   /* Scrim — dim di belakang sheet/modal */
   --scrim:rgba(16,22,30,.32);
+  /* Opasitas overlay netral di atas permukaan gelap (cincin toast, badge
+     hitung) — beda persentase per tema karena kontras dasarnya beda.
+     Sumber: .cd .track / .cnt di Lapisan_Sistem.html. */
+  --toast-chip-mix: 22%;
   /* Rute/perantara (ungu) — chip "Lewat …", aksen simplifikasi settle.
      JANGAN andalkan warna saja; selalu pasangkan label/ikon. */
   --route:#7C3AED; --route-text:#5B21B6; --route-tint:#F1EAFE;
@@ -175,6 +204,7 @@
   --focus-ring-width:  2px;
 
   --scrim:rgba(0,0,0,.55);
+  --toast-chip-mix: 18%;
   --route:#A78BFA; --route-text:#C4B5FD; --route-tint:#221A38;
   --route-line:#A78BFA;
 
@@ -214,6 +244,7 @@
     --btn2-border:var(--border); --btn2-bg-disabled:var(--n-1); --btn2-fg-disabled:var(--n-5);
     --focus-ring:0 0 0 2px var(--n-1), 0 0 0 4px var(--brand); --focus-ring-width:2px;
     --scrim:rgba(0,0,0,.55);
+    --toast-chip-mix: 18%;
     --route:#A78BFA; --route-text:#C4B5FD; --route-tint:#221A38;
     --route-line:#A78BFA;
     --elev-1:0 1px 2px rgba(0,0,0,.4);
