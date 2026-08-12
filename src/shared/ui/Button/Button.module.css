@@ -61,5 +61,4 @@
 .ghost:disabled {
   opacity: 0.6;
   cursor: default;
-  color: #ff00ff; /* SENGAJA rusak — bukti gerbang CI (F0-08), direvert setelah ini */
 }
