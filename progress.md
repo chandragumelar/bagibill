@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 12 Agustus 2026
-Fase aktif: F0 (fondasi), F0-01 sampai F0-04 selesai. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F0 (fondasi). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -31,7 +31,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [ ] F0-05 Komponen dasar dan halaman `/dev/ui`
 - [ ] F0-06 Kerangka rute dan layout (kode selesai, belum dites di HP)
 - [ ] F0-07 Lapisan sistem (undo, offline, gagal) (kode selesai, belum dites di HP)
-- [ ] F0-08 Gerbang kualitas di CI
+- [x] F0-08 Gerbang kualitas di CI
 
 ### F1. Split engine
 - [ ] F1-01 Tipe uang dan minor unit
@@ -289,3 +289,5 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F0-06: AvatarStack (tumpukan avatar berlapis dengan badge "+N") sengaja BELUM dibangun. GroupHeader nerima slot `avatars?: ReactNode` kosong buat sekarang karena Beranda juga butuh pola yang sama nanti (F3-10) dan bangun sekarang di F0-06 berarti nebak API-nya duluan tanpa dua pemakai nyata di tangan. Nyusul jadi komponen `shared/ui` waktu salah satu dari F3-05/F3-07/F3-10 beneran butuh.
 - F0-07 nemu bug nyata pas dites manual di `/dev/ui` (bukan cuma test lolos): `useUndoQueue` manggil `onCommit`/`onRestore` (side effect dari pemanggil) DI DALAM argumen updater fungsional `setPending((current) => { current.forEach(e => e.onCommit()); return []; })`. React StrictMode (dev, aktif lewat `<StrictMode>` di `main.tsx`) memanggil updater fungsional itu **dua kali** buat cek purity — jadi side effect-nya ikut nembak dua kali per item. Ketauan visual: hapus satu item, log nunjukin "komit: a" muncul dua kali buat satu delete. Diperbaiki dengan pola ref-mirror (`pendingRef` disinkronkan manual di samping state, side effect dibaca dari situ di badan fungsi biasa — bukan dari argumen updater). Percobaan pertama benerin ini (baca `pending` polos dari closure, drop functional updater) balik nimbulin bug lain: dua panggilan `remove()` berturutan dalam batch render yang sama saling menimpa (closure basi). Tiga test regresi baru sengaja bungkus `renderHook` dengan `wrapper: StrictMode` biar bug kelas ini ketauan dari test, bukan cuma nemu manual lagi. **Pelajaran buat F1-F3**: side effect dari pemanggil (callback apapun yang dioper ke hook) tidak boleh dijalankan di dalam badan updater fungsional `setState` — React boleh memanggilnya lebih dari sekali kapan saja di StrictMode/Concurrent Mode.
 - F0-07: `useFocusTrap` sengaja BUKAN nyaring elemen fokusabel lewat `el.offsetParent !== null` (beda dari `trapFocus()` di mockup). Di jsdom, `offsetParent` selalu `null` (nol layout engine) jadi filter itu bikin trap mati total di test. Pemakaian nyata (`DangerSheet`) juga gak pernah nyembunyiin salah satu tombolnya secara kondisional, jadi filter itu gak kepake buat kasus ini — kalau nanti ada sheet lain yang butuh sembunyiin elemen fokusabel secara kondisional, filter visibility perlu ditambah lagi pakai cara yang gak bergantung `offsetParent`.
+- F0-08: papan Gelombang 1 dicentang tanpa "diuji di HP sungguhan" — F0-08 infra CI, nol UI buat ditap. Buktinya setara: push komit ke branch beneran, `gh run watch` 3x — ijo (baseline), merah (komit sengaja nulis hex literal di `Button.module.css`, ketangkep di step Test sebelum sempat nyampe Build), ijo lagi (setelah `git revert`). Ketiga run id-nya kecatet di PR #9. `check-raw-css-values.ts` sekarang punya `runCheck()`+`isMain` (pola sama `check-locale-keys.ts`) disambung ke `build` — nutup celah yang dicatat F0-05 ("belum disambungkan ke CI"). Kunci i18n dan anggaran bundle udah otomatis ke-cover masing-masing lewat `build` dan `size`, gak butuh kabel baru.
+- F0-08: `packageManager: "pnpm@11.18.0"` ditambah ke `package.json` biar `pnpm/action-setup@v4` di CI pin versi yang sama dengan lokal, bukan nebak dari `pnpm-lock.yaml`. Satu annotation non-blocking dari Actions: tiga action (`checkout`, `setup-node`, `pnpm/action-setup`) masih target runtime Node 20 yang dipaksa jalan di Node 24 sama GitHub — bukan error, cuma info, biarin sampai action-nya sendiri update.
