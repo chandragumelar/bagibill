@@ -1,0 +1,110 @@
+.toast {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  background: var(--n-9);
+  color: var(--n-0);
+  border-radius: var(--r-card);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  box-shadow: var(--elev-3);
+}
+
+[data-theme="dark"] .toast {
+  background: var(--n-4);
+  color: var(--n-9);
+}
+
+.ring {
+  flex: 0 0 auto;
+  width: var(--size-touch-min);
+  height: var(--size-touch-min);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--n-0) var(--toast-chip-mix), transparent);
+  stroke-width: 3;
+}
+
+[data-theme="dark"] .track {
+  stroke: color-mix(in srgb, var(--n-9) var(--toast-chip-mix), transparent);
+}
+
+.progress {
+  fill: none;
+  stroke: var(--brand-strong);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.ending .progress {
+  stroke: var(--warn);
+}
+
+.ringNumber {
+  position: relative;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  z-index: 1;
+}
+
+.ending .ringNumber {
+  color: var(--warn);
+}
+
+.message {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-footnote);
+  line-height: var(--line-tight);
+}
+
+.sub {
+  display: block;
+  font-size: var(--fs-caption2);
+  opacity: 0.7;
+  margin-top: var(--sp-1);
+}
+
+.count {
+  flex: 0 0 auto;
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-bold);
+  background: color-mix(in srgb, var(--n-0) var(--toast-chip-mix), transparent);
+  border-radius: var(--r-pill);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+[data-theme="dark"] .count {
+  background: color-mix(in srgb, var(--n-9) var(--toast-chip-mix), transparent);
+}
+
+.undo,
+.undoAll {
+  flex: 0 0 auto;
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--brand-on-dark);
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-bold);
+  height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-btn);
+}

@@ -85,7 +85,7 @@ Tergantung: F0-03, F0-04.
 
 Cakupan: `src/shared/ui/` (Button, TextInput, MoneyInput, Sheet, Toast, Avatar, ListRow), plus `src/routes/dev/ui.tsx`.
 
-Isi: cuma komponen yang benar-benar muncul di empat mockup. Tiap komponen satu folder, satu file komponen, satu file CSS Module, satu file test. MoneyInput bekerja di minor unit dan tidak pernah menyimpan string ke state uang. Avatar mengambil inisial dari kata dan menerima warna member dari luar, jangan menghitung warna di dalam dirinya.
+Isi: cuma komponen yang benar-benar muncul di ketujuh mockup gelombang 1 aktif (bukan arsip Saldo___Settle_Up, bukan mockup gelombang 2). Tiap komponen satu folder, satu file komponen, satu file CSS Module, satu file test. MoneyInput bekerja di minor unit dan tidak pernah menyimpan string ke state uang. Avatar mengambil inisial dari kata dan menerima warna member dari luar, jangan menghitung warna di dalam dirinya.
 
 Halaman `/dev/ui` menampilkan seluruh komponen dalam semua keadaannya, dua tema, dua bahasa. Ini alat debug utama sepanjang proyek, bukan pajangan.
 

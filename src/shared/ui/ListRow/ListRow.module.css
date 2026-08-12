@@ -1,0 +1,39 @@
+.row {
+  display: grid;
+  grid-template-columns: var(--sp-8) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3);
+  min-height: var(--size-touch-min);
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  transition: background var(--dur-tap) var(--ease-standard);
+}
+
+button.row {
+  cursor: pointer;
+}
+
+button.row:active {
+  background: var(--surface-sunken);
+}
+
+.leading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  min-width: 0;
+}
+
+.trailing {
+  flex: 0 0 auto;
+}
