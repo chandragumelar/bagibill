@@ -1,0 +1,117 @@
+.header {
+  flex: 0 0 auto;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: var(--sp-1) var(--sp-4) 0;
+  box-shadow: var(--elev-1);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.iconButton {
+  border: none;
+  background: none;
+  color: var(--brand);
+  font-size: var(--size-icon-glyph);
+  line-height: 1;
+  cursor: pointer;
+  width: var(--size-touch-min);
+  height: var(--size-touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--r-pill);
+  flex: 0 0 auto;
+}
+
+.menu {
+  font-size: var(--size-icon-glyph-sm);
+  color: var(--text-secondary);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.title h1 {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mid {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0 var(--sp-4);
+}
+
+.avatars {
+  display: flex;
+  flex: 0 0 auto;
+}
+
+.position {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: var(--sp-2) var(--sp-3);
+  font-family: inherit;
+  appearance: none;
+  cursor: default;
+}
+
+button.position {
+  cursor: pointer;
+}
+
+.here {
+  border-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) var(--position-here-mix), var(--surface-sunken));
+}
+
+.positionLabel {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.positionAmount {
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.negative {
+  color: var(--neg-text);
+}
+
+.positive {
+  color: var(--pos-text);
+}
+
+.zero {
+  color: var(--text-secondary);
+}
+
+.positionSub {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}

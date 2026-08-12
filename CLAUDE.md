@@ -29,6 +29,7 @@ Sudah diputuskan, tidak usah ditawar ulang kecuali anggaran bundle terlampaui.
 - Data lokal: Dexie di atas IndexedDB. State di memori pakai store ringan, jangan tarik Redux.
 - Test: Vitest plus Testing Library. File test sejajar dengan file yang diuji.
 - i18n ditulis sendiri, tipis, di atas `Intl.PluralRules` dan `Intl.NumberFormat`. Jangan tarik i18next demi anggaran bundle.
+- Router ditulis sendiri, tipis, di `src/routes/router.tsx` (K-21). Jangan tarik react-router/wouter demi anggaran bundle, kecuali kebutuhan nested layout, data loader, atau route guard beneran muncul — itu syarat cabut keputusannya.
 - Package manager pnpm.
 - Script build-time (`scripts/*.ts`) jalan langsung lewat `node scripts/nama.ts`, bukan lewat `tsx`/`ts-node`. Node di environment ini sudah bisa eksekusi `.ts` tanpa flag tambahan.
 

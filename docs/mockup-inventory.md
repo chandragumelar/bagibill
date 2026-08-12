@@ -18,14 +18,19 @@ Singkatan layar: **BR** Beranda, **BG** Buat Grup dan Kelola Member, **TP** Tamb
 |---|---|---|
 | Header grup | normal dengan kartu posisi kamu, kartu bernilai nol (grup baru, bukan hilang) | DT, DS |
 | Baris tab | Transaksi aktif, Saldo aktif, Ringkasan (mati) | DT, DS |
-| Topbar layar penuh | dengan tombol kembali, dengan aksi kanan, judul bisa diedit | TP, BG, KI |
-| Bilah tombol bawah | satu tombol primer, primer plus sekunder, disabled | TP, BG, KI |
+| Topbar layar penuh | dengan tombol kembali (ikon), dengan aksi teks kiri, dengan aksi kanan | LS |
+| Bilah tombol bawah | satu tombol primer, disabled | BG, KI |
 | Sheet dari bawah | biasa, berat (aksi permanen) | DS, LS |
 | Panel keadaan dev | — | semua |
 
 Kartu posisi kamu di header grup adalah satu-satunya ringkasan posisi pribadi di seluruh app. Tab Saldo tidak boleh mengulangnya. Ini invarian, bukan preferensi tata letak.
 
 **Koreksi F0-05 12 Ags 2026** — baris Sheet dari bawah sebelumnya menulis tiga keadaan termasuk "penuh layar". Dicek ulang langsung ke `Lapisan_Sistem.html` dan `Detail_Grup_Saldo.html`: "penuh layar" itu bukan varian Sheet, melainkan overlay gagal-muat/skeleton (`.overlay`/`.loadfail`) yang render penuh `#screenBody` tanpa scrim dan tanpa rounded-top — mekanisme beda total dari `.sheet`. Sudah punya baris sendiri di 1.5 ("Layar gagal muat", "Skeleton"). Salah kelompok di F0-02, bukan salah baca mockup di F0-05 — dibetulkan di sini, bukan diam-diam.
+
+**Koreksi F0-06 12 Ags 2026** — dua baris kena perbaikan lagi setelah dicek ulang ke markup mentah TP/BG/KI/LS:
+
+- *Topbar layar penuh*: tercatat "muncul di TP, BG, KI". Kenyataannya class `.topbar` yang beneran reusable (CSS-nya komennya sendiri: "untuk layar non-grup: tambah, member, join") cuma ada di `Lapisan_Sistem.html`, dipakai identik di 3 fungsi (`screenTambah`, `screenMember`, `screenJoin`). TP dan BG punya row atas sendiri tapi inline-style ad hoc format `x-dc`, bukan class yang dishare. KI malah gak punya topbar sama sekali — itu halaman publik tanpa back nav, headernya sendiri (`.k-header`) untuk konteks undangan, bukan Topbar. Keadaan "judul bisa diedit" gak ketemu di manapun; title di ketiga instance LS selalu `<h1>` statis. Yang bisa diedit itu field judul pengeluaran di badan TP (komponen beda, bukan chrome Topbar) — kemungkinan tercampur waktu F0-02.
+- *Bilah tombol bawah*: tercatat "satu tombol primer, primer plus sekunder, disabled — TP, BG, KI". Pola `flex:0 0 auto` sibling-dari-scroll yang konsisten cuma ada di BG (`Buat grup`, disabled lewat `canCreate`) dan KI (footer ringkasan, tanpa tombol sama sekali). TP-nya tombol nempel di dalam area scroll, gak pinned. "Primer plus sekunder" ternyata pola `.sheet-actions`/`.k-sheet-actions` — dua tombol ditumpuk di DALAM sheet (mis. "Bagi berdua" + "Batal, bukan punyaku" di KI), bukan bilah di layar.
 
 ### 1.2 Identitas
 
@@ -151,6 +156,17 @@ Beda sumber dari 2.1: bukan dari audit `var(--x)` F0-02, tapi dari nilai literal
 | `--toast-chip-mix` | 22% (light) / 18% (dark) | `.cd .track` + `.cnt` LS — opasitas overlay netral di atas toast, beda per tema karena kontras dasarnya beda |
 
 Catatan tambahan yang bukan token tapi keputusan implementasi F0-05: field TextInput/MoneyInput dinormalisasi ke `--r-field` (10px) dan `--size-touch-min` (44px) walau BG/TP menulis literal inline 12px/46px/40px — nilai-nilai itu satu-off inline style di format `x-dc` (bukan `var(--x)` berulang lintas file), jadi diselaraskan ke token yang sudah ada ketimbang menambah token baru untuk satu kejadian.
+
+### 2.1c Ditambahkan F0-06
+
+| Nama | Nilai | Sumber |
+|---|---|---|
+| `--elev-bar` | `0 -4px 14px rgba(16,22,30,.05)` (light) / `rgba(0,0,0,.4)` (dark) | `.k-footer` KI — shadow ke ATAS buat elemen nempel di bawah layar (BottomBar), satu-satunya pola lengkap terang+gelap. Arah kebalik dari `--elev-1/2/3`. |
+| `--position-here-mix` | 6% | `.position.here` DS — highlight kartu posisi kamu waktu di tab yang sama diwakili kartu itu |
+| `--size-icon-glyph` | 26px | Ukuran glyph tombol ikon utama (back/close), identik DT + DS |
+| `--size-icon-glyph-sm` | 20px | Ukuran glyph tombol ikon sekunder (menu ⋯), identik DT + DS |
+
+Catatan implementasi F0-06: tombol ikon GroupHeader (30px DT/DS) dan Topbar (34px LS) disatuin ke `--size-touch-min` (44px) buat kotak tombolnya, bukan token baru per komponen — dua nilai itu beda tipis dan kalah sama aturan keras target sentuh 44px. Glyph di dalamnya tetap pakai `--size-icon-glyph`/`--size-icon-glyph-sm` di atas.
 
 ### 2.2 Belum ditambahkan, menunggu layarnya
 
