@@ -1,0 +1,232 @@
+/* ============================================================
+   BagiBill — Design Tokens (Arah A "Kasir")
+   Slate dingin, padat, presisi. iOS-style type, angka tabular.
+
+   Semantik piutang/utang JANGAN andalkan warna saja —
+   selalu pasangkan dengan tanda +/-, panah arah, dan label.
+   Kontras: teks >=4.5:1, elemen UI >=3:1, di light & dark.
+   Aktifkan tema: <html data-theme="light"> / data-theme="dark".
+   ============================================================ */
+
+:root{
+  /* Font stack (arah iOS) — huruf & angka */
+  --bb-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+             system-ui, "Segoe UI", Roboto, sans-serif;
+  --bb-num-features: "tnum" 1, "lnum" 1;
+
+  /* Tipografi (px) */
+  --fs-caption2: 11px;
+  --fs-caption:  12px;
+  --fs-footnote: 13px;
+  --fs-subhead:  15px;
+  --fs-body:     17px;
+  --fs-headline: 17px; /* weight 600 */
+  --fs-title3:   20px;
+  --fs-title2:   22px;
+  --fs-title1:   28px;
+  --fs-large:    34px;
+  --num-lg:      40px; /* nominal utama */
+  --num-xl:      48px; /* hero balance — muat nominal 9 digit di lebar 360px */
+  --num-tracking: -0.02em; /* nominal besar sedikit rapat */
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
+  --line-tight: 1.2; --line-body: 1.3; --line-relaxed: 1.45;
+
+  /* Spacing (kelipatan 4) */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
+  --sp-6: 24px; --sp-7: 32px; --sp-8: 40px; --sp-9: 48px; --sp-10: 64px;
+
+  /* Radius */
+  --r-btn: 10px; --r-card: 14px; --r-field: 10px; --r-pill: 999px;
+
+  /* Motion */
+  --dur-tap: 120ms; --dur-base: 200ms; --dur-sheet: 320ms;
+  --ease-standard: cubic-bezier(.2,.8,.2,1);
+  --ease-emphasized: cubic-bezier(.4,0,.2,1);
+  /* --ease = alias pendek untuk --ease-standard. Nilainya identik.
+     Ada karena dipakai di Detail_Grup_Transaksi, Detail_Grup_Saldo, dan
+     Lapisan_Sistem. Nama pendek dipakai di komponen; --ease-standard
+     tetap ada supaya pasangannya dengan --ease-emphasized kebaca. */
+  --ease: var(--ease-standard);
+  /* Durasi lapisan sistem — masing-masing variabel SENDIRI, tidak
+     menumpang --dur-base. Ubah salah satu tanpa menggeser yang lain. */
+  --dur-undo:  6000ms;   /* jendela undo — cukup buat sadar & tarik lagi */
+  --dur-toast: 3200ms;   /* toast info/sukses non-undo, auto hilang */
+  --dur-move:  260ms;    /* masuk/keluar elemen sistem (toast, baris hilang) */
+  --dur-hold:  1100ms;   /* tahan-untuk-hapus (aksi permanen) */
+
+  /* Identitas member (12) — sama di light & dark, avatar terisi, teks putih */
+  --m-1:#E5484D; --m-2:#E1620F; --m-3:#A9820C; --m-4:#4B9E2F;
+  --m-5:#12967A; --m-6:#0E8FB0; --m-7:#3A5BD9; --m-8:#5B4BD6;
+  --m-9:#7C3AED; --m-10:#A83BC0; --m-11:#C42C86; --m-12:#D33B63;
+  /* Warna kategori TIDAK punya token sendiri. Turunkan dari palet member:
+     set --cat:var(--m-N) di elemen, lalu
+     background:color-mix(in srgb, var(--cat) 16%, transparent); */
+}
+
+/* ---------------- Light ---------------- */
+:root,
+[data-theme="light"]{
+  --n-0:#F6F7F9; --n-1:#FFFFFF; --n-2:#EDF0F3; --n-3:#E1E5EA; --n-4:#C8CED7;
+  --n-5:#98A0AC; --n-6:#69717E; --n-7:#49515D; --n-8:#282D35; --n-9:#12161C;
+
+  --surface:var(--n-1); --surface-sunken:var(--n-0); --surface-raised:var(--n-1);
+  --graph-bg:#F6F7F9;   /* kanvas diagram jaringan transfer (tab Saldo) */
+  --border:var(--n-3);
+  --text:var(--n-9); --text-secondary:var(--n-7); --text-muted:var(--n-6);
+
+  --brand:#1E63E9; --brand-strong:#1750C9; --brand-tint:#E7EEFD; --on-brand:#FFFFFF;
+  --pos:#0E9E8E; --pos-text:#0A6E63; --pos-tint:#DBF4F0;
+  --neg:#E5484D; --neg-text:#B22026; --neg-tint:#FCE4E5;
+  /* Caution/ragu — dipakai utk field OCR yang tak yakin (bukan error).
+     JANGAN andalkan warna saja; pasangkan ikon/underline putus + label. */
+  --warn:#E8A317; --warn-text:#8A5A00; --warn-tint:#FBEFCF;
+  /* Kondisi alokasi — alias semantik dari palet di atas.
+     kurang=warn(kuning), pas=pos(hijau), lebih=neg(merah).
+     JANGAN warna saja: pasangkan tanda +/-, panah, arsir, label. */
+  --state-under:var(--warn);  --state-under-text:var(--warn-text);  --state-under-tint:var(--warn-tint);
+  --state-exact:var(--pos);   --state-exact-text:var(--pos-text);   --state-exact-tint:var(--pos-tint);
+  --state-over:var(--neg);    --state-over-text:var(--neg-text);    --state-over-tint:var(--neg-tint);
+
+  /* State tombol — primary (brand) */
+  --btn-bg:            var(--brand);
+  --btn-bg-hover:      #1A57CE;
+  --btn-bg-active:     #164BB0;
+  --btn-fg:            var(--on-brand);
+  --btn-bg-disabled:   #C6D6F7;
+  --btn-fg-disabled:   #7C90B8;
+  /* State tombol — secondary (netral) */
+  --btn2-bg:           var(--n-2);
+  --btn2-bg-hover:     var(--n-3);
+  --btn2-bg-active:    var(--n-4);
+  --btn2-fg:           var(--n-9);
+  --btn2-border:       var(--border);
+  --btn2-bg-disabled:  var(--n-2);
+  --btn2-fg-disabled:  var(--n-5);
+  /* Focus ring — sama utk semua tombol/kontrol */
+  --focus-ring:        0 0 0 2px var(--n-1), 0 0 0 4px var(--brand);
+  --focus-ring-width:  2px;
+
+  /* Scrim — dim di belakang sheet/modal */
+  --scrim:rgba(16,22,30,.32);
+  /* Rute/perantara (ungu) — chip "Lewat …", aksen simplifikasi settle.
+     JANGAN andalkan warna saja; selalu pasangkan label/ikon. */
+  --route:#7C3AED; --route-text:#5B21B6; --route-tint:#F1EAFE;
+  /* Garis rute di diagram jaringan settle (edge "lewat perantara") */
+  --route-line:#8B5CF6;
+
+  /* ---------------- Lapisan sistem (light) ----------------
+     Tangga bahaya aksi — treatment beda supaya terlihat sebelum dibaca:
+       low    = reversible (ada undo) → tenang, warna brand.
+       high   = permanen, tak bisa ditarik → merah kuat + tahan-untuk-hapus.
+       locked = tidak diizinkan (mis. member ber-transaksi) → NETRAL,
+                bukan merah (ini bukan bahaya, cuma tak bisa). */
+  --risk-low:var(--brand);        --risk-low-tint:var(--brand-tint);
+  --risk-high:var(--neg);         --risk-high-strong:#C42127; --risk-high-tint:var(--neg-tint); --risk-high-text:var(--neg-text);
+  --risk-locked:var(--n-6);       --risk-locked-tint:var(--n-2);
+  /* Offline TENANG vs gagal BUTUH-TINDAKAN — pembeda yang tadinya belum ada.
+     offline = keadaan normal, netral abu (BUKAN merah/alarm).
+     sync    = lagi mengirim / kembali online → brand, lalu pos saat beres.
+     fail    = butuh tindakan (ulangi / muat ulang) → neg + jalan keluar. */
+  --offline-fg:var(--text-secondary); --offline-bg:var(--n-2); --offline-dot:var(--n-5);
+  --sync-fg:var(--brand);             --sync-bg:var(--brand-tint);
+  --syncdone-fg:var(--pos-text);      --syncdone-bg:var(--pos-tint);
+  --fail-fg:var(--neg-text);          --fail-bg:var(--neg-tint); --fail-border:color-mix(in srgb, var(--neg) 40%, transparent);
+
+  --elev-1:0 1px 2px rgba(16,22,30,.06);
+  --elev-2:0 2px 10px rgba(16,22,30,.08);
+  --elev-3:0 8px 26px rgba(16,22,30,.12);
+}
+
+/* ---------------- Dark (permukaan berlapis, bukan hitam pekat) ---------------- */
+[data-theme="dark"]{
+  --n-0:#0E1116; --n-1:#161A21; --n-2:#1D222B; --n-3:#242A34; --n-4:#313945;
+  --n-5:#48525F; --n-6:#79838F; --n-7:#9AA4B2; --n-8:#C8CED7; --n-9:#F2F4F7;
+
+  --surface:var(--n-1); --surface-sunken:var(--n-0); --surface-raised:var(--n-2);
+  --graph-bg:#12161C;   /* kanvas diagram jaringan transfer (tab Saldo) */
+  --border:var(--n-3);
+  --text:var(--n-9); --text-secondary:var(--n-7); --text-muted:var(--n-6);
+
+  --brand:#5B8CFF; --brand-strong:#7AA2FF; --brand-tint:#182338; --on-brand:#0B1220;
+  --pos:#2FC7B4; --pos-text:#54D6C6; --pos-tint:#0F2B29;
+  --neg:#FF6B6E; --neg-text:#FF8E90; --neg-tint:#331A1C;
+  --warn:#E0A63A; --warn-text:#F0C070; --warn-tint:#33270F;
+  --state-under:var(--warn);  --state-under-text:var(--warn-text);  --state-under-tint:var(--warn-tint);
+  --state-exact:var(--pos);   --state-exact-text:var(--pos-text);   --state-exact-tint:var(--pos-tint);
+  --state-over:var(--neg);    --state-over-text:var(--neg-text);    --state-over-tint:var(--neg-tint);
+
+  /* State tombol — primary (brand) */
+  --btn-bg:            var(--brand);
+  --btn-bg-hover:      #74A0FF;
+  --btn-bg-active:     #8FB2FF;
+  --btn-fg:            var(--on-brand);
+  --btn-bg-disabled:   #2A3550;
+  --btn-fg-disabled:   #5E6E90;
+  /* State tombol — secondary (netral) */
+  --btn2-bg:           var(--n-2);
+  --btn2-bg-hover:     var(--n-3);
+  --btn2-bg-active:    var(--n-4);
+  --btn2-fg:           var(--n-9);
+  --btn2-border:       var(--border);
+  --btn2-bg-disabled:  var(--n-1);
+  --btn2-fg-disabled:  var(--n-5);
+  /* Focus ring */
+  --focus-ring:        0 0 0 2px var(--n-1), 0 0 0 4px var(--brand);
+  --focus-ring-width:  2px;
+
+  --scrim:rgba(0,0,0,.55);
+  --route:#A78BFA; --route-text:#C4B5FD; --route-tint:#221A38;
+  --route-line:#A78BFA;
+
+  /* ---------------- Lapisan sistem (dark) ---------------- */
+  --risk-low:var(--brand);        --risk-low-tint:var(--brand-tint);
+  --risk-high:var(--neg);         --risk-high-strong:#FF7B7E; --risk-high-tint:var(--neg-tint); --risk-high-text:var(--neg-text);
+  --risk-locked:var(--n-6);       --risk-locked-tint:var(--n-2);
+  --offline-fg:var(--text-secondary); --offline-bg:var(--n-2); --offline-dot:var(--n-5);
+  --sync-fg:var(--brand-strong);      --sync-bg:var(--brand-tint);
+  --syncdone-fg:var(--pos-text);      --syncdone-bg:var(--pos-tint);
+  --fail-fg:var(--neg-text);          --fail-bg:var(--neg-tint); --fail-border:color-mix(in srgb, var(--neg) 45%, transparent);
+
+  --elev-1:0 1px 2px rgba(0,0,0,.4);
+  --elev-2:0 4px 14px rgba(0,0,0,.5);
+  --elev-3:0 10px 28px rgba(0,0,0,.6);
+}
+
+/* Auto dark bila belum di-set eksplisit */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme]){
+    --n-0:#0E1116; --n-1:#161A21; --n-2:#1D222B; --n-3:#242A34; --n-4:#313945;
+    --n-5:#48525F; --n-6:#79838F; --n-7:#9AA4B2; --n-8:#C8CED7; --n-9:#F2F4F7;
+    --surface:var(--n-1); --surface-sunken:var(--n-0); --surface-raised:var(--n-2);
+  --graph-bg:#12161C;   /* kanvas diagram jaringan transfer (tab Saldo) */
+    --border:var(--n-3);
+    --text:var(--n-9); --text-secondary:var(--n-7); --text-muted:var(--n-6);
+    --brand:#5B8CFF; --brand-strong:#7AA2FF; --brand-tint:#182338; --on-brand:#0B1220;
+    --pos:#2FC7B4; --pos-text:#54D6C6; --pos-tint:#0F2B29;
+    --neg:#FF6B6E; --neg-text:#FF8E90; --neg-tint:#331A1C;
+    --warn:#E0A63A; --warn-text:#F0C070; --warn-tint:#33270F;
+  --state-under:var(--warn);  --state-under-text:var(--warn-text);  --state-under-tint:var(--warn-tint);
+  --state-exact:var(--pos);   --state-exact-text:var(--pos-text);   --state-exact-tint:var(--pos-tint);
+  --state-over:var(--neg);    --state-over-text:var(--neg-text);    --state-over-tint:var(--neg-tint);
+    --btn-bg:var(--brand); --btn-bg-hover:#74A0FF; --btn-bg-active:#8FB2FF; --btn-fg:var(--on-brand);
+    --btn-bg-disabled:#2A3550; --btn-fg-disabled:#5E6E90;
+    --btn2-bg:var(--n-2); --btn2-bg-hover:var(--n-3); --btn2-bg-active:var(--n-4); --btn2-fg:var(--n-9);
+    --btn2-border:var(--border); --btn2-bg-disabled:var(--n-1); --btn2-fg-disabled:var(--n-5);
+    --focus-ring:0 0 0 2px var(--n-1), 0 0 0 4px var(--brand); --focus-ring-width:2px;
+    --scrim:rgba(0,0,0,.55);
+    --route:#A78BFA; --route-text:#C4B5FD; --route-tint:#221A38;
+    --route-line:#A78BFA;
+    --elev-1:0 1px 2px rgba(0,0,0,.4);
+    --elev-2:0 4px 14px rgba(0,0,0,.5);
+    --elev-3:0 10px 28px rgba(0,0,0,.6);
+  }
+}
+
+/* ---------------- Helper angka nominal ---------------- */
+.bb-numeral{
+  font-family: var(--bb-font);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: var(--bb-num-features);
+}
+.bb-numeral--lg{ font-size:var(--num-lg); font-weight:var(--fw-bold); letter-spacing:var(--num-tracking); line-height:1; }
+.bb-numeral--xl{ font-size:var(--num-xl); font-weight:var(--fw-bold); letter-spacing:var(--num-tracking); line-height:1; }

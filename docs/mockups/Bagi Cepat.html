@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>BagiBill — Bagi Cepat</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1E63E9; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #1E63E9; z-index: 9999; }
+    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    #__bundler_placeholder { color: #999; font-size: 14px; }
+  </style>
+  <noscript>
+    <style>#__bundler_loading { display: none; }</style>
+    <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
+      This page requires JavaScript to display.
+    </div>
+  </noscript>
+</head>
+<body>
+  <div id="__bundler_thumbnail">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#1E63E9"></rect>
+    <rect x="430" y="250" width="340" height="120" rx="18" fill="#fff"></rect>
+    <text x="600" y="340" font-family="-apple-system,system-ui,sans-serif" font-size="88" font-weight="700" fill="#1E63E9" text-anchor="middle">Rp</text>
+    <text x="600" y="470" font-family="-apple-system,system-ui,sans-serif" font-size="34" font-weight="600" fill="#E7EEFD" text-anchor="middle" letter-spacing="6">BAGI CEPAT</text>
+  </svg>
+</div>
+  <div id="__bundler_loading">Unpacking...</div>
+
+  <script>
+    
+document.addEventListener('DOMContentLoaded', async function() {
+  const loading = document.getElementById('__bundler_loading');
+  function setStatus(msg) { if (loading) loading.textContent = msg; }
+
+  const FONT_MIME = /^(font[/]|application[/](x-)?font-|application[/]vnd\.ms-fontobject)/i;
+  const MIME_TOKEN = /^[\w.+-]+[/][\w.+-]+$/;
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
+
+  // Error sink persists across replaceWith since it's on window, not the DOM.
+  window.addEventListener('error', function(e) {
+    // Failed resource loads (CSP-blocked links, scripts, images) fire plain
+    // events at the element — warn only; real JS errors carry message/error.
+    if (!e.message && !e.error && e.target && e.target !== window) {
+      console.warn('[bundle] resource failed to load:',
+        e.target.tagName, String(e.target.src || e.target.href || ''));
+      return;
+    }
+    var p = document.body || document.documentElement;
+    var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
+    d.id = '__bundler_err';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;font:12px/1.4 ui-monospace,monospace;background:#2a1215;color:#ff8a80;padding:10px 14px;border-radius:8px;border:1px solid #5c2b2e;z-index:99999;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.textContent = (d.textContent ? d.textContent + String.fromCharCode(10) : '') +
+      '[bundle] ' + (e.message || e.type) +
+      (e.filename ? ' (' + e.filename.slice(0, 60) + ':' + e.lineno + ')' : '');
+  }, true);
+
+  try {
+    const manifestEl = document.querySelector('script[type="__bundler/manifest"]');
+    const templateEl = document.querySelector('script[type="__bundler/template"]');
+    if (!manifestEl || !templateEl) {
+      setStatus('Error: missing bundle data');
+      console.error('[bundler] Missing script tags — manifestEl:', !!manifestEl, 'templateEl:', !!templateEl);
+      return;
+    }
+
+    const manifest = JSON.parse(manifestEl.textContent);
+    let template = JSON.parse(templateEl.textContent);
+
+    // Nested page bundles (iframe targets). Each ships ONCE, in the ROOT
+    // document's manifest; frame srcs carry an about:blank#<uuid> marker
+    // instead of a substitutable uuid. Every document mints the blobs for
+    // its OWN frames — from local text at the root, or text obtained from
+    // its DIRECT parent over the relay protocol below — so each frame
+    // navigation stays same-origin with its initiator and a deduped page
+    // loads at any depth on any host, including a file:// download's
+    // opaque origins (where a blob minted by one document cannot be
+    // navigated to by another).
+    const pageOrderEl = document.querySelector('script[type="__bundler/page_order"]');
+    const pageOrder = pageOrderEl ? JSON.parse(pageOrderEl.textContent) : [];
+    const pageSet = new Set(pageOrder);
+    const pageTexts = {};
+
+    // ── Nested-page text protocol (parent-chain relay) ──
+    // Page bundles ship once, in the ROOT document's manifest. Every
+    // document mints the blobs for its OWN frames, obtaining page text
+    // through a strict parent-chain relay: a document only ever SENDS to
+    // its direct parent (which, for every document the publisher's own
+    // runtime minted, is another publisher document) and only ACCEPTS
+    // text from that direct parent; requests from below are honored only
+    // for the document's own child frames, and the ROOT never sends
+    // upward at all. That last rule is load-bearing: the artifact host's
+    // frame-ancestors allows claude.ai (and friends) to frame an
+    // artifact, so window.top can be a FOREIGN document — a top-addressed
+    // protocol would hand page uuids to that ancestor and accept forged
+    // "page text" from it, minting attacker HTML as an artifact-origin
+    // blob document. The chain never touches the ancestor: requests stop
+    // at the root, replies are origin-addressed per hop (never '*' when
+    // an origin exists), and both directions are origin-gated (on https
+    // a foreign sender's origin can never equal this document's; in
+    // opaque contexts — file:// — everything serializes as 'null', where
+    // an embedded EXTERNAL frame still fails the gate by carrying its
+    // own real origin, and a sandboxed child of such a frame is excluded
+    // by the own-child-frames check plus uuid unguessability). Shape is
+    // deny-by-default: one request form, one reply form, no error
+    // replies.
+    // window.origin is the SERIALIZED SECURITY origin ('null' in opaque
+    // contexts such as a sandboxed preview iframe) — location.origin is
+    // computed from the URL and stays 'https://…' even when the document
+    // is sandboxed, which would misgate every opaque chain.
+    const OWN_TARGET = /^https?:[/][/]/.test(window.origin || '')
+      ? window.origin
+      : '*';
+    function trustedOrigin(e) {
+      if (e.origin === window.origin) return true; // https chains; opaque==opaque
+      // file:// trees: Chrome serializes the file document's origin as
+      // 'file://' while the blob: documents it mints serialize as 'null',
+      // so the two legitimate shapes can never string-match — accept the
+      // pair in both directions. https origins never serialize as either,
+      // and sender identity (own child frame / direct parent) is checked
+      // separately.
+      return (
+        (e.origin === 'null' &&
+          (window.origin === 'file://' ||
+            window.location.protocol === 'file:')) ||
+        (/^file:/.test(e.origin) && window.origin === 'null')
+      );
+    }
+    // Non-empty only in the root document (nested bundles ship an empty
+    // island), so it doubles as the root marker: the root answers from
+    // local text and treats a miss as authoritative — never relaying to
+    // its (possibly foreign) parent.
+    const isPageRoot = pageOrder.length > 0;
+    const blobUrls = {};
+    const resourceBlobs = {};
+    const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    const pendingFrames = {}; // uuid -> [{el, frag}] awaiting text for own frames
+    const pendingRelays = {}; // uuid -> [childWindow] awaiting text to pass down
+    function mountPage(el, frag, text) {
+      const pageBlob = new Blob([text], { type: 'text/html' });
+      const u = URL.createObjectURL(pageBlob);
+      resourceBlobs[u] = pageBlob;
+      el.src = u + frag;
+    }
+    function deliverPage(uuid, text) {
+      const frames = pendingFrames[uuid];
+      delete pendingFrames[uuid];
+      if (frames) for (const f of frames) mountPage(f.el, f.frag, text);
+      const relays = pendingRelays[uuid];
+      delete pendingRelays[uuid];
+      if (relays) {
+        for (const cw of relays) {
+          try { cw.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+        }
+      }
+    }
+    function ownFrameWindows() {
+      const out = [];
+      for (const f of Array.from(document.querySelectorAll('iframe'))) {
+        try { if (f.contentWindow) out.push(f.contentWindow); } catch (err) { /* detached */ }
+      }
+      return out;
+    }
+    window.addEventListener('message', function (e) {
+      const d = e.data;
+      if (!d || typeof d !== 'object' || !e.source) return;
+      // Origin gate first; the structural checks below (own-child-frames
+      // for requests, direct-parent + solicited-uuid for replies, the
+      // root's never-relay rule) are what hold in fully opaque chains
+      // where origin strings can't discriminate — a sandboxed root's
+      // FOREIGN wrapper still fails all three even though both serialize
+      // as real-vs-'null' rather than matching.
+      if (!trustedOrigin(e)) return;
+      if (typeof d.__bundler_need === 'string' && UUID_SHAPE.test(d.__bundler_need)) {
+        // Requests are honored only for this document's own child frames.
+        if (ownFrameWindows().indexOf(e.source) < 0) return;
+        const uuid = d.__bundler_need;
+        const text = pageTexts[uuid];
+        if (typeof text === 'string') {
+          try { e.source.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+          return;
+        }
+        if (isPageRoot || window.parent === window) return; // authoritative miss
+        const waiting = pendingRelays[uuid];
+        if (waiting) {
+          if (waiting.indexOf(e.source) < 0) waiting.push(e.source);
+          return;
+        }
+        // Never-answered uuids would otherwise accumulate forever under a
+        // request spray; past the cap (far above any real page count) new
+        // relays are dropped rather than remembered.
+        if (Object.keys(pendingRelays).length >= 128) return;
+        pendingRelays[uuid] = [e.source];
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      } else if (
+        typeof d.__bundler_page === 'string' &&
+        UUID_SHAPE.test(d.__bundler_page) &&
+        typeof d.__bundler_text === 'string'
+      ) {
+        // The shape test is load-bearing beyond tidiness: the solicited
+        // check below uses the in operator, which matches prototype keys
+        // ('__proto__', 'constructor') — an unshaped key would reach
+        // deliverPage and throw, painting the error banner.
+        // Text is accepted only from the direct parent — the document
+        // that minted this one.
+        if (e.source !== window.parent || window.parent === window) return;
+        if (!(d.__bundler_page in pendingFrames) && !(d.__bundler_page in pendingRelays)) return;
+        deliverPage(d.__bundler_page, d.__bundler_text);
+      }
+    });
+
+    const uuids = Object.keys(manifest);
+    setStatus('Unpacking ' + uuids.length + ' assets...');
+
+    await Promise.all(uuids.map(async (uuid) => {
+      const entry = manifest[uuid];
+      try {
+        const binaryStr = atob(entry.data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        let finalBytes = bytes;
+        if (entry.compressed) {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(bytes);
+            writer.close();
+            const chunks = [];
+            let totalLen = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              totalLen += value.length;
+            }
+            finalBytes = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) { finalBytes.set(chunk, offset); offset += chunk.length; }
+          } else {
+            console.warn('DecompressionStream not available, asset ' + uuid + ' may not render');
+          }
+        }
+
+        if (pageSet.has(uuid)) {
+          pageTexts[uuid] = new TextDecoder().decode(finalBytes);
+          return;
+        }
+        if (FONT_MIME.test(entry.mime) && MIME_TOKEN.test(entry.mime)) {
+          // Strict artifact hosts allow font-src data: but not blob:.
+          blobUrls[uuid] = 'data:' + entry.mime + ';base64,' +
+            (entry.compressed ? toBase64(finalBytes) : entry.data);
+        } else {
+          const blob = new Blob([finalBytes], { type: entry.mime });
+          blobUrls[uuid] = URL.createObjectURL(blob);
+          resourceBlobs[blobUrls[uuid]] = blob;
+        }
+      } catch (err) {
+        console.error('Failed to decode asset ' + uuid + ':', err);
+        const blob = new Blob([], { type: entry.mime });
+        blobUrls[uuid] = URL.createObjectURL(blob);
+        resourceBlobs[blobUrls[uuid]] = blob;
+      }
+    }));
+
+    const extResEl = document.querySelector('script[type="__bundler/ext_resources"]');
+    const extResources = extResEl ? JSON.parse(extResEl.textContent) : [];
+    const resourceMap = {};
+    for (const entry of extResources) {
+      if (blobUrls[entry.uuid]) resourceMap[entry.id] = blobUrls[entry.uuid];
+    }
+
+    // Artifact-host CSP (connect-src 'self') refuses fetch() of blob: URLs —
+    // consumers read these Blobs directly. Survives the swap like the error sink.
+    window.__resourceBlobs = resourceBlobs;
+
+    setStatus('Rendering...');
+    // Page uuids have no blob here — they ride inside about:blank#<uuid>
+    // frame markers the pass below resolves after the swap.
+    for (const uuid of uuids) {
+      if (pageSet.has(uuid)) continue;
+      template = template.split(uuid).join(blobUrls[uuid]);
+    }
+
+    // Strip integrity + crossorigin — blob URLs from a file:// document inherit
+    // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
+    // The manifest bytes are ours; SRI protects against CDN compromise, not this.
+    template = template.replace(/\s+integrity="[^"]*"/gi, '').replace(/\s+crossorigin="[^"]*"/gi, '');
+
+    const resourceScript = '<script>window.__resources = ' +
+      JSON.stringify(resourceMap).replace(/<\//g, '<\\/') +
+      ';</' + 'script>';
+    // Inject after <head> so the DOCTYPE stays first; prepending the script
+    // would push the parser into quirks mode. DOMParser always emits a <head>
+    // (synthesizing one if the source HTML omitted it) but may carry
+    // attributes through, so match the full opening tag. slice() rather than
+    // replace() keeps us clear of $-pattern substitution in resourceScript.
+    const headOpen = template.match(/<head[^>]*>/i);
+    if (headOpen) {
+      const i = headOpen.index + headOpen[0].length;
+      template = template.slice(0, i) + resourceScript + template.slice(i);
+    }
+
+    // Parse the template and swap the root element. Scripts inserted via
+    // DOMParser/replaceWith are inert per spec — re-create each with
+    // createElement so they execute, awaiting onload for src scripts to
+    // preserve ordering (React before ReactDOM before Babel before text/babel).
+    const doc = new DOMParser().parseFromString(template, 'text/html');
+    document.documentElement.replaceWith(doc.documentElement);
+
+    // Resolve page-frame markers: mint this document's own blob for each
+    // framed page — from local text when this is the root, otherwise by
+    // asking the direct parent over the relay protocol above. An
+    // unanswered request leaves the frame on about:blank, the same
+    // degraded state as a refused embed.
+    {
+      const MARKER = /^about:blank#([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(#.*)?$/;
+      const needed = [];
+      for (const el of Array.from(document.querySelectorAll('iframe'))) {
+        const m = MARKER.exec(el.getAttribute('src') || '');
+        if (!m) continue;
+        const text = pageTexts[m[1]];
+        if (typeof text === 'string') {
+          mountPage(el, m[2] || '', text);
+        } else if (window.parent !== window && !isPageRoot) {
+          const had = pendingFrames[m[1]];
+          (pendingFrames[m[1]] = had || []).push({ el: el, frag: m[2] || '' });
+          if (!had) needed.push(m[1]);
+        }
+      }
+      for (const uuid of needed) {
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      }
+    }
+
+    const dead = Array.from(document.scripts);
+    for (const old of dead) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      // text/babel scripts with a src: read and inline. transformScriptTags
+      // does XHR against the src, but blob:null/ from a file:// origin is
+      // silently dropped. Inlining makes it a plain inline babel script,
+      // which transformScriptTags handles unconditionally.
+      if ((s.type === 'text/babel' || s.type === 'text/jsx') && s.src) {
+        const pre = resourceBlobs[s.src.split('#')[0]];
+        s.textContent = pre ? await pre.text() : await (await fetch(s.src)).text();
+        s.removeAttribute('src');
+      }
+      const p = s.src ? new Promise(function(r) { s.onload = s.onerror = r; }) : null;
+      old.replaceWith(s);
+      if (p) await p;
+    }
+    // Babel standalone auto-transforms type=text/babel on DOMContentLoaded,
+    // which fired before we swapped the document. Trigger manually if present.
+    if (window.Babel && typeof window.Babel.transformScriptTags === 'function') {
+      window.Babel.transformScriptTags();
+    }
+  } catch (err) {
+    setStatus('Error unpacking: ' + err.message);
+    console.error('Bundle unpack error:', err);
+  }
+});
+
+  </script>
+
+  <script type="__bundler/manifest">
+{}
+  </script>
+
+  <script type="__bundler/ext_resources">
+[]
+  </script>
+
+  <script type="__bundler/page_order">
+[]
+  </script>
+
+  <script type="__bundler/template">
+"<!DOCTYPE html>\n<html data-theme=\"light\"><head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n<title>BagiBill — Bagi Cepat<\u002Ftitle>\n\n<style>\n/* ============================================================\n   TOKENS (dari tokens.css — arah A \"Kasir\")\n   ============================================================ */\n:root{\n  --bb-font:-apple-system,BlinkMacSystemFont,\"SF Pro Text\",\"SF Pro Display\",system-ui,\"Segoe UI\",Roboto,sans-serif;\n  --bb-num-features:\"tnum\" 1,\"lnum\" 1;\n\n  --fs-caption2:11px; --fs-caption:12px; --fs-footnote:13px; --fs-subhead:15px;\n  --fs-body:17px; --fs-headline:17px; --fs-title3:20px; --fs-title2:22px;\n  --fs-title1:28px; --fs-large:34px;\n  --num-lg:40px; --num-xl:48px; --num-tracking:-0.02em;\n  --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;\n  --line-tight:1.2; --line-body:1.3; --line-relaxed:1.45;\n\n  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;\n  --sp-6:24px; --sp-7:32px; --sp-8:40px; --sp-9:48px; --sp-10:64px;\n\n  --r-btn:10px; --r-card:14px; --r-field:10px; --r-pill:999px;\n\n  --dur-tap:120ms; --dur-base:200ms; --dur-sheet:320ms;\n  --ease-standard:cubic-bezier(.2,.8,.2,1);\n  --ease-emphasized:cubic-bezier(.4,0,.2,1);\n\n  --m-1:#E5484D; --m-2:#E1620F; --m-3:#A9820C; --m-4:#4B9E2F;\n  --m-5:#12967A; --m-6:#0E8FB0; --m-7:#3A5BD9; --m-8:#5B4BD6;\n  --m-9:#7C3AED; --m-10:#A83BC0; --m-11:#C42C86; --m-12:#D33B63;\n\n  /* Token yang DIUSULKAN — belum ada di tokens.css (lihat catatan desain) */\n  --keycap-bg:var(--n-1);\n  --keycap-bg-active:var(--n-2);\n  --keycap-fg:var(--n-9);\n  --hero-glow:transparent;\n}\n\n[data-theme=\"light\"]{\n  --n-0:#F6F7F9; --n-1:#FFFFFF; --n-2:#EDF0F3; --n-3:#E1E5EA; --n-4:#C8CED7;\n  --n-5:#98A0AC; --n-6:#69717E; --n-7:#49515D; --n-8:#282D35; --n-9:#12161C;\n  --surface:var(--n-1); --surface-sunken:var(--n-0); --surface-raised:var(--n-1);\n  --border:var(--n-3);\n  --text:var(--n-9); --text-secondary:var(--n-7); --text-muted:var(--n-6);\n  --brand:#1E63E9; --brand-strong:#1750C9; --brand-tint:#E7EEFD; --on-brand:#FFFFFF;\n  --pos:#0E9E8E; --pos-text:#0A6E63; --pos-tint:#DBF4F0;\n  --neg:#E5484D; --neg-text:#B22026; --neg-tint:#FCE4E5;\n  --warn:#E8A317; --warn-text:#8A5A00; --warn-tint:#FBEFCF;\n  --btn-bg:var(--brand); --btn-bg-hover:#1A57CE; --btn-bg-active:#164BB0; --btn-fg:var(--on-brand);\n  --btn-bg-disabled:#C6D6F7; --btn-fg-disabled:#7C90B8;\n  --btn2-bg:var(--n-2); --btn2-bg-hover:var(--n-3); --btn2-bg-active:var(--n-4);\n  --btn2-fg:var(--n-9); --btn2-border:var(--border); --btn2-bg-disabled:var(--n-2); --btn2-fg-disabled:var(--n-5);\n  --focus-ring:0 0 0 2px var(--n-1),0 0 0 4px var(--brand); --focus-ring-width:2px;\n  --scrim:rgba(16,22,30,.32);\n  --route:#7C3AED; --route-text:#5B21B6; --route-tint:#F1EAFE;\n  --elev-1:0 1px 2px rgba(16,22,30,.06);\n  --elev-2:0 2px 10px rgba(16,22,30,.08);\n  --elev-3:0 8px 26px rgba(16,22,30,.12);\n  --keycap-bg:var(--n-1); --keycap-bg-active:var(--n-3); --keycap-fg:var(--n-9);\n  --hero-glow:radial-gradient(120% 90% at 50% 0%,var(--brand-tint) 0%,transparent 60%);\n}\n\n[data-theme=\"dark\"]{\n  --n-0:#0E1116; --n-1:#161A21; --n-2:#1D222B; --n-3:#242A34; --n-4:#313945;\n  --n-5:#48525F; --n-6:#79838F; --n-7:#9AA4B2; --n-8:#C8CED7; --n-9:#F2F4F7;\n  --surface:var(--n-1); --surface-sunken:var(--n-0); --surface-raised:var(--n-2);\n  --border:var(--n-3);\n  --text:var(--n-9); --text-secondary:var(--n-7); --text-muted:var(--n-6);\n  --brand:#5B8CFF; --brand-strong:#7AA2FF; --brand-tint:#182338; --on-brand:#0B1220;\n  --pos:#2FC7B4; --pos-text:#54D6C6; --pos-tint:#0F2B29;\n  --neg:#FF6B6E; --neg-text:#FF8E90; --neg-tint:#331A1C;\n  --warn:#E0A63A; --warn-text:#F0C070; --warn-tint:#33270F;\n  --btn-bg:var(--brand); --btn-bg-hover:#74A0FF; --btn-bg-active:#8FB2FF; --btn-fg:var(--on-brand);\n  --btn-bg-disabled:#2A3550; --btn-fg-disabled:#5E6E90;\n  --btn2-bg:var(--n-2); --btn2-bg-hover:var(--n-3); --btn2-bg-active:var(--n-4);\n  --btn2-fg:var(--n-9); --btn2-border:var(--border); --btn2-bg-disabled:var(--n-1); --btn2-fg-disabled:var(--n-5);\n  --focus-ring:0 0 0 2px var(--n-1),0 0 0 4px var(--brand); --focus-ring-width:2px;\n  --scrim:rgba(0,0,0,.55);\n  --route:#A78BFA; --route-text:#C4B5FD; --route-tint:#221A38;\n  --elev-1:0 1px 2px rgba(0,0,0,.4);\n  --elev-2:0 4px 14px rgba(0,0,0,.5);\n  --elev-3:0 10px 28px rgba(0,0,0,.6);\n  --keycap-bg:var(--n-2); --keycap-bg-active:var(--n-4); --keycap-fg:var(--n-9);\n  --hero-glow:radial-gradient(120% 90% at 50% 0%,rgba(91,140,255,.14) 0%,transparent 60%);\n}\n\n/* ============================================================\n   RESET + HARNESS\n   ============================================================ */\n*{margin:0;padding:0;box-sizing:border-box;}\nhtml,body{height:100%;}\nbody{\n  font-family:var(--bb-font);\n  background:\n    linear-gradient(180deg,#c9ced6,#aeb4be);\n  color:var(--text);\n  -webkit-font-smoothing:antialiased;\n  display:flex; flex-direction:column; align-items:center;\n  gap:var(--sp-4); padding:var(--sp-6) var(--sp-4) var(--sp-9);\n  min-height:100%;\n}\na{color:var(--brand); text-decoration:none;}\n\n/* Harness — bukan bagian dari layar, alat review */\n.harness{\n  display:flex; flex-wrap:wrap; gap:var(--sp-2); align-items:center;\n  justify-content:center; max-width:360px;\n  font:var(--fw-medium) var(--fs-caption)/1 var(--bb-font);\n}\n.harness__seg{\n  display:inline-flex; background:rgba(255,255,255,.7); border-radius:var(--r-pill);\n  padding:3px; box-shadow:var(--elev-1); backdrop-filter:blur(6px);\n}\n.harness__seg button{\n  border:0; background:transparent; color:#3a4048; cursor:pointer;\n  font:inherit; padding:6px 11px; border-radius:var(--r-pill); white-space:nowrap;\n}\n.harness__seg button[aria-pressed=\"true\"]{ background:#12161C; color:#fff; }\n\n/* ============================================================\n   PHONE FRAME\n   ============================================================ */\n.phone{\n  width:360px; min-height:760px;\n  background:var(--surface-sunken); color:var(--text);\n  border-radius:34px; overflow:hidden; position:relative;\n  box-shadow:var(--elev-3),0 0 0 1px rgba(0,0,0,.04);\n  display:flex; flex-direction:column;\n}\n.statusbar{\n  display:flex; align-items:center; justify-content:space-between;\n  padding:10px var(--sp-5) 2px;\n  font:var(--fw-semibold) var(--fs-footnote)/1 var(--bb-font);\n  color:var(--text);\n}\n.statusbar__dots{ display:flex; gap:5px; align-items:center; }\n.statusbar__dots i{ width:6px; height:6px; border-radius:50%; background:var(--text); opacity:.85; }\n\n/* ---- App top bar ---- */\n.topbar{\n  display:flex; align-items:center; justify-content:space-between;\n  padding:var(--sp-3) var(--sp-5) var(--sp-2);\n}\n.topbar__title{\n  font:var(--fw-semibold) var(--fs-headline)/1 var(--bb-font);\n  letter-spacing:-0.01em; display:flex; align-items:center; gap:var(--sp-2);\n}\n.topbar__title .mark{\n  width:22px; height:22px; border-radius:7px; background:var(--brand);\n  color:var(--on-brand); display:grid; place-items:center;\n  font:var(--fw-bold) 12px/1 var(--bb-font);\n}\n.topbar__actions{ display:flex; gap:var(--sp-2); }\n.iconbtn{\n  width:34px; height:34px; border-radius:var(--r-pill);\n  border:1px solid var(--border); background:var(--surface);\n  color:var(--text-secondary); display:grid; place-items:center;\n  cursor:pointer; font-size:16px; line-height:1;\n  transition:background var(--dur-tap) var(--ease-standard);\n}\n.iconbtn:hover{ background:var(--btn2-bg-hover); }\n.iconbtn:active{ background:var(--btn2-bg-active); }\n\n/* ============================================================\n   SCROLL BODY\n   ============================================================ */\n.body{\n  flex:1; display:flex; flex-direction:column;\n  padding:0 var(--sp-5) var(--sp-4); gap:var(--sp-4);\n  overflow:auto;\n}\n\n/* ---- HERO: per orang ---- */\n.hero{\n  position:relative; text-align:center;\n  padding:var(--sp-5) var(--sp-4) var(--sp-4);\n  border-radius:var(--r-card); overflow:hidden;\n}\n.hero::before{ content:\"\"; position:absolute; inset:0; background:var(--hero-glow); pointer-events:none; }\n.hero__label{\n  position:relative;\n  font:var(--fw-semibold) var(--fs-caption)/1 var(--bb-font);\n  letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted);\n  margin-bottom:var(--sp-3);\n}\n.hero__amount{\n  position:relative; display:flex; align-items:baseline; justify-content:center;\n  gap:var(--sp-2); color:var(--text);\n}\n.hero__cur{ font:var(--fw-semibold) var(--fs-title3)/1 var(--bb-font); color:var(--text-secondary); }\n.hero__num{\n  font-variant-numeric:tabular-nums; font-feature-settings:var(--bb-num-features);\n  font-size:var(--num-xl); font-weight:var(--fw-bold);\n  letter-spacing:var(--num-tracking); line-height:1;\n}\n.hero.is-empty .hero__num,.hero.is-empty .hero__cur{ color:var(--n-4); }\n.hero__meta{\n  position:relative; margin-top:var(--sp-3);\n  font:var(--fw-medium) var(--fs-subhead)/1.35 var(--bb-font); color:var(--text-secondary);\n}\n.hero__remainder{\n  position:relative; display:inline-flex; align-items:center; gap:6px;\n  margin-top:var(--sp-3); padding:5px 10px; border-radius:var(--r-pill);\n  background:var(--warn-tint); color:var(--warn-text);\n  font:var(--fw-medium) var(--fs-caption)/1 var(--bb-font);\n}\n.hero__hint{\n  position:relative; margin-top:var(--sp-2);\n  font:var(--fw-regular) var(--fs-subhead)/1.4 var(--bb-font); color:var(--text-muted);\n}\n\n/* ---- Field: total ---- */\n.field{\n  display:flex; align-items:center; justify-content:space-between;\n  background:var(--surface); border:1.5px solid var(--border);\n  border-radius:var(--r-field); padding:var(--sp-3) var(--sp-4);\n  cursor:pointer; transition:border-color var(--dur-tap) var(--ease-standard);\n}\n.field.is-active{ border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-tint); }\n.field__label{ font:var(--fw-medium) var(--fs-footnote)/1 var(--bb-font); color:var(--text-muted); }\n.field__value{ display:flex; align-items:baseline; gap:6px; }\n.field__cur{ font:var(--fw-semibold) var(--fs-subhead)/1 var(--bb-font); color:var(--text-secondary); }\n.field__num{\n  font-variant-numeric:tabular-nums; font-feature-settings:var(--bb-num-features);\n  font-size:var(--fs-title2); font-weight:var(--fw-semibold); color:var(--text);\n}\n.field__num.is-zero{ color:var(--n-4); }\n.field__caret{\n  width:2px; height:26px; background:var(--brand); border-radius:2px; margin-left:2px;\n  animation:blink 1s steps(1) infinite;\n}\n.field.is-active .field__caret{ display:block; }\n.field:not(.is-active) .field__caret{ display:none; }\n@keyframes blink{ 50%{opacity:0;} }\n\n/* ---- Row: people stepper + tip toggle ---- */\n.row{ display:flex; gap:var(--sp-3); }\n.tile{\n  flex:1; background:var(--surface); border:1px solid var(--border);\n  border-radius:var(--r-field); padding:var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-4);\n  display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2);\n}\n.tile__label{ font:var(--fw-medium) var(--fs-footnote)/1.2 var(--bb-font); color:var(--text-muted); }\n.tile__sub{ font:var(--fw-regular) var(--fs-caption2)/1.2 var(--bb-font); color:var(--text-muted); margin-top:3px; }\n.stepper{ display:flex; align-items:center; gap:var(--sp-1); }\n.stepper button{\n  width:36px; height:36px; border-radius:var(--r-btn);\n  border:1px solid var(--btn2-border); background:var(--btn2-bg); color:var(--btn2-fg);\n  font-size:20px; font-weight:var(--fw-medium); line-height:1; cursor:pointer;\n  display:grid; place-items:center; transition:background var(--dur-tap);\n}\n.stepper button:hover{ background:var(--btn2-bg-hover); }\n.stepper button:active{ background:var(--btn2-bg-active); transform:scale(.94); }\n.stepper button:disabled{ background:var(--btn2-bg-disabled); color:var(--btn2-fg-disabled); cursor:default; transform:none; }\n.stepper__val{\n  min-width:30px; text-align:center;\n  font-variant-numeric:tabular-nums; font-size:var(--fs-title3); font-weight:var(--fw-semibold);\n}\n\n/* ---- Tip toggle chip ---- */\n.tipchip{\n  display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2);\n  cursor:pointer; width:100%; border:0; background:transparent; text-align:left;\n}\n.tipchip__lead{ display:flex; align-items:center; gap:8px; }\n.switch{\n  width:42px; height:25px; border-radius:var(--r-pill); background:var(--n-4);\n  position:relative; flex:none; transition:background var(--dur-base) var(--ease-standard);\n}\n.switch::after{\n  content:\"\"; position:absolute; top:2px; left:2px; width:21px; height:21px;\n  border-radius:50%; background:#fff; box-shadow:var(--elev-1);\n  transition:transform var(--dur-base) var(--ease-standard);\n}\n.tile.is-on .switch{ background:var(--brand); }\n.tile.is-on .switch::after{ transform:translateX(17px); }\n\n/* ---- Tip detail (expandable) ---- */\n.tipdetail{ display:none; flex-direction:column; gap:var(--sp-3); }\n.tipdetail.is-open{ display:flex; }\n.segchips{ display:flex; gap:var(--sp-2); }\n.chip{\n  flex:1; border:1px solid var(--border); background:var(--surface);\n  border-radius:var(--r-btn); padding:9px 4px; cursor:pointer; text-align:center;\n  font:var(--fw-medium) var(--fs-subhead)/1 var(--bb-font); color:var(--text-secondary);\n  font-variant-numeric:tabular-nums; transition:all var(--dur-tap) var(--ease-standard);\n}\n.chip[aria-pressed=\"true\"]{ background:var(--brand); border-color:var(--brand); color:var(--on-brand); }\n.tipmode{ display:flex; gap:var(--sp-2); }\n.tipmode button{\n  flex:1; border:1px solid var(--border); background:var(--surface);\n  border-radius:var(--r-btn); padding:7px; cursor:pointer; color:var(--text-muted);\n  font:var(--fw-medium) var(--fs-caption)/1 var(--bb-font);\n}\n.tipmode button[aria-pressed=\"true\"]{ background:var(--n-2); color:var(--text); border-color:var(--n-4); }\n\n/* ---- Section heads ---- */\n.sectionhead{\n  display:flex; align-items:center; justify-content:space-between;\n  margin-top:var(--sp-1);\n}\n.sectionhead__t{ font:var(--fw-semibold) var(--fs-footnote)/1 var(--bb-font); color:var(--text-secondary); letter-spacing:.02em; }\n.linkbtn{ border:0; background:transparent; cursor:pointer; color:var(--brand);\n  font:var(--fw-semibold) var(--fs-footnote)/1 var(--bb-font); padding:4px; }\n\n/* ---- Uneven split list ---- */\n.splitmode{ display:none; flex-direction:column; gap:var(--sp-2); }\n.splitmode.is-open{ display:flex; }\n.person{\n  display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:var(--sp-3);\n  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-field);\n  padding:var(--sp-2) var(--sp-3);\n}\n.avatar{\n  width:34px; height:34px; border-radius:50%; background:var(--cat,var(--m-7));\n  color:#fff; display:grid; place-items:center;\n  font:var(--fw-semibold) var(--fs-footnote)/1 var(--bb-font);\n}\n.person__mid{ display:flex; flex-direction:column; gap:6px; min-width:0; }\n.person__top{ display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2); }\n.person__name{ font:var(--fw-medium) var(--fs-footnote)/1 var(--bb-font); color:var(--text-secondary); }\n.person__weight{ font:var(--fw-medium) var(--fs-caption)/1 var(--bb-font); color:var(--text-muted); font-variant-numeric:tabular-nums; }\n.slider{ -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:var(--r-pill);\n  background:var(--n-3); outline:none; cursor:pointer; }\n.slider::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; border-radius:50%;\n  background:var(--cat,var(--m-7)); border:3px solid var(--surface); box-shadow:var(--elev-1); cursor:grab; }\n.slider::-moz-range-thumb{ width:20px; height:20px; border-radius:50%;\n  background:var(--cat,var(--m-7)); border:3px solid var(--surface); box-shadow:var(--elev-1); cursor:grab; }\n.person__amt{\n  font-variant-numeric:tabular-nums; font-feature-settings:var(--bb-num-features);\n  font:var(--fw-semibold) var(--fs-subhead)/1 var(--bb-font); color:var(--text); text-align:right;\n}\n.splitmode__hint{ font:var(--fw-regular) var(--fs-caption)/1.4 var(--bb-font); color:var(--text-muted); padding:0 var(--sp-1); }\n\n/* ============================================================\n   FOOTER (keypad OR actions)\n   ============================================================ */\n.footer{\n  border-top:1px solid var(--border); background:var(--surface);\n  padding:var(--sp-3) var(--sp-4) var(--sp-5);\n}\n.keypad{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-2); }\n.key{\n  height:52px; border:0; border-radius:var(--r-btn);\n  background:var(--keycap-bg); color:var(--keycap-fg); box-shadow:var(--elev-1);\n  font-variant-numeric:tabular-nums;\n  font:var(--fw-medium) var(--fs-title2)/1 var(--bb-font); cursor:pointer;\n  transition:background var(--dur-tap),transform var(--dur-tap);\n}\n.key:hover{ background:var(--keycap-bg-active); }\n.key:active{ background:var(--keycap-bg-active); transform:scale(.96); }\n.key--util{ font-size:var(--fs-subhead); color:var(--text-secondary); font-weight:var(--fw-semibold); }\n.keypad__done{ grid-column:1 / -1; margin-top:var(--sp-1); }\n\n/* Action buttons area (shown once amount exists) */\n.actions{ display:flex; flex-direction:column; gap:var(--sp-2); }\n.actions__row{ display:flex; gap:var(--sp-2); }\n.btn{\n  border:0; border-radius:var(--r-btn); cursor:pointer;\n  font:var(--fw-semibold) var(--fs-body)/1 var(--bb-font);\n  padding:14px; display:flex; align-items:center; justify-content:center; gap:8px;\n  transition:background var(--dur-tap);\n}\n.btn--primary{ background:var(--btn-bg); color:var(--btn-fg); flex:1; }\n.btn--primary:hover{ background:var(--btn-bg-hover); }\n.btn--primary:active{ background:var(--btn-bg-active); }\n.btn--secondary{ background:var(--btn2-bg); color:var(--btn2-fg); border:1px solid var(--btn2-border); flex:1; }\n.btn--secondary:hover{ background:var(--btn2-bg-hover); }\n.btn--ghost{ background:transparent; color:var(--text-secondary); font-weight:var(--fw-medium);\n  font-size:var(--fs-subhead); padding:10px; }\n.btn--ghost:hover{ color:var(--text); }\n.btn__arrow{ color:var(--route); }\n\n/* ============================================================\n   SHEETS (history / share)\n   ============================================================ */\n.scrim{\n  position:absolute; inset:0; background:var(--scrim); opacity:0; pointer-events:none;\n  transition:opacity var(--dur-base) var(--ease-standard); z-index:5;\n}\n.scrim.is-open{ opacity:1; pointer-events:auto; }\n.sheet{\n  position:absolute; left:0; right:0; bottom:0; z-index:6;\n  background:var(--surface); border-radius:20px 20px 0 0;\n  transform:translateY(102%); transition:transform var(--dur-sheet) var(--ease-emphasized);\n  padding:var(--sp-3) var(--sp-5) var(--sp-6); max-height:82%; overflow:auto;\n  box-shadow:var(--elev-3);\n}\n.sheet.is-open{ transform:translateY(0); }\n.sheet__grip{ width:38px; height:5px; border-radius:var(--r-pill); background:var(--n-4); margin:2px auto var(--sp-4); }\n.sheet__title{ font:var(--fw-semibold) var(--fs-title3)/1 var(--bb-font); margin-bottom:var(--sp-1); }\n.sheet__sub{ font:var(--fw-regular) var(--fs-footnote)/1.4 var(--bb-font); color:var(--text-muted); margin-bottom:var(--sp-4); }\n\n.histitem{\n  display:flex; align-items:center; justify-content:space-between; gap:var(--sp-3);\n  padding:var(--sp-3) 0; border-bottom:1px solid var(--border); cursor:pointer;\n}\n.histitem:last-child{ border-bottom:0; }\n.histitem__l{ min-width:0; }\n.histitem__top{ font:var(--fw-regular) var(--fs-footnote)/1.3 var(--bb-font); color:var(--text-muted);\n  font-variant-numeric:tabular-nums; }\n.histitem__amt{ font-variant-numeric:tabular-nums; font-feature-settings:var(--bb-num-features);\n  font:var(--fw-bold) var(--fs-title3)/1.1 var(--bb-font); color:var(--text); margin-top:3px; }\n.histitem__r{ text-align:right; flex:none; }\n.histitem__per{ font-variant-numeric:tabular-nums; font:var(--fw-semibold) var(--fs-subhead)/1 var(--bb-font); color:var(--brand); }\n.histitem__perlabel{ font:var(--fw-regular) var(--fs-caption2)/1 var(--bb-font); color:var(--text-muted); margin-top:4px; }\n\n/* Share preview card */\n.sharecard{\n  background:var(--surface-sunken); border:1px solid var(--border); border-radius:var(--r-card);\n  padding:var(--sp-5); text-align:center; margin-bottom:var(--sp-4);\n}\n.sharecard__amt{ font-variant-numeric:tabular-nums; font-feature-settings:var(--bb-num-features);\n  font-size:var(--num-lg); font-weight:var(--fw-bold); letter-spacing:var(--num-tracking); }\n.sharecard__meta{ font:var(--fw-medium) var(--fs-footnote)/1.4 var(--bb-font); color:var(--text-muted); margin-top:var(--sp-2); }\n.sharegrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:var(--sp-3); }\n.shareway{ display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;\n  border:0; background:transparent; font:var(--fw-medium) var(--fs-caption2)/1 var(--bb-font); color:var(--text-secondary); }\n.shareway__ic{ width:52px; height:52px; border-radius:var(--r-card); display:grid; place-items:center;\n  background:var(--surface); border:1px solid var(--border); font-size:22px; }\n\n/* ============================================================\n   STATE MACHINE — bagian footer & sections show/hide\n   Body[data-input] toggles keypad vs actions.\n   ============================================================ */\n.phone[data-input=\"keypad\"] .footer--actions{ display:none; }\n.phone[data-input=\"done\"]   .footer--keypad{ display:none; }\n.phone[data-input=\"done\"]   .field:not(.is-active){}\n.phone[data-input=\"keypad\"] .field{ }\n<\u002Fstyle>\n<\u002Fhead>\n<body>\n\n<div class=\"harness\" role=\"toolbar\" aria-label=\"Pratinjau state\">\n  <div class=\"harness__seg\" id=\"stateSeg\">\n    <button data-state=\"empty\" aria-pressed=\"true\">Kosong<\u002Fbutton>\n    <button data-state=\"rata\">Rata<\u002Fbutton>\n    <button data-state=\"tip\">Tip aktif<\u002Fbutton>\n    <button data-state=\"uneven\">Ga rata<\u002Fbutton>\n    <button data-state=\"riwayat\">Riwayat<\u002Fbutton>\n  <\u002Fdiv>\n  <div class=\"harness__seg\" id=\"themeSeg\">\n    <button data-theme-set=\"light\" aria-pressed=\"true\">☀︎<\u002Fbutton>\n    <button data-theme-set=\"dark\">☾<\u002Fbutton>\n  <\u002Fdiv>\n<\u002Fdiv>\n\n<div class=\"phone\" id=\"phone\" data-input=\"keypad\">\n  <div class=\"statusbar\">\n    <span>9:41<\u002Fspan>\n    <span class=\"statusbar__dots\"><i><\u002Fi><i><\u002Fi><i><\u002Fi><\u002Fspan>\n  <\u002Fdiv>\n\n  <div class=\"topbar\">\n    <div class=\"topbar__title\"><span class=\"mark\">B<\u002Fspan> Bagi Cepat<\u002Fdiv>\n    <div class=\"topbar__actions\">\n      <button class=\"iconbtn\" id=\"btnHistory\" title=\"Riwayat\">◷<\u002Fbutton>\n      <button class=\"iconbtn\" id=\"btnTheme\" title=\"Tema\">☾<\u002Fbutton>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"body\">\n    <!-- HERO -->\n    <div class=\"hero\" id=\"hero\">\n      <div class=\"hero__label\">Per orang<\u002Fdiv>\n      <div class=\"hero__amount\">\n        <span class=\"hero__cur\">Rp<\u002Fspan>\n        <span class=\"hero__num bb-numeral\" id=\"heroNum\">0<\u002Fspan>\n      <\u002Fdiv>\n      <div class=\"hero__meta\" id=\"heroMeta\"><\u002Fdiv>\n      <div class=\"hero__remainder\" id=\"heroRem\" style=\"display:none\"><\u002Fdiv>\n      <div class=\"hero__hint\" id=\"heroHint\">Ketik total tagihannya di bawah<\u002Fdiv>\n    <\u002Fdiv>\n\n    <!-- TOTAL FIELD -->\n    <div class=\"field is-active\" id=\"totalField\">\n      <span class=\"field__label\">Total tagihan<\u002Fspan>\n      <span class=\"field__value\">\n        <span class=\"field__cur\">Rp<\u002Fspan>\n        <span class=\"field__num is-zero bb-numeral\" id=\"totalNum\">0<\u002Fspan>\n        <span class=\"field__caret\"><\u002Fspan>\n      <\u002Fspan>\n    <\u002Fdiv>\n\n    <!-- ORANG + TIP -->\n    <div class=\"row\">\n      <div class=\"tile\">\n        <div>\n          <div class=\"tile__label\">Orang<\u002Fdiv>\n          <div class=\"tile__sub\" id=\"peopleSub\">bagi rata<\u002Fdiv>\n        <\u002Fdiv>\n        <div class=\"stepper\">\n          <button id=\"pMinus\" aria-label=\"Kurangi orang\">−<\u002Fbutton>\n          <span class=\"stepper__val bb-numeral\" id=\"peopleVal\">4<\u002Fspan>\n          <button id=\"pPlus\" aria-label=\"Tambah orang\">+<\u002Fbutton>\n        <\u002Fdiv>\n      <\u002Fdiv>\n    <\u002Fdiv>\n\n    <div class=\"tile\" id=\"tipTile\">\n      <button class=\"tipchip\" id=\"tipToggle\" aria-expanded=\"false\">\n        <span class=\"tipchip__lead\">\n          <span class=\"tile__label\" style=\"color:var(--text)\">Tip / Pajak<\u002Fspan>\n          <span class=\"tile__sub\" id=\"tipSummary\" style=\"margin-top:0\">opsional<\u002Fspan>\n        <\u002Fspan>\n        <span class=\"switch\"><\u002Fspan>\n      <\u002Fbutton>\n    <\u002Fdiv>\n    <div class=\"tipdetail\" id=\"tipDetail\">\n      <div class=\"tipmode\" id=\"tipMode\">\n        <button data-tipmode=\"tip\" aria-pressed=\"true\">Tip<\u002Fbutton>\n        <button data-tipmode=\"tax\" aria-pressed=\"false\">Pajak (PB1 10%)<\u002Fbutton>\n      <\u002Fdiv>\n      <div class=\"segchips\" id=\"tipChips\">\n        <button class=\"chip\" data-pct=\"0\" aria-pressed=\"false\">0%<\u002Fbutton>\n        <button class=\"chip\" data-pct=\"5\" aria-pressed=\"false\">5%<\u002Fbutton>\n        <button class=\"chip\" data-pct=\"10\" aria-pressed=\"true\">10%<\u002Fbutton>\n        <button class=\"chip\" data-pct=\"15\" aria-pressed=\"false\">15%<\u002Fbutton>\n      <\u002Fdiv>\n    <\u002Fdiv>\n\n    <!-- UNEVEN -->\n    <div class=\"sectionhead\" id=\"splitHead\">\n      <span class=\"sectionhead__t\">Pembagian<\u002Fspan>\n      <button class=\"linkbtn\" id=\"splitToggle\">Ada yang makan lebih? →<\u002Fbutton>\n    <\u002Fdiv>\n    <div class=\"splitmode\" id=\"splitMode\">\n      <p class=\"splitmode__hint\">Geser tiap orang sesuai porsinya. Total selalu pas.<\u002Fp>\n      <div id=\"personList\"><\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <!-- FOOTER: keypad -->\n  <div class=\"footer footer--keypad\">\n    <div class=\"keypad\" id=\"keypad\">\n      <button class=\"key\" data-k=\"1\">1<\u002Fbutton>\n      <button class=\"key\" data-k=\"2\">2<\u002Fbutton>\n      <button class=\"key\" data-k=\"3\">3<\u002Fbutton>\n      <button class=\"key\" data-k=\"4\">4<\u002Fbutton>\n      <button class=\"key\" data-k=\"5\">5<\u002Fbutton>\n      <button class=\"key\" data-k=\"6\">6<\u002Fbutton>\n      <button class=\"key\" data-k=\"7\">7<\u002Fbutton>\n      <button class=\"key\" data-k=\"8\">8<\u002Fbutton>\n      <button class=\"key\" data-k=\"9\">9<\u002Fbutton>\n      <button class=\"key key--util\" data-k=\"000\">000<\u002Fbutton>\n      <button class=\"key\" data-k=\"0\">0<\u002Fbutton>\n      <button class=\"key key--util\" data-k=\"back\">⌫<\u002Fbutton>\n      <button class=\"btn btn--primary keypad__done\" id=\"keypadDone\">Lihat hasil<\u002Fbutton>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <!-- FOOTER: actions -->\n  <div class=\"footer footer--actions\">\n    <div class=\"actions\">\n      <div class=\"actions__row\">\n        <button class=\"btn btn--secondary\" id=\"btnEdit\">Ubah angka<\u002Fbutton>\n        <button class=\"btn btn--primary\" id=\"btnShare\">Bagikan<\u002Fbutton>\n      <\u002Fdiv>\n      <button class=\"btn btn--ghost\" id=\"btnGroup\">Butuh lacak siapa bayar? <span class=\"btn__arrow\">Jadikan grup →<\u002Fspan><\u002Fbutton>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <!-- SHEETS -->\n  <div class=\"scrim\" id=\"scrim\"><\u002Fdiv>\n\n  <div class=\"sheet\" id=\"histSheet\">\n    <div class=\"sheet__grip\"><\u002Fdiv>\n    <div class=\"sheet__title\">Hitungan terakhir<\u002Fdiv>\n    <div class=\"sheet__sub\">Tersimpan di HP ini saja. Ketuk untuk pakai lagi.<\u002Fdiv>\n    <div id=\"histList\"><\u002Fdiv>\n  <\u002Fdiv>\n\n  <div class=\"sheet\" id=\"shareSheet\">\n    <div class=\"sheet__grip\"><\u002Fdiv>\n    <div class=\"sharecard\">\n      <div class=\"hero__label\" style=\"margin-bottom:8px\">Per orang<\u002Fdiv>\n      <div class=\"sharecard__amt bb-numeral\" id=\"sharePer\">Rp 0<\u002Fdiv>\n      <div class=\"sharecard__meta\" id=\"shareMeta\"><\u002Fdiv>\n    <\u002Fdiv>\n    <div class=\"sharegrid\">\n      <button class=\"shareway\"><span class=\"shareway__ic\">✎<\u002Fspan>Salin<\u002Fbutton>\n      <button class=\"shareway\"><span class=\"shareway__ic\">◔<\u002Fspan>WhatsApp<\u002Fbutton>\n      <button class=\"shareway\"><span class=\"shareway__ic\">◫<\u002Fspan>QRIS<\u002Fbutton>\n      <button class=\"shareway\"><span class=\"shareway__ic\">↗<\u002Fspan>Lainnya<\u002Fbutton>\n    <\u002Fdiv>\n  <\u002Fdiv>\n<\u002Fdiv>\n\n<script>\n/* =========================================================================\n   STATE\n   ========================================================================= */\nconst M = ['--m-1','--m-4','--m-6','--m-8','--m-11','--m-3','--m-9','--m-5'];\nconst S = {\n  total: 0,          // rupiah integer\n  people: 4,\n  tipOn: false,\n  tipMode: 'tip',    // 'tip' | 'tax'\n  tipPct: 10,\n  uneven: false,\n  weights: [],       // per-person, only when uneven\n};\n\nconst HISTORY = [\n  { total: 285000, people: 4, tip: 0, label: 'Makan siang kantor' },\n  { total: 132000, people: 3, tip: 10, label: 'Kopi + cemilan' },\n  { total: 384500000, people: 12, tip: 0, label: 'Katering kondangan' }, // 9 digit → uji layout\n  { total: 100000, people: 3, tip: 0, label: 'Patungan bensin' },        // sisa recehan\n];\n\n/* =========================================================================\n   HELPERS\n   ========================================================================= */\nconst $ = s => document.querySelector(s);\nconst fmt = n => n.toLocaleString('id-ID');\nconst phone = $('#phone');\n\nfunction grandTotal(st = S){\n  const t = st.total;\n  if(!st.tipOn || !st.tipPct) return t;\n  return Math.round(t * (1 + st.tipPct/100));\n}\n// bagi rata dgn sisa recehan → sebagian orang bayar +Rp1\nfunction evenSplit(grand, people){\n  const base = Math.floor(grand / people);\n  const rem  = grand - base * people;   // rem orang bayar base+1\n  return { base, rem, high: base + 1 };\n}\n// bagi berbobot, sisa rupiah ke bobot terbesar\nfunction weightedSplit(grand, weights){\n  const sum = weights.reduce((a,b)=>a+b,0) || 1;\n  const raw = weights.map(w => grand * w / sum);\n  const floor = raw.map(Math.floor);\n  let left = grand - floor.reduce((a,b)=>a+b,0);\n  const order = raw.map((v,i)=>({i, frac:v-Math.floor(v)})).sort((a,b)=>b.frac-a.frac);\n  for(let k=0; k<left; k++) floor[order[k % order.length].i]++;\n  return floor;\n}\n\n/* =========================================================================\n   RENDER\n   ========================================================================= */\nfunction render(){\n  const empty = S.total === 0;\n  const grand = grandTotal();\n  const hero = $('#hero');\n\n  // total field\n  $('#totalNum').textContent = fmt(S.total);\n  $('#totalNum').classList.toggle('is-zero', empty);\n\n  // people\n  $('#peopleVal').textContent = S.people;\n  $('#pMinus').disabled = S.people <= 1;\n\n  // tip tile + summary\n  $('#tipTile').classList.toggle('is-on', S.tipOn);\n  $('#tipToggle').setAttribute('aria-expanded', S.tipOn);\n  $('#tipDetail').classList.toggle('is-open', S.tipOn);\n  $('#tipSummary').textContent = S.tipOn\n    ? `${S.tipMode==='tax'?'pajak':'tip'} ${S.tipPct}% · +Rp ${fmt(grand - S.total)}`\n    : 'opsional';\n\n  // split section availability\n  $('#splitHead').style.display = (empty || S.people < 2) ? 'none' : 'flex';\n  $('#splitMode').classList.toggle('is-open', S.uneven && !empty && S.people >= 2);\n  $('#splitToggle').textContent = S.uneven ? 'Balik ke rata' : 'Ada yang makan lebih? →';\n  $('#peopleSub').textContent = S.uneven ? 'atur porsi' : 'bagi rata';\n\n  // HERO\n  hero.classList.toggle('is-empty', empty);\n  $('#heroHint').style.display = empty ? 'block' : 'none';\n  $('#heroMeta').style.display = empty ? 'none' : 'block';\n  $('#heroRem').style.display = 'none';\n\n  if(empty){\n    $('#heroNum').textContent = '0';\n    $('#heroMeta').textContent = '';\n  } else if(S.uneven && S.people >= 2){\n    ensureWeights();\n    const amts = weightedSplit(grand, S.weights);\n    const mx = Math.max(...amts);\n    $('#heroNum').textContent = fmt(mx);\n    $('#heroMeta').textContent = `porsi terbesar · Rp ${fmt(grand)} dibagi ${S.people}`;\n    renderPeople(amts);\n  } else {\n    const { base, rem, high } = evenSplit(grand, S.people);\n    $('#heroNum').textContent = fmt(rem ? high : base);\n    const tipTxt = S.tipOn && S.tipPct ? ` (incl. ${S.tipMode==='tax'?'pajak':'tip'})` : '';\n    $('#heroMeta').textContent = `Rp ${fmt(grand)} ÷ ${S.people} orang${tipTxt}`;\n    if(rem){\n      $('#heroRem').style.display = 'inline-flex';\n      $('#heroRem').innerHTML = `⤵ ${rem} orang bayar Rp ${fmt(high)}, sisanya Rp ${fmt(base)}`;\n    }\n  }\n}\n\nfunction ensureWeights(){\n  if(S.weights.length !== S.people)\n    S.weights = Array.from({length:S.people}, (_,i)=> i===0 ? 2 : 1);\n}\n\nfunction renderPeople(amts){\n  const list = $('#personList');\n  list.innerHTML = '';\n  S.weights.forEach((w,i)=>{\n    const row = document.createElement('div');\n    row.className = 'person';\n    row.style.setProperty('--cat', `var(${M[i % M.length]})`);\n    row.innerHTML = `\n      <div class=\"avatar\">${String.fromCharCode(65+i)}<\u002Fdiv>\n      <div class=\"person__mid\">\n        <div class=\"person__top\">\n          <span class=\"person__name\">Orang ${i+1}<\u002Fspan>\n          <span class=\"person__weight\">${w}×<\u002Fspan>\n        <\u002Fdiv>\n        <input class=\"slider\" type=\"range\" min=\"1\" max=\"5\" step=\"1\" value=\"${w}\" data-i=\"${i}\">\n      <\u002Fdiv>\n      <div class=\"person__amt\">Rp ${fmt(amts[i])}<\u002Fdiv>`;\n    list.appendChild(row);\n  });\n  list.querySelectorAll('.slider').forEach(sl=>{\n    sl.addEventListener('input', e=>{\n      S.weights[+e.target.dataset.i] = +e.target.value;\n      render();\n    });\n  });\n}\n\n/* =========================================================================\n   INPUT MODE (keypad vs done)\n   ========================================================================= */\nfunction setMode(m){\n  phone.dataset.input = m;\n  $('#totalField').classList.toggle('is-active', m === 'keypad');\n}\n\n/* keypad */\n$('#keypad').addEventListener('click', e=>{\n  const k = e.target.closest('.key'); if(!k) return;\n  const v = k.dataset.k;\n  if(v === 'back') S.total = Math.floor(S.total / 10);\n  else if(v === '000') S.total = S.total ? S.total * 1000 : 0;\n  else S.total = S.total * 10 + (+v);\n  if(S.total > 999999999) S.total = 999999999; // cap 9 digit\n  render();\n});\n$('#keypadDone').addEventListener('click', ()=>{ if(S.total>0) setMode('done'); });\n$('#totalField').addEventListener('click', ()=> setMode('keypad'));\n$('#btnEdit').addEventListener('click', ()=> setMode('keypad'));\n\n/* people */\n$('#pMinus').addEventListener('click', ()=>{ if(S.people>1){ S.people--; S.weights=[]; render(); }});\n$('#pPlus').addEventListener('click',  ()=>{ if(S.people<20){ S.people++; S.weights=[]; render(); }});\n\n/* tip */\n$('#tipToggle').addEventListener('click', ()=>{ S.tipOn = !S.tipOn; render(); });\n$('#tipChips').addEventListener('click', e=>{\n  const c = e.target.closest('.chip'); if(!c) return;\n  S.tipPct = +c.dataset.pct;\n  $('#tipChips').querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed', x===c));\n  render();\n});\n$('#tipMode').addEventListener('click', e=>{\n  const b = e.target.closest('button'); if(!b) return;\n  S.tipMode = b.dataset.tipmode;\n  $('#tipMode').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x===b));\n  if(S.tipMode==='tax'){ S.tipPct=10; $('#tipChips').querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed', x.dataset.pct==='10')); }\n  render();\n});\n\n/* uneven */\n$('#splitToggle').addEventListener('click', ()=>{ S.uneven=!S.uneven; if(S.uneven){ S.weights=[]; ensureWeights(); } render(); });\n\n/* =========================================================================\n   SHEETS\n   ========================================================================= */\nconst scrim = $('#scrim');\nfunction openSheet(id){ $(id).classList.add('is-open'); scrim.classList.add('is-open'); }\nfunction closeSheets(){ document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('is-open')); scrim.classList.remove('is-open'); }\nscrim.addEventListener('click', closeSheets);\n\n$('#btnHistory').addEventListener('click', ()=>{ buildHistory(); openSheet('#histSheet'); });\n$('#btnShare').addEventListener('click', ()=>{\n  const grand = grandTotal();\n  let per;\n  if(S.uneven){ ensureWeights(); per = Math.max(...weightedSplit(grand,S.weights)); }\n  else { const {base,rem,high}=evenSplit(grand,S.people); per = rem?high:base; }\n  $('#sharePer').textContent = 'Rp ' + fmt(per);\n  $('#shareMeta').textContent = `Rp ${fmt(grand)} · ${S.people} orang${S.uneven?' · porsi diatur':''}`;\n  openSheet('#shareSheet');\n});\n\nfunction buildHistory(){\n  const list = $('#histList'); list.innerHTML = '';\n  HISTORY.forEach(h=>{\n    const g = h.tip ? Math.round(h.total*(1+h.tip/100)) : h.total;\n    const {base,rem,high} = evenSplit(g, h.people);\n    const per = rem?high:base;\n    const el = document.createElement('div');\n    el.className = 'histitem';\n    el.innerHTML = `\n      <div class=\"histitem__l\">\n        <div class=\"histitem__top\">${h.label} · Rp ${fmt(h.total)}${h.tip?` +${h.tip}%`:''} · ${h.people} org<\u002Fdiv>\n        <div class=\"histitem__amt\">Rp ${fmt(per)}<\u002Fdiv>\n      <\u002Fdiv>\n      <div class=\"histitem__r\">\n        <div class=\"histitem__per\">↺<\u002Fdiv>\n        <div class=\"histitem__perlabel\">pakai lagi<\u002Fdiv>\n      <\u002Fdiv>`;\n    el.addEventListener('click', ()=>{\n      S.total=h.total; S.people=h.people; S.tipOn=!!h.tip; S.tipPct=h.tip||10; S.uneven=false; S.weights=[];\n      $('#tipChips').querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed', +x.dataset.pct===(h.tip||10)));\n      closeSheets(); setMode('done'); render();\n    });\n    list.appendChild(el);\n  });\n}\n\n/* group escape hatch (mock) */\n$('#btnGroup').addEventListener('click', ()=> alert('Membuat grup dari hitungan ini — angka & orang terbawa, lalu bisa tambah nama & lacak siapa bayar.'));\n\n/* =========================================================================\n   THEME\n   ========================================================================= */\nfunction setTheme(t){\n  document.documentElement.dataset.theme = t;\n  $('#btnTheme').textContent = t==='dark' ? '☀︎' : '☾';\n  document.querySelectorAll('#themeSeg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.themeSet===t));\n}\n$('#btnTheme').addEventListener('click', ()=> setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'));\n$('#themeSeg').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b) setTheme(b.dataset.themeSet); });\n\n/* =========================================================================\n   HARNESS STATES\n   ========================================================================= */\nfunction applyState(name){\n  closeSheets();\n  const chips = () => $('#tipChips').querySelectorAll('.chip');\n  const setPct = p => chips().forEach(x=>x.setAttribute('aria-pressed', +x.dataset.pct===p));\n  switch(name){\n    case 'empty':\n      Object.assign(S,{total:0,people:4,tipOn:false,tipPct:10,tipMode:'tip',uneven:false,weights:[]});\n      setPct(10); setMode('keypad'); break;\n    case 'rata':\n      Object.assign(S,{total:240000,people:4,tipOn:false,uneven:false,weights:[]});\n      setMode('done'); break;\n    case 'tip':\n      Object.assign(S,{total:218000,people:3,tipOn:true,tipMode:'tip',tipPct:10,uneven:false,weights:[]});\n      setPct(10); setMode('done'); break;\n    case 'uneven':\n      Object.assign(S,{total:517000,people:4,tipOn:false,uneven:true,weights:[3,1,1,1]});\n      setMode('done'); break;\n    case 'riwayat':\n      Object.assign(S,{total:240000,people:4,tipOn:false,uneven:false,weights:[]});\n      setMode('done'); render(); buildHistory(); openSheet('#histSheet'); return;\n  }\n  render();\n}\n$('#stateSeg').addEventListener('click', e=>{\n  const b=e.target.closest('button'); if(!b) return;\n  $('#stateSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', x===b));\n  applyState(b.dataset.state);\n});\n\n/* init */\nsetTheme('light');\napplyState('empty');\n<\u002Fscript>\n\n<!-- ============================================================\nCATATAN DESAIN (sekali, untuk agent coding)\n\nKonteks. Layar tanpa grup, tanpa nama, tanpa simpan ke server. Satu\ntujuan: satu angka per orang, cepat, lalu tutup. Karena paling sering\ndibuka & jadi kesan pertama, hero \"per orang\" (--num-xl, tabular)\nadalah satu-satunya elemen berukuran besar; semua yang lain tunduk.\n\nInput angka. Keypad numerik kustom selalu tampak di footer, bukan\nkeyboard OS — rupiah panjang, hindari salah ketik, satu tangan. Tombol\n\"000\" untuk nol beruntun. Jumlah orang pakai stepper (angka kecil,\nsering ganti) — tak pantas keyboard penuh. Cap 9 digit (999.999.999)\nsesuai catatan token --num-xl (muat 9 digit di 360px).\n\nProgresif. Tip/pajak & pembagian ga-rata tersembunyi di balik satu\nbaris toggle / satu link, jadi mayoritas yang bagi rata lihat layar\nbersih. Ga rata pakai slider porsi (1×–5×) per orang, live; sisa rupiah\njatuh ke porsi terbesar (weightedSplit). Bagi rata: sisa recehan\ndiangkat eksplisit — \"N orang bayar +Rp1\" (evenSplit), bukan disembunyikan.\n\nState (harness atas, alat review — bukan UI): empty / rata / tip / ga\nrata / riwayat. Tema light-dark via toggle in-app (◷/☾) & di harness.\nRiwayat = sheet lokal, ada entri 9 digit (Rp 384.500.000 ÷ 12) utk uji\nlayout & entri Rp 100.000 ÷ 3 utk sisa recehan.\n\nJalan keluar: \"Jadikan grup\" di footer hasil — nol harga/lisensi/beli.\n\nTOKEN YANG PERLU DITAMBAH ke tokens.css (dipakai di sini via fallback\nlokal di :root, mohon dipromosikan):\n  --keycap-bg / --keycap-bg-active / --keycap-fg\n     Keycap keypad. Sekarang: light = n-1 / n-3, dark = n-2 / n-4.\n     tokens.css belum punya warna khusus keycap; ini elemen sentral\n     layar tersibuk, layak token sendiri (bukan meminjam --btn2).\n  --hero-glow\n     Aura tipis di belakang hero (brand-tint di light, brand 14% di\n     dark). Semata dekoratif; boleh diabaikan kalau tak mau efek.\nSisanya 100% dari tokens.css tanpa nilai mentah yang diulang.\n============================================================ -->\n\n\n<\u002Fbody><\u002Fhtml>"
+  </script>
+</body>
+</html>

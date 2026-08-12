@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>BagiBill — Beranda</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1E63E9; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #1E63E9; z-index: 9999; }
+    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    #__bundler_placeholder { color: #999; font-size: 14px; }
+  </style>
+  <noscript>
+    <style>#__bundler_loading { display: none; }</style>
+    <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
+      This page requires JavaScript to display.
+    </div>
+  </noscript>
+</head>
+<body>
+  <div id="__bundler_thumbnail">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#1E63E9"></rect>
+    <rect x="420" y="250" width="360" height="120" rx="24" fill="#FFFFFF"></rect>
+    <rect x="420" y="410" width="360" height="70" rx="18" fill="#FFFFFF" opacity=".55"></rect>
+    <rect x="420" y="500" width="360" height="70" rx="18" fill="#FFFFFF" opacity=".35"></rect>
+    <text x="600" y="680" font-family="-apple-system,system-ui,sans-serif" font-size="60" font-weight="700" fill="#FFFFFF" text-anchor="middle">Beranda</text>
+  </svg>
+</div>
+  <div id="__bundler_loading">Unpacking...</div>
+
+  <script>
+    
+document.addEventListener('DOMContentLoaded', async function() {
+  const loading = document.getElementById('__bundler_loading');
+  function setStatus(msg) { if (loading) loading.textContent = msg; }
+
+  const FONT_MIME = /^(font[/]|application[/](x-)?font-|application[/]vnd\.ms-fontobject)/i;
+  const MIME_TOKEN = /^[\w.+-]+[/][\w.+-]+$/;
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
+
+  // Error sink persists across replaceWith since it's on window, not the DOM.
+  window.addEventListener('error', function(e) {
+    // Failed resource loads (CSP-blocked links, scripts, images) fire plain
+    // events at the element — warn only; real JS errors carry message/error.
+    if (!e.message && !e.error && e.target && e.target !== window) {
+      console.warn('[bundle] resource failed to load:',
+        e.target.tagName, String(e.target.src || e.target.href || ''));
+      return;
+    }
+    var p = document.body || document.documentElement;
+    var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
+    d.id = '__bundler_err';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;font:12px/1.4 ui-monospace,monospace;background:#2a1215;color:#ff8a80;padding:10px 14px;border-radius:8px;border:1px solid #5c2b2e;z-index:99999;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.textContent = (d.textContent ? d.textContent + String.fromCharCode(10) : '') +
+      '[bundle] ' + (e.message || e.type) +
+      (e.filename ? ' (' + e.filename.slice(0, 60) + ':' + e.lineno + ')' : '');
+  }, true);
+
+  try {
+    const manifestEl = document.querySelector('script[type="__bundler/manifest"]');
+    const templateEl = document.querySelector('script[type="__bundler/template"]');
+    if (!manifestEl || !templateEl) {
+      setStatus('Error: missing bundle data');
+      console.error('[bundler] Missing script tags — manifestEl:', !!manifestEl, 'templateEl:', !!templateEl);
+      return;
+    }
+
+    const manifest = JSON.parse(manifestEl.textContent);
+    let template = JSON.parse(templateEl.textContent);
+
+    // Nested page bundles (iframe targets). Each ships ONCE, in the ROOT
+    // document's manifest; frame srcs carry an about:blank#<uuid> marker
+    // instead of a substitutable uuid. Every document mints the blobs for
+    // its OWN frames — from local text at the root, or text obtained from
+    // its DIRECT parent over the relay protocol below — so each frame
+    // navigation stays same-origin with its initiator and a deduped page
+    // loads at any depth on any host, including a file:// download's
+    // opaque origins (where a blob minted by one document cannot be
+    // navigated to by another).
+    const pageOrderEl = document.querySelector('script[type="__bundler/page_order"]');
+    const pageOrder = pageOrderEl ? JSON.parse(pageOrderEl.textContent) : [];
+    const pageSet = new Set(pageOrder);
+    const pageTexts = {};
+
+    // ── Nested-page text protocol (parent-chain relay) ──
+    // Page bundles ship once, in the ROOT document's manifest. Every
+    // document mints the blobs for its OWN frames, obtaining page text
+    // through a strict parent-chain relay: a document only ever SENDS to
+    // its direct parent (which, for every document the publisher's own
+    // runtime minted, is another publisher document) and only ACCEPTS
+    // text from that direct parent; requests from below are honored only
+    // for the document's own child frames, and the ROOT never sends
+    // upward at all. That last rule is load-bearing: the artifact host's
+    // frame-ancestors allows claude.ai (and friends) to frame an
+    // artifact, so window.top can be a FOREIGN document — a top-addressed
+    // protocol would hand page uuids to that ancestor and accept forged
+    // "page text" from it, minting attacker HTML as an artifact-origin
+    // blob document. The chain never touches the ancestor: requests stop
+    // at the root, replies are origin-addressed per hop (never '*' when
+    // an origin exists), and both directions are origin-gated (on https
+    // a foreign sender's origin can never equal this document's; in
+    // opaque contexts — file:// — everything serializes as 'null', where
+    // an embedded EXTERNAL frame still fails the gate by carrying its
+    // own real origin, and a sandboxed child of such a frame is excluded
+    // by the own-child-frames check plus uuid unguessability). Shape is
+    // deny-by-default: one request form, one reply form, no error
+    // replies.
+    // window.origin is the SERIALIZED SECURITY origin ('null' in opaque
+    // contexts such as a sandboxed preview iframe) — location.origin is
+    // computed from the URL and stays 'https://…' even when the document
+    // is sandboxed, which would misgate every opaque chain.
+    const OWN_TARGET = /^https?:[/][/]/.test(window.origin || '')
+      ? window.origin
+      : '*';
+    function trustedOrigin(e) {
+      if (e.origin === window.origin) return true; // https chains; opaque==opaque
+      // file:// trees: Chrome serializes the file document's origin as
+      // 'file://' while the blob: documents it mints serialize as 'null',
+      // so the two legitimate shapes can never string-match — accept the
+      // pair in both directions. https origins never serialize as either,
+      // and sender identity (own child frame / direct parent) is checked
+      // separately.
+      return (
+        (e.origin === 'null' &&
+          (window.origin === 'file://' ||
+            window.location.protocol === 'file:')) ||
+        (/^file:/.test(e.origin) && window.origin === 'null')
+      );
+    }
+    // Non-empty only in the root document (nested bundles ship an empty
+    // island), so it doubles as the root marker: the root answers from
+    // local text and treats a miss as authoritative — never relaying to
+    // its (possibly foreign) parent.
+    const isPageRoot = pageOrder.length > 0;
+    const blobUrls = {};
+    const resourceBlobs = {};
+    const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    const pendingFrames = {}; // uuid -> [{el, frag}] awaiting text for own frames
+    const pendingRelays = {}; // uuid -> [childWindow] awaiting text to pass down
+    function mountPage(el, frag, text) {
+      const pageBlob = new Blob([text], { type: 'text/html' });
+      const u = URL.createObjectURL(pageBlob);
+      resourceBlobs[u] = pageBlob;
+      el.src = u + frag;
+    }
+    function deliverPage(uuid, text) {
+      const frames = pendingFrames[uuid];
+      delete pendingFrames[uuid];
+      if (frames) for (const f of frames) mountPage(f.el, f.frag, text);
+      const relays = pendingRelays[uuid];
+      delete pendingRelays[uuid];
+      if (relays) {
+        for (const cw of relays) {
+          try { cw.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+        }
+      }
+    }
+    function ownFrameWindows() {
+      const out = [];
+      for (const f of Array.from(document.querySelectorAll('iframe'))) {
+        try { if (f.contentWindow) out.push(f.contentWindow); } catch (err) { /* detached */ }
+      }
+      return out;
+    }
+    window.addEventListener('message', function (e) {
+      const d = e.data;
+      if (!d || typeof d !== 'object' || !e.source) return;
+      // Origin gate first; the structural checks below (own-child-frames
+      // for requests, direct-parent + solicited-uuid for replies, the
+      // root's never-relay rule) are what hold in fully opaque chains
+      // where origin strings can't discriminate — a sandboxed root's
+      // FOREIGN wrapper still fails all three even though both serialize
+      // as real-vs-'null' rather than matching.
+      if (!trustedOrigin(e)) return;
+      if (typeof d.__bundler_need === 'string' && UUID_SHAPE.test(d.__bundler_need)) {
+        // Requests are honored only for this document's own child frames.
+        if (ownFrameWindows().indexOf(e.source) < 0) return;
+        const uuid = d.__bundler_need;
+        const text = pageTexts[uuid];
+        if (typeof text === 'string') {
+          try { e.source.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+          return;
+        }
+        if (isPageRoot || window.parent === window) return; // authoritative miss
+        const waiting = pendingRelays[uuid];
+        if (waiting) {
+          if (waiting.indexOf(e.source) < 0) waiting.push(e.source);
+          return;
+        }
+        // Never-answered uuids would otherwise accumulate forever under a
+        // request spray; past the cap (far above any real page count) new
+        // relays are dropped rather than remembered.
+        if (Object.keys(pendingRelays).length >= 128) return;
+        pendingRelays[uuid] = [e.source];
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      } else if (
+        typeof d.__bundler_page === 'string' &&
+        UUID_SHAPE.test(d.__bundler_page) &&
+        typeof d.__bundler_text === 'string'
+      ) {
+        // The shape test is load-bearing beyond tidiness: the solicited
+        // check below uses the in operator, which matches prototype keys
+        // ('__proto__', 'constructor') — an unshaped key would reach
+        // deliverPage and throw, painting the error banner.
+        // Text is accepted only from the direct parent — the document
+        // that minted this one.
+        if (e.source !== window.parent || window.parent === window) return;
+        if (!(d.__bundler_page in pendingFrames) && !(d.__bundler_page in pendingRelays)) return;
+        deliverPage(d.__bundler_page, d.__bundler_text);
+      }
+    });
+
+    const uuids = Object.keys(manifest);
+    setStatus('Unpacking ' + uuids.length + ' assets...');
+
+    await Promise.all(uuids.map(async (uuid) => {
+      const entry = manifest[uuid];
+      try {
+        const binaryStr = atob(entry.data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        let finalBytes = bytes;
+        if (entry.compressed) {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(bytes);
+            writer.close();
+            const chunks = [];
+            let totalLen = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              totalLen += value.length;
+            }
+            finalBytes = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) { finalBytes.set(chunk, offset); offset += chunk.length; }
+          } else {
+            console.warn('DecompressionStream not available, asset ' + uuid + ' may not render');
+          }
+        }
+
+        if (pageSet.has(uuid)) {
+          pageTexts[uuid] = new TextDecoder().decode(finalBytes);
+          return;
+        }
+        if (FONT_MIME.test(entry.mime) && MIME_TOKEN.test(entry.mime)) {
+          // Strict artifact hosts allow font-src data: but not blob:.
+          blobUrls[uuid] = 'data:' + entry.mime + ';base64,' +
+            (entry.compressed ? toBase64(finalBytes) : entry.data);
+        } else {
+          const blob = new Blob([finalBytes], { type: entry.mime });
+          blobUrls[uuid] = URL.createObjectURL(blob);
+          resourceBlobs[blobUrls[uuid]] = blob;
+        }
+      } catch (err) {
+        console.error('Failed to decode asset ' + uuid + ':', err);
+        const blob = new Blob([], { type: entry.mime });
+        blobUrls[uuid] = URL.createObjectURL(blob);
+        resourceBlobs[blobUrls[uuid]] = blob;
+      }
+    }));
+
+    const extResEl = document.querySelector('script[type="__bundler/ext_resources"]');
+    const extResources = extResEl ? JSON.parse(extResEl.textContent) : [];
+    const resourceMap = {};
+    for (const entry of extResources) {
+      if (blobUrls[entry.uuid]) resourceMap[entry.id] = blobUrls[entry.uuid];
+    }
+
+    // Artifact-host CSP (connect-src 'self') refuses fetch() of blob: URLs —
+    // consumers read these Blobs directly. Survives the swap like the error sink.
+    window.__resourceBlobs = resourceBlobs;
+
+    setStatus('Rendering...');
+    // Page uuids have no blob here — they ride inside about:blank#<uuid>
+    // frame markers the pass below resolves after the swap.
+    for (const uuid of uuids) {
+      if (pageSet.has(uuid)) continue;
+      template = template.split(uuid).join(blobUrls[uuid]);
+    }
+
+    // Strip integrity + crossorigin — blob URLs from a file:// document inherit
+    // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
+    // The manifest bytes are ours; SRI protects against CDN compromise, not this.
+    template = template.replace(/\s+integrity="[^"]*"/gi, '').replace(/\s+crossorigin="[^"]*"/gi, '');
+
+    const resourceScript = '<script>window.__resources = ' +
+      JSON.stringify(resourceMap).replace(/<\//g, '<\\/') +
+      ';</' + 'script>';
+    // Inject after <head> so the DOCTYPE stays first; prepending the script
+    // would push the parser into quirks mode. DOMParser always emits a <head>
+    // (synthesizing one if the source HTML omitted it) but may carry
+    // attributes through, so match the full opening tag. slice() rather than
+    // replace() keeps us clear of $-pattern substitution in resourceScript.
+    const headOpen = template.match(/<head[^>]*>/i);
+    if (headOpen) {
+      const i = headOpen.index + headOpen[0].length;
+      template = template.slice(0, i) + resourceScript + template.slice(i);
+    }
+
+    // Parse the template and swap the root element. Scripts inserted via
+    // DOMParser/replaceWith are inert per spec — re-create each with
+    // createElement so they execute, awaiting onload for src scripts to
+    // preserve ordering (React before ReactDOM before Babel before text/babel).
+    const doc = new DOMParser().parseFromString(template, 'text/html');
+    document.documentElement.replaceWith(doc.documentElement);
+
+    // Resolve page-frame markers: mint this document's own blob for each
+    // framed page — from local text when this is the root, otherwise by
+    // asking the direct parent over the relay protocol above. An
+    // unanswered request leaves the frame on about:blank, the same
+    // degraded state as a refused embed.
+    {
+      const MARKER = /^about:blank#([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(#.*)?$/;
+      const needed = [];
+      for (const el of Array.from(document.querySelectorAll('iframe'))) {
+        const m = MARKER.exec(el.getAttribute('src') || '');
+        if (!m) continue;
+        const text = pageTexts[m[1]];
+        if (typeof text === 'string') {
+          mountPage(el, m[2] || '', text);
+        } else if (window.parent !== window && !isPageRoot) {
+          const had = pendingFrames[m[1]];
+          (pendingFrames[m[1]] = had || []).push({ el: el, frag: m[2] || '' });
+          if (!had) needed.push(m[1]);
+        }
+      }
+      for (const uuid of needed) {
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      }
+    }
+
+    const dead = Array.from(document.scripts);
+    for (const old of dead) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      // text/babel scripts with a src: read and inline. transformScriptTags
+      // does XHR against the src, but blob:null/ from a file:// origin is
+      // silently dropped. Inlining makes it a plain inline babel script,
+      // which transformScriptTags handles unconditionally.
+      if ((s.type === 'text/babel' || s.type === 'text/jsx') && s.src) {
+        const pre = resourceBlobs[s.src.split('#')[0]];
+        s.textContent = pre ? await pre.text() : await (await fetch(s.src)).text();
+        s.removeAttribute('src');
+      }
+      const p = s.src ? new Promise(function(r) { s.onload = s.onerror = r; }) : null;
+      old.replaceWith(s);
+      if (p) await p;
+    }
+    // Babel standalone auto-transforms type=text/babel on DOMContentLoaded,
+    // which fired before we swapped the document. Trigger manually if present.
+    if (window.Babel && typeof window.Babel.transformScriptTags === 'function') {
+      window.Babel.transformScriptTags();
+    }
+  } catch (err) {
+    setStatus('Error unpacking: ' + err.message);
+    console.error('Bundle unpack error:', err);
+  }
+});
+
+  </script>
+
+  <script type="__bundler/manifest">
+{}
+  </script>
+
+  <script type="__bundler/ext_resources">
+[]
+  </script>
+
+  <script type="__bundler/page_order">
+[]
+  </script>
+
+  <script type="__bundler/template">
+"<!DOCTYPE html>\n<html lang=\"id\" data-theme=\"light\"><head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n<title>BagiBill — Beranda<\u002Ftitle>\n<style>\n/* ============================================================\n   BagiBill — Layar Beranda (Home)\n   Token dari tokens.css, di-inline supaya satu file mandiri.\n   Konvensi kelas: prefix .h-  (home). Class dipakai ulang,\n   tidak ada style inline per elemen (kecuali --c warna member\n   & --w lebar bar), semua nilai lewat variabel.\n   ============================================================ */\n\n:root{\n  --bb-font:-apple-system,BlinkMacSystemFont,\"SF Pro Text\",\"SF Pro Display\",system-ui,\"Segoe UI\",Roboto,sans-serif;\n\n  --fs-caption2:11px; --fs-caption:12px; --fs-footnote:13px; --fs-subhead:15px;\n  --fs-body:17px; --fs-headline:17px; --fs-title3:20px; --fs-title2:22px; --fs-title1:28px; --fs-large:34px;\n  --num-lg:40px; --num-xl:48px; --num-tracking:-0.02em;\n  --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;\n  --line-tight:1.2; --line-body:1.3; --line-relaxed:1.45;\n\n  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;\n  --sp-6:24px; --sp-7:32px; --sp-8:40px; --sp-9:48px; --sp-10:64px;\n\n  --r-btn:10px; --r-card:14px; --r-field:10px; --r-pill:999px;\n\n  --dur-tap:120ms; --dur-base:200ms; --dur-sheet:320ms;\n  --ease-standard:cubic-bezier(.2,.8,.2,1);\n  --ease-emphasized:cubic-bezier(.4,0,.2,1);\n\n  --m-1:#E5484D; --m-2:#E1620F; --m-3:#A9820C; --m-4:#4B9E2F;\n  --m-5:#12967A; --m-6:#0E8FB0; --m-7:#3A5BD9; --m-8:#5B4BD6;\n  --m-9:#7C3AED; --m-10:#A83BC0; --m-11:#C42C86; --m-12:#D33B63;\n}\n\n[data-theme=\"light\"]{\n  --n-0:#F6F7F9; --n-1:#FFFFFF; --n-2:#EDF0F3; --n-3:#E1E5EA; --n-4:#C8CED7;\n  --n-5:#98A0AC; --n-6:#69717E; --n-7:#49515D; --n-8:#282D35; --n-9:#12161C;\n  --surface:var(--n-1); --surface-sunken:var(--n-0); --surface-raised:var(--n-1);\n  --border:var(--n-3);\n  --text:var(--n-9); --text-secondary:var(--n-7); --text-muted:var(--n-6);\n  --brand:#1E63E9; --brand-strong:#1750C9; --brand-tint:#E7EEFD; --on-brand:#FFFFFF;\n  --pos:#0E9E8E; --pos-text:#0A6E63; --pos-tint:#DBF4F0;\n  --neg:#E5484D; --neg-text:#B22026; --neg-tint:#FCE4E5;\n  --btn-bg:var(--brand); --btn-bg-hover:#1A57CE; --btn-bg-active:#164BB0; --btn-fg:var(--on-brand);\n  --btn-bg-disabled:#C6D6F7; --btn-fg-disabled:#7C90B8;\n  --btn2-bg:var(--n-2); --btn2-bg-hover:var(--n-3); --btn2-bg-active:var(--n-4); --btn2-fg:var(--n-9); --btn2-border:var(--border);\n  --scrim:rgba(16,22,30,.32);\n  --route:#7C3AED; --route-text:#5B21B6; --route-tint:#F1EAFE;\n  --elev-1:0 1px 2px rgba(16,22,30,.06);\n  --elev-2:0 2px 10px rgba(16,22,30,.08);\n  --elev-3:0 8px 26px rgba(16,22,30,.12);\n}\n[data-theme=\"dark\"]{\n  --n-0:#0E1116; --n-1:#161A21; --n-2:#1D222B; --n-3:#242A34; --n-4:#313945;\n  --n-5:#48525F; --n-6:#79838F; --n-7:#9AA4B2; --n-8:#C8CED7; --n-9:#F2F4F7;\n  --surface:var(--n-1); --surface-sunken:var(--n-0); --surface-raised:var(--n-2);\n  --border:var(--n-3);\n  --text:var(--n-9); --text-secondary:var(--n-7); --text-muted:var(--n-6);\n  --brand:#5B8CFF; --brand-strong:#7AA2FF; --brand-tint:#182338; --on-brand:#0B1220;\n  --pos:#2FC7B4; --pos-text:#54D6C6; --pos-tint:#0F2B29;\n  --neg:#FF6B6E; --neg-text:#FF8E90; --neg-tint:#331A1C;\n  --btn-bg:var(--brand); --btn-bg-hover:#74A0FF; --btn-bg-active:#8FB2FF; --btn-fg:var(--on-brand);\n  --btn-bg-disabled:#2A3550; --btn-fg-disabled:#5E6E90;\n  --btn2-bg:var(--n-2); --btn2-bg-hover:var(--n-3); --btn2-bg-active:var(--n-4); --btn2-fg:var(--n-9); --btn2-border:var(--border);\n  --scrim:rgba(0,0,0,.55);\n  --route:#A78BFA; --route-text:#C4B5FD; --route-tint:#221A38;\n  --elev-1:0 1px 2px rgba(0,0,0,.4);\n  --elev-2:0 4px 14px rgba(0,0,0,.5);\n  --elev-3:0 10px 28px rgba(0,0,0,.6);\n}\n\n*{box-sizing:border-box; margin:0; padding:0;}\nhtml,body{height:100%;}\nbody{\n  font-family:var(--bb-font); color:var(--text); background:var(--n-4);\n  -webkit-font-smoothing:antialiased;\n  display:flex; align-items:flex-start; justify-content:center;\n  gap:var(--sp-6); padding:var(--sp-6); min-height:100vh;\n}\n.h-num{ font-variant-numeric:tabular-nums; font-feature-settings:\"tnum\" 1,\"lnum\" 1; }\n\n/* ---- Device shell ---- */\n.h-device{\n  position:relative; width:360px; height:800px;\n  background:var(--surface-sunken); border-radius:34px; overflow:hidden;\n  box-shadow:var(--elev-3); display:flex; flex-direction:column;\n}\n.h-statusbar{\n  flex:0 0 auto; height:44px; padding:0 var(--sp-5) 0 var(--sp-6);\n  display:flex; align-items:center; justify-content:space-between;\n  font-size:var(--fs-footnote); font-weight:var(--fw-semibold);\n  color:var(--text); background:var(--surface);\n}\n.h-sb-right{ display:flex; align-items:center; gap:5px; opacity:.85; }\n.h-sb-glyph rect{ fill:currentColor; }\n\n/* ---- Top bar ---- */\n.h-top{\n  flex:0 0 auto; display:flex; align-items:center; gap:var(--sp-2);\n  padding:var(--sp-1) var(--sp-4) var(--sp-3); background:var(--surface);\n}\n.h-brand{ display:flex; align-items:center; gap:8px; font-size:var(--fs-title2); font-weight:var(--fw-bold); letter-spacing:-.02em; }\n.h-brand-mark{ width:26px; height:26px; border-radius:8px; background:var(--brand); color:var(--on-brand); display:flex; align-items:center; justify-content:center; }\n.h-brand-mark svg{ width:16px; height:16px; }\n.h-top-spacer{ flex:1 1 auto; }\n.h-iconbtn{\n  appearance:none; border:none; cursor:pointer; font-family:inherit;\n  width:38px; height:38px; border-radius:var(--r-pill); background:var(--n-2); color:var(--text-secondary);\n  display:flex; align-items:center; justify-content:center; transition:background var(--dur-tap);\n}\n.h-iconbtn:hover{ background:var(--n-3); }\n.h-iconbtn svg{ width:19px; height:19px; }\n\n/* ---- Scroll region ---- */\n.h-scroll{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:var(--sp-9); }\n.h-scroll::-webkit-scrollbar{ width:0; }\n\n/* ============================================================\n   QUICK SPLIT — kalkulator instan tanpa grup, paling atas\n   ============================================================ */\n.h-qs{\n  margin:var(--sp-3) var(--sp-4) var(--sp-2);\n  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card);\n  box-shadow:var(--elev-1); overflow:hidden;\n}\n.h-qs-head{ display:flex; align-items:center; gap:8px; padding:var(--sp-4) var(--sp-4) var(--sp-2); }\n.h-qs-ic{ width:24px; height:24px; border-radius:7px; background:var(--brand-tint); color:var(--brand); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }\n.h-qs-ic svg{ width:15px; height:15px; }\n.h-qs-title{ font-size:var(--fs-subhead); font-weight:var(--fw-bold); }\n.h-qs-badge{ margin-left:auto; font-size:var(--fs-caption2); font-weight:var(--fw-semibold); color:var(--text-muted); background:var(--n-2); border-radius:var(--r-pill); padding:2px 9px; }\n\n.h-qs-input{ padding:0 var(--sp-4) var(--sp-3); }\n.h-qs-lbl{ font-size:var(--fs-caption); color:var(--text-muted); font-weight:var(--fw-medium); margin-bottom:6px; }\n.h-qs-amt{ display:flex; align-items:baseline; gap:6px; }\n.h-qs-amt .h-rp{ font-size:var(--fs-title3); font-weight:var(--fw-semibold); color:var(--text-secondary); }\n.h-qs-field{\n  flex:1 1 auto; min-width:0; appearance:none; border:none; background:transparent; font-family:inherit;\n  color:var(--text); font-size:var(--num-lg); font-weight:var(--fw-bold); letter-spacing:var(--num-tracking);\n  font-variant-numeric:tabular-nums; padding:0; line-height:1;\n}\n.h-qs-field::placeholder{ color:var(--n-4); }\n.h-qs-field:focus{ outline:none; }\n.h-qs-underline{ height:2px; background:var(--border); border-radius:2px; margin-top:6px; transition:background var(--dur-tap); }\n.h-qs-input:focus-within .h-qs-underline{ background:var(--brand); }\n\n/* stepper orang */\n.h-qs-people{ display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-3) var(--sp-4); border-top:1px solid var(--border); }\n.h-qs-people-lbl{ font-size:var(--fs-footnote); color:var(--text-secondary); font-weight:var(--fw-medium); }\n.h-qs-people-lbl b{ color:var(--text); font-weight:var(--fw-semibold); }\n.h-stepper{ margin-left:auto; display:flex; align-items:center; gap:0; background:var(--n-2); border-radius:var(--r-pill); padding:3px; }\n.h-step-btn{\n  appearance:none; border:none; cursor:pointer; width:30px; height:30px; border-radius:var(--r-pill);\n  background:var(--surface); color:var(--text); box-shadow:var(--elev-1); display:flex; align-items:center; justify-content:center;\n  font-family:inherit; transition:transform var(--dur-tap);\n}\n.h-step-btn:active{ transform:scale(.9); }\n.h-step-btn:disabled{ opacity:.4; box-shadow:none; cursor:default; }\n.h-step-btn svg{ width:16px; height:16px; }\n.h-step-val{ min-width:34px; text-align:center; font-size:var(--fs-subhead); font-weight:var(--fw-bold); font-variant-numeric:tabular-nums; }\n\n/* hasil per orang */\n.h-qs-result{\n  display:flex; align-items:center; gap:var(--sp-3);\n  padding:var(--sp-3) var(--sp-4); background:var(--brand-tint); color:var(--brand-strong);\n}\n.h-qs-result-lbl{ font-size:var(--fs-footnote); font-weight:var(--fw-semibold); }\n.h-qs-result-amt{ margin-left:auto; font-size:var(--fs-title3); font-weight:var(--fw-bold); font-variant-numeric:tabular-nums; letter-spacing:var(--num-tracking); }\n.h-qs-result-amt .h-rp{ font-size:var(--fs-footnote); font-weight:var(--fw-semibold); opacity:.7; margin-right:2px; }\n[data-theme=\"dark\"] .h-qs-result{ color:var(--brand-strong); }\n\n/* riwayat lokal quick split */\n.h-qs-hist{ display:flex; gap:var(--sp-2); padding:var(--sp-3) var(--sp-4); overflow-x:auto; }\n.h-qs-hist::-webkit-scrollbar{ height:0; }\n.h-qs-chip{\n  appearance:none; border:1px solid var(--border); background:var(--surface-sunken); color:var(--text-secondary);\n  border-radius:var(--r-pill); padding:5px 11px; cursor:pointer; font-family:inherit; white-space:nowrap;\n  font-size:var(--fs-caption); font-weight:var(--fw-medium); font-variant-numeric:tabular-nums; flex:0 0 auto;\n  transition:border-color var(--dur-tap), color var(--dur-tap);\n}\n.h-qs-chip:hover{ border-color:var(--n-4); color:var(--text); }\n.h-qs-chip b{ color:var(--text); font-weight:var(--fw-semibold); }\n\n/* ---- Section label ---- */\n.h-sectlabel{\n  padding:var(--sp-5) var(--sp-5) var(--sp-2);\n  display:flex; align-items:center; justify-content:space-between; gap:var(--sp-2);\n}\n.h-sect-title{ font-size:var(--fs-caption); font-weight:var(--fw-semibold); color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }\n.h-sect-add{\n  appearance:none; border:none; cursor:pointer; font-family:inherit;\n  display:flex; align-items:center; gap:4px; color:var(--brand); background:transparent;\n  font-size:var(--fs-footnote); font-weight:var(--fw-semibold); padding:2px 2px;\n}\n.h-sect-add svg{ width:16px; height:16px; }\n\n/* ============================================================\n   KARTU GRUP — satu pola, diulang\n   ============================================================ */\n.h-groups{ padding:0 var(--sp-4); display:flex; flex-direction:column; gap:var(--sp-3); }\n.h-group{\n  width:100%; text-align:left; font-family:inherit; color:inherit; cursor:pointer;\n  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card);\n  padding:var(--sp-4); display:flex; flex-direction:column; gap:var(--sp-3);\n  transition:border-color var(--dur-tap), transform var(--dur-tap), box-shadow var(--dur-tap);\n}\n.h-group:hover{ border-color:var(--n-4); box-shadow:var(--elev-1); }\n.h-group:active{ transform:scale(.99); }\n\n.h-group-top{ display:flex; align-items:flex-start; gap:var(--sp-3); }\n.h-group-id{ min-width:0; flex:1 1 auto; }\n.h-group-name{ font-size:var(--fs-body); font-weight:var(--fw-semibold); line-height:var(--line-tight); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n.h-group-meta{ font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; display:flex; align-items:center; gap:5px; }\n.h-group-meta svg{ width:12px; height:12px; }\n.h-chev{ flex:0 0 auto; color:var(--n-5); align-self:center; }\n.h-chev svg{ width:18px; height:18px; }\n\n/* tumpukan avatar */\n.h-stack{ display:flex; align-items:center; }\n.h-stack .h-avatar{ margin-left:-8px; box-shadow:0 0 0 2px var(--surface); }\n.h-stack .h-avatar:first-child{ margin-left:0; }\n.h-stack-more{\n  margin-left:-8px; width:30px; height:30px; border-radius:var(--r-pill);\n  background:var(--n-2); color:var(--text-secondary); box-shadow:0 0 0 2px var(--surface);\n  display:flex; align-items:center; justify-content:center; font-size:var(--fs-caption2); font-weight:var(--fw-bold); flex:0 0 auto;\n}\n\n.h-avatar{\n  --c:var(--n-5); width:30px; height:30px; border-radius:var(--r-pill);\n  background:var(--c); color:#fff; display:flex; align-items:center; justify-content:center;\n  font-size:var(--fs-caption2); font-weight:var(--fw-bold); flex:0 0 auto; line-height:1; letter-spacing:.01em;\n}\n\n/* baris posisi: garis pemisah + tag arah + nominal */\n.h-group-foot{ display:flex; align-items:center; gap:var(--sp-3); padding-top:var(--sp-3); border-top:1px solid var(--border); }\n.h-pos{ display:flex; flex-direction:column; gap:2px; }\n.h-tag{\n  display:inline-flex; align-items:center; gap:4px; align-self:flex-start;\n  font-size:var(--fs-caption2); font-weight:var(--fw-bold); letter-spacing:.01em;\n  padding:2px 8px 2px 5px; border-radius:var(--r-pill);\n}\n.h-tag svg{ width:11px; height:11px; }\n.h-tag--pos{ color:var(--pos-text); background:var(--pos-tint); }\n.h-tag--neg{ color:var(--neg-text); background:var(--neg-tint); }\n.h-tag--zero{ color:var(--text-muted); background:var(--n-2); }\n.h-pos-sub{ font-size:var(--fs-caption2); color:var(--text-muted); }\n.h-group-amt{ margin-left:auto; font-size:var(--fs-title3); font-weight:var(--fw-bold); white-space:nowrap; letter-spacing:var(--num-tracking); }\n.h-group-amt .h-rp{ font-size:var(--fs-footnote); font-weight:var(--fw-semibold); color:var(--text-secondary); margin-right:2px; }\n.h-group.is-pos .h-group-amt{ color:var(--pos-text); }\n.h-group.is-neg .h-group-amt{ color:var(--neg-text); }\n\n/* grup lunas (saldo nol) — beda jelas: teduh, tanpa nominal besar */\n.h-group.is-settled{ background:var(--surface-sunken); border-style:dashed; }\n.h-group.is-settled .h-group-name{ color:var(--text-secondary); }\n.h-settled-amt{ margin-left:auto; display:flex; align-items:center; gap:6px; color:var(--pos-text); font-size:var(--fs-footnote); font-weight:var(--fw-semibold); }\n.h-settled-amt svg{ width:15px; height:15px; }\n\n/* ---- Arsip (collapsible) ---- */\n.h-arch{ padding:var(--sp-4) var(--sp-4) 0; }\n.h-arch-toggle{\n  width:100%; appearance:none; border:none; background:transparent; cursor:pointer; font-family:inherit;\n  display:flex; align-items:center; gap:var(--sp-2); color:var(--text-secondary);\n  padding:var(--sp-2); font-size:var(--fs-footnote); font-weight:var(--fw-semibold);\n}\n.h-arch-toggle svg{ width:14px; height:14px; transition:transform var(--dur-base); }\n.h-arch-toggle.is-open svg.h-arch-caret{ transform:rotate(90deg); }\n.h-arch-count{ margin-left:auto; font-size:var(--fs-caption); color:var(--text-muted); font-weight:var(--fw-medium); }\n.h-arch-list{ display:none; flex-direction:column; gap:var(--sp-2); padding-top:var(--sp-2); }\n.h-arch-list.is-open{ display:flex; }\n.h-arch-row{\n  width:100%; text-align:left; font-family:inherit; color:inherit; cursor:pointer;\n  display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-3);\n  background:var(--surface); border:1px solid var(--border); border-radius:var(--r-card); opacity:.72;\n  transition:opacity var(--dur-tap);\n}\n.h-arch-row:hover{ opacity:1; }\n.h-arch-name{ flex:1 1 auto; min-width:0; font-size:var(--fs-footnote); font-weight:var(--fw-semibold); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }\n.h-arch-meta{ font-size:var(--fs-caption); color:var(--text-muted); white-space:nowrap; }\n\n/* ============================================================\n   FAB — buat grup baru\n   ============================================================ */\n.h-fab{\n  position:absolute; right:var(--sp-4); bottom:var(--sp-5); z-index:12;\n  appearance:none; border:none; cursor:pointer; font-family:inherit;\n  height:52px; padding:0 var(--sp-5); border-radius:var(--r-pill);\n  background:var(--btn-bg); color:var(--btn-fg); box-shadow:var(--elev-3);\n  display:flex; align-items:center; gap:8px; font-size:var(--fs-headline); font-weight:var(--fw-semibold);\n  transition:transform var(--dur-tap), background var(--dur-tap);\n}\n.h-fab:hover{ background:var(--btn-bg-hover); }\n.h-fab:active{ transform:scale(.96); }\n.h-fab svg{ width:20px; height:20px; }\n\n/* ============================================================\n   STATE KOSONG — pengguna baru, belum punya grup\n   ============================================================ */\n.h-empty{ padding:var(--sp-5) var(--sp-5) var(--sp-8); text-align:center; display:flex; flex-direction:column; align-items:center; }\n.h-empty-art{ width:76px; height:76px; border-radius:22px; background:var(--n-2); color:var(--n-5); display:flex; align-items:center; justify-content:center; margin-bottom:var(--sp-4); }\n.h-empty-art svg{ width:38px; height:38px; }\n.h-empty-title{ font-size:var(--fs-title3); font-weight:var(--fw-bold); }\n.h-empty-sub{ font-size:var(--fs-footnote); color:var(--text-secondary); margin-top:var(--sp-2); line-height:var(--line-relaxed); max-width:250px; }\n.h-empty-cta{ margin-top:var(--sp-5); width:100%; max-width:260px; }\n.h-empty-hint{ font-size:var(--fs-caption); color:var(--text-muted); margin-top:var(--sp-3); line-height:var(--line-relaxed); max-width:250px; }\n.h-empty-hint b{ color:var(--text-secondary); font-weight:var(--fw-semibold); }\n\n/* ---- Buttons ---- */\n.h-btn{\n  appearance:none; border:none; font-family:inherit; cursor:pointer;\n  font-size:var(--fs-headline); font-weight:var(--fw-semibold);\n  border-radius:var(--r-btn); padding:var(--sp-3) var(--sp-4);\n  display:flex; align-items:center; justify-content:center; gap:var(--sp-2);\n  transition:background var(--dur-tap), transform var(--dur-tap); width:100%;\n}\n.h-btn:active{ transform:scale(.98); }\n.h-btn svg{ width:18px; height:18px; }\n.h-btn--primary{ background:var(--btn-bg); color:var(--btn-fg); }\n.h-btn--primary:hover{ background:var(--btn-bg-hover); }\n\n/* ---- Dev switcher (bukan bagian produk) ---- */\n.h-dev{\n  width:230px; flex:0 0 auto; position:sticky; top:var(--sp-6);\n  background:var(--surface); color:var(--text);\n  border-radius:var(--r-card); padding:var(--sp-4); box-shadow:var(--elev-2); font-size:var(--fs-footnote);\n}\n.h-dev h4{ font-size:var(--fs-caption); text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:var(--sp-3); font-weight:var(--fw-semibold); }\n.h-dev-group{ display:flex; flex-direction:column; gap:6px; margin-bottom:var(--sp-4); }\n.h-dev-btn{\n  appearance:none; text-align:left; font-family:inherit; font-size:var(--fs-footnote);\n  border:1px solid var(--border); background:var(--surface-sunken); color:var(--text);\n  border-radius:var(--r-btn); padding:var(--sp-2) var(--sp-3); cursor:pointer; transition:all var(--dur-tap);\n}\n.h-dev-btn:hover{ border-color:var(--n-4); }\n.h-dev-btn.is-active{ background:var(--brand); color:var(--on-brand); border-color:var(--brand); }\n.h-dev-note{ font-size:var(--fs-caption); color:var(--text-muted); line-height:var(--line-relaxed); }\n.h-dev-theme{ display:flex; gap:6px; }\n.h-dev-theme .h-dev-btn{ flex:1; text-align:center; }\n\n@media(max-width:640px){ .h-dev{ display:none; } body{ padding:0; align-items:stretch; } .h-device{ border-radius:0; height:100vh; width:100%; max-width:420px; margin:0 auto; } }\n<\u002Fstyle>\n<\u002Fhead>\n<body>\n\n\n<div class=\"h-device\" id=\"device\">\n  <div class=\"h-statusbar\">\n    <span class=\"h-num\">19:42<\u002Fspan>\n    <span class=\"h-sb-right\">\n      <svg class=\"h-sb-glyph\" viewBox=\"0 0 17 11\" width=\"17\" height=\"11\" aria-hidden=\"true\"><rect x=\"0\" y=\"7\" width=\"3\" height=\"4\" rx=\"1\"><\u002Frect><rect x=\"4.5\" y=\"5\" width=\"3\" height=\"6\" rx=\"1\"><\u002Frect><rect x=\"9\" y=\"2.5\" width=\"3\" height=\"8.5\" rx=\"1\"><\u002Frect><rect x=\"13.5\" y=\"0\" width=\"3\" height=\"11\" rx=\"1\"><\u002Frect><\u002Fsvg>\n      <svg class=\"h-sb-glyph\" viewBox=\"0 0 22 11\" width=\"22\" height=\"11\" aria-hidden=\"true\"><rect x=\"0\" y=\"1\" width=\"18\" height=\"9\" rx=\"2.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1\"><\u002Frect><rect x=\"1.5\" y=\"2.5\" width=\"13\" height=\"6\" rx=\"1\"><\u002Frect><rect x=\"19\" y=\"4\" width=\"2\" height=\"3\" rx=\"1\"><\u002Frect><\u002Fsvg>\n    <\u002Fspan>\n  <\u002Fdiv>\n\n  <div class=\"h-top\">\n    <div class=\"h-brand\">\n      <span class=\"h-brand-mark\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 4v16M6 8h9a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h10\"><\u002Fpath><\u002Fsvg><\u002Fspan>\n      BagiBill\n    <\u002Fdiv>\n    <span class=\"h-top-spacer\"><\u002Fspan>\n    <button class=\"h-iconbtn\" id=\"settingsBtn\" aria-label=\"Pengaturan\">\n      <svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"3\"><\u002Fcircle><path d=\"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z\"><\u002Fpath><\u002Fsvg>\n    <\u002Fbutton>\n  <\u002Fdiv>\n\n  <div class=\"h-scroll\" id=\"scroll\">\n    <!-- QUICK SPLIT -->\n    <div class=\"h-qs\">\n      <div class=\"h-qs-head\">\n        <span class=\"h-qs-ic\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 9h16M4 15h16M10 4L8 20M16 4l-2 16\"><\u002Fpath><\u002Fsvg><\u002Fspan>\n        <span class=\"h-qs-title\">Bagi cepat<\u002Fspan>\n        <span class=\"h-qs-badge\">tanpa grup<\u002Fspan>\n      <\u002Fdiv>\n      <div class=\"h-qs-input\">\n        <div class=\"h-qs-lbl\">Total tagihan<\u002Fdiv>\n        <div class=\"h-qs-amt\">\n          <span class=\"h-rp\">Rp<\u002Fspan>\n          <input class=\"h-qs-field h-num\" id=\"qsAmount\" inputmode=\"numeric\" placeholder=\"0\" value=\"240.000\">\n        <\u002Fdiv>\n        <div class=\"h-qs-underline\"><\u002Fdiv>\n      <\u002Fdiv>\n      <div class=\"h-qs-people\">\n        <span class=\"h-qs-people-lbl\">Dibagi <b id=\"qsPeople\">4<\u002Fb> orang<\u002Fspan>\n        <div class=\"h-stepper\">\n          <button class=\"h-step-btn\" id=\"qsMinus\" aria-label=\"Kurangi\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M5 12h14\"><\u002Fpath><\u002Fsvg><\u002Fbutton>\n          <span class=\"h-step-val h-num\" id=\"qsPeopleVal\">4<\u002Fspan>\n          <button class=\"h-step-btn\" id=\"qsPlus\" aria-label=\"Tambah\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"><\u002Fpath><\u002Fsvg><\u002Fbutton>\n        <\u002Fdiv>\n      <\u002Fdiv>\n      <div class=\"h-qs-result\">\n        <span class=\"h-qs-result-lbl\">Per orang<\u002Fspan>\n        <span class=\"h-qs-result-amt\" id=\"qsResult\"><span class=\"h-rp\">Rp<\u002Fspan>60.000<\u002Fspan>\n      <\u002Fdiv>\n      <div class=\"h-qs-hist\" id=\"qsHist\"><\u002Fdiv>\n    <\u002Fdiv>\n\n    <!-- GRUP -->\n    <div class=\"h-sectlabel\">\n      <span class=\"h-sect-title\">Grup kamu<\u002Fspan>\n      <button class=\"h-sect-add\" id=\"addTop\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"><\u002Fpath><\u002Fsvg>Buat grup<\u002Fbutton>\n    <\u002Fdiv>\n    <div class=\"h-groups\" id=\"groupList\"><\u002Fdiv>\n\n    <!-- ARSIP -->\n    <div class=\"h-arch\" id=\"archWrap\">\n      <button class=\"h-arch-toggle\" id=\"archToggle\">\n        <svg class=\"h-arch-caret\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 6l6 6-6 6\"><\u002Fpath><\u002Fsvg>\n        Arsip\n        <span class=\"h-arch-count\" id=\"archCount\"><\u002Fspan>\n      <\u002Fbutton>\n      <div class=\"h-arch-list\" id=\"archList\"><\u002Fdiv>\n    <\u002Fdiv>\n\n    <!-- KOSONG (pengguna baru) -->\n    <div class=\"h-empty\" id=\"emptyGroups\" hidden=\"\">\n      <div class=\"h-empty-art\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"><\u002Fpath><circle cx=\"9\" cy=\"7\" r=\"4\"><\u002Fcircle><path d=\"M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"><\u002Fpath><\u002Fsvg><\u002Fdiv>\n      <div class=\"h-empty-title\">Patungan pertama kamu<\u002Fdiv>\n      <div class=\"h-empty-sub\">Bikin grup buat trip, kosan, atau makan bareng — biar tau siapa nombok berapa tanpa ribut.<\u002Fdiv>\n      <button class=\"h-btn h-btn--primary h-empty-cta\" id=\"emptyCta\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"><\u002Fpath><\u002Fsvg>Buat grup pertama<\u002Fbutton>\n      <div class=\"h-empty-hint\">Cuma mau bagi rata sekali? <b>Bagi cepat<\u002Fb> di atas jalan tanpa bikin grup.<\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <!-- FAB -->\n  <button class=\"h-fab\" id=\"fab\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12h14\"><\u002Fpath><\u002Fsvg>Grup baru<\u002Fbutton>\n<\u002Fdiv>\n\n<!-- DEV SWITCHER -->\n<aside class=\"h-dev\">\n  <h4>Keadaan layar<\u002Fh4>\n  <div class=\"h-dev-group\" id=\"devStates\">\n    <button class=\"h-dev-btn is-active\" data-state=\"filled\">1 · Beranda terisi<\u002Fbutton>\n    <button class=\"h-dev-btn\" data-state=\"empty\">2 · Pengguna baru (kosong)<\u002Fbutton>\n  <\u002Fdiv>\n  <h4>Tema<\u002Fh4>\n  <div class=\"h-dev-theme\">\n    <button class=\"h-dev-btn is-active\" data-theme-btn=\"light\">Terang<\u002Fbutton>\n    <button class=\"h-dev-btn\" data-theme-btn=\"dark\">Gelap<\u002Fbutton>\n  <\u002Fdiv>\n  <p class=\"h-dev-note\">Layar pertama tiap buka app. Bagi cepat = kalkulator instan tanpa grup (dipakai paling sering, jadi paling atas). Kartu grup nunjukin posisi kamu: dapet / bayar / lunas. Grup lunas tampil teduh &amp; putus-putus; arsip disembunyiin.<\u002Fp>\n<\u002Faside>\n\n<script>\n/* ============================================================\n   DATA — grup di beranda. myNet: >0 kamu dapet, <0 kamu bayar,\n   0 lunas. Inisial avatar dari kata (Dimas Prasetyo→DP).\n   Tabrakan huruf awal (Dimas/Dina, Reza/Rina) dibedakan warna.\n   ============================================================ */\nconst MEMBER_COLORS = {\n  DP:\"var(--m-7)\", DK:\"var(--m-11)\", RA:\"var(--m-2)\", RW:\"var(--m-5)\",\n  BS:\"var(--m-4)\", AS:\"var(--m-9)\", FN:\"var(--m-6)\", YP:\"var(--m-3)\",\n  SL:\"var(--m-10)\", HP:\"var(--m-1)\", TW:\"var(--m-8)\", GN:\"var(--m-12)\",\n};\nfunction initials(name){ const w=name.trim().split(/\\s+/); return (w.length===1 ? w[0].slice(0,2) : w[0][0]+w[1][0]).toUpperCase(); }\n\nconst GROUPS = [\n  { name:\"Trip Bali & Tokyo\", members:[\"Dimas Prasetyo\",\"Dina Kartika\",\"Reza Aditya\",\"Rina Wijaya\",\"Bagus Santoso\"], myNet: 156700000, sub:\"7 transaksi baru\" },\n  { name:\"Kosan Blok C\", members:[\"Dimas Prasetyo\",\"Fajar Nugroho\",\"Yoga Pratama\",\"Sinta Larasati\"], myNet: -1850000, sub:\"Listrik & wifi bulan ini\" },\n  { name:\"Patungan Kado Nikahan Sarah & Bagus\", members:[\"Dimas Prasetyo\",\"Dina Kartika\",\"Reza Aditya\",\"Rina Wijaya\",\"Andi Saputra\",\"Hesti Purnama\"], myNet: -347500, sub:\"Nama grup panjang · tes tata letak\" },\n  { name:\"Makan Jumat\", members:[\"Dimas Prasetyo\",\"Reza Aditya\",\"Rina Wijaya\"], myNet: 0, sub:\"Semua sudah setor\" },\n];\nconst ARCHIVED = [\n  { name:\"Trip Bromo 2024\", members:5, when:\"Lunas Des 2024\" },\n  { name:\"Futsal Rabu\", members:8, when:\"Lunas Okt 2024\" },\n];\n\n/* riwayat lokal bagi cepat (chip) */\nconst QS_HISTORY = [\n  { total:180000, people:3 },\n  { total:500000, people:5 },\n  { total:96000, people:2 },\n];\n\nconst $ = s => document.querySelector(s);\nconst rpn = n => n.toLocaleString(\"id-ID\");\nconst parseNum = s => parseInt(String(s).replace(/\\D/g,\"\"),10) || 0;\n\n/* ---- avatar ---- */\nfunction avatar(name){\n  const ini = initials(name);\n  const c = MEMBER_COLORS[ini] || \"var(--n-5)\";\n  return `<span class=\"h-avatar\" style=\"--c:${c}\" title=\"${name}\">${ini}<\u002Fspan>`;\n}\nfunction iconDir(dir){\n  const d = dir===\"down\" ? \"M12 5v14M6 13l6 6 6-6\" : \"M12 19V5M6 11l6-6 6 6\";\n  return `<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"${d}\"/><\u002Fsvg>`;\n}\nconst iconCheck = `<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 13l4 4L19 7\"/><\u002Fsvg>`;\nconst iconPeople = `<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><\u002Fsvg>`;\nconst iconChev = `<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 6l6 6-6 6\"/><\u002Fsvg>`;\n\n/* ============================================================\n   RENDER GRUP\n   ============================================================ */\nfunction renderGroups(){\n  const wrap = $(\"#groupList\"); wrap.innerHTML = \"\";\n  GROUPS.forEach(g => {\n    const net = g.myNet, pos = net>0, neg = net<0, zero = net===0;\n    const stateCls = pos ? \"is-pos\" : neg ? \"is-neg\" : \"is-settled\";\n    const shown = g.members.slice(0,4);\n    const more = g.members.length - shown.length;\n    const stack = shown.map(avatar).join(\"\") + (more>0 ? `<span class=\"h-stack-more\">+${more}<\u002Fspan>` : \"\");\n\n    let foot;\n    if(zero){\n      foot = `<span class=\"h-tag h-tag--zero\">lunas<\u002Fspan>\n              <span class=\"h-settled-amt\">${iconCheck} Beres<\u002Fspan>`;\n    } else {\n      const tag = pos\n        ? `<span class=\"h-tag h-tag--pos\">${iconDir(\"down\")} kamu dapet<\u002Fspan>`\n        : `<span class=\"h-tag h-tag--neg\">${iconDir(\"up\")} kamu bayar<\u002Fspan>`;\n      const sign = pos ? \"+\" : \"−\";\n      foot = `<div class=\"h-pos\">${tag}<\u002Fdiv>\n              <span class=\"h-group-amt h-num\">${sign}<span class=\"h-rp\">Rp<\u002Fspan>${rpn(Math.abs(net))}<\u002Fspan>`;\n    }\n\n    const b = document.createElement(\"button\");\n    b.className = `h-group ${stateCls}`;\n    b.innerHTML =\n      `<div class=\"h-group-top\">\n         <div class=\"h-group-id\">\n           <div class=\"h-group-name\">${g.name}<\u002Fdiv>\n           <div class=\"h-group-meta\">${iconPeople} ${g.members.length} orang · ${g.sub}<\u002Fdiv>\n         <\u002Fdiv>\n         <span class=\"h-chev\">${iconChev}<\u002Fspan>\n       <\u002Fdiv>\n       <div class=\"h-stack\">${stack}<\u002Fdiv>\n       <div class=\"h-group-foot\">${foot}<\u002Fdiv>`;\n    b.addEventListener(\"click\", () => { location.href = \"Saldo & Settle Up (standalone).html\"; });\n    wrap.appendChild(b);\n  });\n}\n\n/* ---- arsip ---- */\nfunction renderArchive(){\n  const wrap = $(\"#archList\"); wrap.innerHTML = \"\";\n  ARCHIVED.forEach(a => {\n    const row = document.createElement(\"button\");\n    row.className = \"h-arch-row\";\n    row.innerHTML =\n      `<span class=\"h-avatar\" style=\"--c:var(--n-5)\">${iconCheckMini()}<\u002Fspan>\n       <span class=\"h-arch-name\">${a.name}<\u002Fspan>\n       <span class=\"h-arch-meta\">${a.members} orang · ${a.when}<\u002Fspan>`;\n    wrap.appendChild(row);\n  });\n  $(\"#archCount\").textContent = ARCHIVED.length + \" grup\";\n}\nfunction iconCheckMini(){ return `<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:14px;height:14px\"><path d=\"M5 13l4 4L19 7\"/><\u002Fsvg>`; }\n$(\"#archToggle\").addEventListener(\"click\", () => {\n  $(\"#archToggle\").classList.toggle(\"is-open\");\n  $(\"#archList\").classList.toggle(\"is-open\");\n});\n\n/* ============================================================\n   QUICK SPLIT (bagi cepat) — instan, tanpa grup\n   ============================================================ */\nlet qsPeople = 4;\nfunction qsAmountVal(){ return parseNum($(\"#qsAmount\").value); }\nfunction calcQS(){\n  const total = qsAmountVal();\n  const per = qsPeople>0 ? Math.round(total/qsPeople) : 0;\n  $(\"#qsResult\").innerHTML = `<span class=\"h-rp\">Rp<\u002Fspan>${rpn(per)}`;\n  $(\"#qsPeople\").textContent = qsPeople;\n  $(\"#qsPeopleVal\").textContent = qsPeople;\n  $(\"#qsMinus\").disabled = qsPeople<=1;\n}\nfunction fmtField(){\n  const v = qsAmountVal();\n  $(\"#qsAmount\").value = v ? rpn(v) : \"\";\n}\n$(\"#qsAmount\").addEventListener(\"input\", () => {\n  const el = $(\"#qsAmount\");\n  const v = parseNum(el.value);\n  el.value = v ? rpn(v) : \"\";\n  calcQS();\n});\n$(\"#qsMinus\").addEventListener(\"click\", () => { if(qsPeople>1){ qsPeople--; calcQS(); } });\n$(\"#qsPlus\").addEventListener(\"click\", () => { if(qsPeople<50){ qsPeople++; calcQS(); } });\n\nfunction renderQSHist(){\n  const wrap = $(\"#qsHist\"); wrap.innerHTML = \"\";\n  QS_HISTORY.forEach(h => {\n    const per = Math.round(h.total/h.people);\n    const c = document.createElement(\"button\");\n    c.className = \"h-qs-chip\";\n    c.innerHTML = `${rpn(h.total)} ÷ ${h.people} = <b>${rpn(per)}<\u002Fb>`;\n    c.addEventListener(\"click\", () => { $(\"#qsAmount\").value = rpn(h.total); qsPeople = h.people; calcQS(); });\n    wrap.appendChild(c);\n  });\n}\n\n/* ============================================================\n   STATE SWITCHER (dev)\n   ============================================================ */\nfunction setState(s){\n  document.querySelectorAll(\"#devStates .h-dev-btn\").forEach(b => b.classList.toggle(\"is-active\", b.dataset.state===s));\n  const empty = s===\"empty\";\n  $(\"#groupList\").hidden = empty;\n  $(\"#archWrap\").hidden = empty;\n  $(\"#emptyGroups\").hidden = !empty;\n  $(\"#fab\").style.display = empty ? \"none\" : \"flex\";\n  document.querySelector(\".h-sectlabel\").style.display = empty ? \"none\" : \"flex\";\n}\ndocument.querySelectorAll(\"#devStates .h-dev-btn\").forEach(b => b.addEventListener(\"click\", () => setState(b.dataset.state)));\ndocument.querySelectorAll(\"[data-theme-btn]\").forEach(b => b.addEventListener(\"click\", () => {\n  document.documentElement.setAttribute(\"data-theme\", b.dataset.themeBtn);\n  document.querySelectorAll(\"[data-theme-btn]\").forEach(x => x.classList.toggle(\"is-active\", x===b));\n}));\n\n/* ---- Init ---- */\nrenderGroups(); renderArchive(); renderQSHist(); calcQS();\n\n/* ============================================================\n   CATATAN DESAIN (sekali, di bawah — untuk agent coding)\n   ------------------------------------------------------------\n   • Pertanyaan utama tiap buka app: \"gue lagi nombok atau\n     ditagih, berapa?\" — dijawab tanpa scroll oleh tag arah +\n     nominal di tiap kartu grup (dapet/bayar/lunas).\n   • Bagi cepat (Quick Split) paling atas: kalkulator instan\n     tanpa grup, ga nyimpen apa-apa selain riwayat lokal (chip).\n     Sekaligus jadi \"coba tanpa komitmen\" buat pengguna baru —\n     makanya di state kosong ia tetap ada, empty-state cuma\n     ganti area daftar grup.\n   • Kartu grup = satu pola, diulang dari array GROUPS. Isi:\n     nama, jumlah + tumpukan avatar, posisi kamu (tag + nominal).\n   • Arah piutang/utang TIDAK andalkan warna: tag punya panah\n     (naik/turun), tanda +/−, dan kata (\"kamu dapet\"/\"kamu\n     bayar\"/\"lunas\"). Aman buta warna & kebaca di bawah matahari\n     (bobot tebal, tnum).\n   • Grup lunas (myNet 0) tampil beda jelas: permukaan teduh,\n     border putus-putus, tanpa nominal besar — cuma \"Beres\".\n   • Arsip disembunyiin di seksi collapsible, ga menuh-menuhin\n     daftar utama.\n   • Avatar: inisial dari kata (Dimas Prasetyo→DP). Tabrakan\n     huruf awal (Dimas/Dina→DP/DK lewat kata kedua; Reza/Rina→\n     RA/RW) dibedakan warna, inisial ga dipanjangin. Di beranda\n     avatar berdiri sendiri (tumpukan) karena ga ada keputusan\n     uang yang diambil dari situ.\n   • Dua jalan bikin grup: FAB (utama, selalu kejangkau) + link\n     di header seksi. Pengaturan di kanan atas.\n   • Data uji tata letak: \"Trip Bali & Tokyo\" nominal 9 digit\n     (Rp 156.700.000) — kartu foot nowrap, ga pecah. \"Patungan\n     Kado Nikahan Sarah & Bagus\" nama panjang — ellipsis satu\n     baris, meta tetap kebaca.\n\n   TOKEN: semua dari tokens.css yang ada (netral, brand, pos/neg,\n   member colors, elev, radius, motion, spacing, --num-xl, --scrim,\n   --route*). TIDAK ada token baru yang perlu ditambah untuk layar\n   ini.\n   ============================================================ */\n<\u002Fscript>\n\n\n<\u002Fbody><\u002Fhtml>"
+  </script>
+</body>
+</html>

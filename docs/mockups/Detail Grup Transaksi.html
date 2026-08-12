@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>BagiBill — Detail Grup · Transaksi</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1E63E9; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #1E63E9; z-index: 9999; }
+    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    #__bundler_placeholder { color: #999; font-size: 14px; }
+  </style>
+  <noscript>
+    <style>#__bundler_loading { display: none; }</style>
+    <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
+      This page requires JavaScript to display.
+    </div>
+  </noscript>
+</head>
+<body>
+  <div id="__bundler_thumbnail">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#1E63E9"></rect>
+    <rect x="440" y="150" width="320" height="500" rx="46" fill="#FFFFFF"></rect>
+    <rect x="470" y="210" width="200" height="26" rx="8" fill="#12161C"></rect>
+    <rect x="470" y="270" width="260" height="70" rx="14" fill="#EDF0F3"></rect>
+    <rect x="470" y="370" width="260" height="54" rx="12" fill="#F6F7F9"></rect>
+    <rect x="470" y="440" width="260" height="54" rx="12" fill="#F6F7F9"></rect>
+    <rect x="470" y="510" width="260" height="54" rx="12" fill="#DBF4F0"></rect>
+    <text x="600" y="620" font-family="system-ui,sans-serif" font-size="40" font-weight="700" fill="#1E63E9" text-anchor="middle">Rp</text>
+  </svg>
+</div>
+  <div id="__bundler_loading">Unpacking...</div>
+
+  <script>
+    
+document.addEventListener('DOMContentLoaded', async function() {
+  const loading = document.getElementById('__bundler_loading');
+  function setStatus(msg) { if (loading) loading.textContent = msg; }
+
+  const FONT_MIME = /^(font[/]|application[/](x-)?font-|application[/]vnd\.ms-fontobject)/i;
+  const MIME_TOKEN = /^[\w.+-]+[/][\w.+-]+$/;
+  function toBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
+
+  // Error sink persists across replaceWith since it's on window, not the DOM.
+  window.addEventListener('error', function(e) {
+    // Failed resource loads (CSP-blocked links, scripts, images) fire plain
+    // events at the element — warn only; real JS errors carry message/error.
+    if (!e.message && !e.error && e.target && e.target !== window) {
+      console.warn('[bundle] resource failed to load:',
+        e.target.tagName, String(e.target.src || e.target.href || ''));
+      return;
+    }
+    var p = document.body || document.documentElement;
+    var d = document.getElementById('__bundler_err') || p.appendChild(document.createElement('div'));
+    d.id = '__bundler_err';
+    d.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;font:12px/1.4 ui-monospace,monospace;background:#2a1215;color:#ff8a80;padding:10px 14px;border-radius:8px;border:1px solid #5c2b2e;z-index:99999;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    d.textContent = (d.textContent ? d.textContent + String.fromCharCode(10) : '') +
+      '[bundle] ' + (e.message || e.type) +
+      (e.filename ? ' (' + e.filename.slice(0, 60) + ':' + e.lineno + ')' : '');
+  }, true);
+
+  try {
+    const manifestEl = document.querySelector('script[type="__bundler/manifest"]');
+    const templateEl = document.querySelector('script[type="__bundler/template"]');
+    if (!manifestEl || !templateEl) {
+      setStatus('Error: missing bundle data');
+      console.error('[bundler] Missing script tags — manifestEl:', !!manifestEl, 'templateEl:', !!templateEl);
+      return;
+    }
+
+    const manifest = JSON.parse(manifestEl.textContent);
+    let template = JSON.parse(templateEl.textContent);
+
+    // Nested page bundles (iframe targets). Each ships ONCE, in the ROOT
+    // document's manifest; frame srcs carry an about:blank#<uuid> marker
+    // instead of a substitutable uuid. Every document mints the blobs for
+    // its OWN frames — from local text at the root, or text obtained from
+    // its DIRECT parent over the relay protocol below — so each frame
+    // navigation stays same-origin with its initiator and a deduped page
+    // loads at any depth on any host, including a file:// download's
+    // opaque origins (where a blob minted by one document cannot be
+    // navigated to by another).
+    const pageOrderEl = document.querySelector('script[type="__bundler/page_order"]');
+    const pageOrder = pageOrderEl ? JSON.parse(pageOrderEl.textContent) : [];
+    const pageSet = new Set(pageOrder);
+    const pageTexts = {};
+
+    // ── Nested-page text protocol (parent-chain relay) ──
+    // Page bundles ship once, in the ROOT document's manifest. Every
+    // document mints the blobs for its OWN frames, obtaining page text
+    // through a strict parent-chain relay: a document only ever SENDS to
+    // its direct parent (which, for every document the publisher's own
+    // runtime minted, is another publisher document) and only ACCEPTS
+    // text from that direct parent; requests from below are honored only
+    // for the document's own child frames, and the ROOT never sends
+    // upward at all. That last rule is load-bearing: the artifact host's
+    // frame-ancestors allows claude.ai (and friends) to frame an
+    // artifact, so window.top can be a FOREIGN document — a top-addressed
+    // protocol would hand page uuids to that ancestor and accept forged
+    // "page text" from it, minting attacker HTML as an artifact-origin
+    // blob document. The chain never touches the ancestor: requests stop
+    // at the root, replies are origin-addressed per hop (never '*' when
+    // an origin exists), and both directions are origin-gated (on https
+    // a foreign sender's origin can never equal this document's; in
+    // opaque contexts — file:// — everything serializes as 'null', where
+    // an embedded EXTERNAL frame still fails the gate by carrying its
+    // own real origin, and a sandboxed child of such a frame is excluded
+    // by the own-child-frames check plus uuid unguessability). Shape is
+    // deny-by-default: one request form, one reply form, no error
+    // replies.
+    // window.origin is the SERIALIZED SECURITY origin ('null' in opaque
+    // contexts such as a sandboxed preview iframe) — location.origin is
+    // computed from the URL and stays 'https://…' even when the document
+    // is sandboxed, which would misgate every opaque chain.
+    const OWN_TARGET = /^https?:[/][/]/.test(window.origin || '')
+      ? window.origin
+      : '*';
+    function trustedOrigin(e) {
+      if (e.origin === window.origin) return true; // https chains; opaque==opaque
+      // file:// trees: Chrome serializes the file document's origin as
+      // 'file://' while the blob: documents it mints serialize as 'null',
+      // so the two legitimate shapes can never string-match — accept the
+      // pair in both directions. https origins never serialize as either,
+      // and sender identity (own child frame / direct parent) is checked
+      // separately.
+      return (
+        (e.origin === 'null' &&
+          (window.origin === 'file://' ||
+            window.location.protocol === 'file:')) ||
+        (/^file:/.test(e.origin) && window.origin === 'null')
+      );
+    }
+    // Non-empty only in the root document (nested bundles ship an empty
+    // island), so it doubles as the root marker: the root answers from
+    // local text and treats a miss as authoritative — never relaying to
+    // its (possibly foreign) parent.
+    const isPageRoot = pageOrder.length > 0;
+    const blobUrls = {};
+    const resourceBlobs = {};
+    const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+    const pendingFrames = {}; // uuid -> [{el, frag}] awaiting text for own frames
+    const pendingRelays = {}; // uuid -> [childWindow] awaiting text to pass down
+    function mountPage(el, frag, text) {
+      const pageBlob = new Blob([text], { type: 'text/html' });
+      const u = URL.createObjectURL(pageBlob);
+      resourceBlobs[u] = pageBlob;
+      el.src = u + frag;
+    }
+    function deliverPage(uuid, text) {
+      const frames = pendingFrames[uuid];
+      delete pendingFrames[uuid];
+      if (frames) for (const f of frames) mountPage(f.el, f.frag, text);
+      const relays = pendingRelays[uuid];
+      delete pendingRelays[uuid];
+      if (relays) {
+        for (const cw of relays) {
+          try { cw.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+        }
+      }
+    }
+    function ownFrameWindows() {
+      const out = [];
+      for (const f of Array.from(document.querySelectorAll('iframe'))) {
+        try { if (f.contentWindow) out.push(f.contentWindow); } catch (err) { /* detached */ }
+      }
+      return out;
+    }
+    window.addEventListener('message', function (e) {
+      const d = e.data;
+      if (!d || typeof d !== 'object' || !e.source) return;
+      // Origin gate first; the structural checks below (own-child-frames
+      // for requests, direct-parent + solicited-uuid for replies, the
+      // root's never-relay rule) are what hold in fully opaque chains
+      // where origin strings can't discriminate — a sandboxed root's
+      // FOREIGN wrapper still fails all three even though both serialize
+      // as real-vs-'null' rather than matching.
+      if (!trustedOrigin(e)) return;
+      if (typeof d.__bundler_need === 'string' && UUID_SHAPE.test(d.__bundler_need)) {
+        // Requests are honored only for this document's own child frames.
+        if (ownFrameWindows().indexOf(e.source) < 0) return;
+        const uuid = d.__bundler_need;
+        const text = pageTexts[uuid];
+        if (typeof text === 'string') {
+          try { e.source.postMessage({ __bundler_page: uuid, __bundler_text: text }, OWN_TARGET); } catch (err) { /* gone */ }
+          return;
+        }
+        if (isPageRoot || window.parent === window) return; // authoritative miss
+        const waiting = pendingRelays[uuid];
+        if (waiting) {
+          if (waiting.indexOf(e.source) < 0) waiting.push(e.source);
+          return;
+        }
+        // Never-answered uuids would otherwise accumulate forever under a
+        // request spray; past the cap (far above any real page count) new
+        // relays are dropped rather than remembered.
+        if (Object.keys(pendingRelays).length >= 128) return;
+        pendingRelays[uuid] = [e.source];
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      } else if (
+        typeof d.__bundler_page === 'string' &&
+        UUID_SHAPE.test(d.__bundler_page) &&
+        typeof d.__bundler_text === 'string'
+      ) {
+        // The shape test is load-bearing beyond tidiness: the solicited
+        // check below uses the in operator, which matches prototype keys
+        // ('__proto__', 'constructor') — an unshaped key would reach
+        // deliverPage and throw, painting the error banner.
+        // Text is accepted only from the direct parent — the document
+        // that minted this one.
+        if (e.source !== window.parent || window.parent === window) return;
+        if (!(d.__bundler_page in pendingFrames) && !(d.__bundler_page in pendingRelays)) return;
+        deliverPage(d.__bundler_page, d.__bundler_text);
+      }
+    });
+
+    const uuids = Object.keys(manifest);
+    setStatus('Unpacking ' + uuids.length + ' assets...');
+
+    await Promise.all(uuids.map(async (uuid) => {
+      const entry = manifest[uuid];
+      try {
+        const binaryStr = atob(entry.data);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        let finalBytes = bytes;
+        if (entry.compressed) {
+          if (typeof DecompressionStream !== 'undefined') {
+            const ds = new DecompressionStream('gzip');
+            const writer = ds.writable.getWriter();
+            const reader = ds.readable.getReader();
+            writer.write(bytes);
+            writer.close();
+            const chunks = [];
+            let totalLen = 0;
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              totalLen += value.length;
+            }
+            finalBytes = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) { finalBytes.set(chunk, offset); offset += chunk.length; }
+          } else {
+            console.warn('DecompressionStream not available, asset ' + uuid + ' may not render');
+          }
+        }
+
+        if (pageSet.has(uuid)) {
+          pageTexts[uuid] = new TextDecoder().decode(finalBytes);
+          return;
+        }
+        if (FONT_MIME.test(entry.mime) && MIME_TOKEN.test(entry.mime)) {
+          // Strict artifact hosts allow font-src data: but not blob:.
+          blobUrls[uuid] = 'data:' + entry.mime + ';base64,' +
+            (entry.compressed ? toBase64(finalBytes) : entry.data);
+        } else {
+          const blob = new Blob([finalBytes], { type: entry.mime });
+          blobUrls[uuid] = URL.createObjectURL(blob);
+          resourceBlobs[blobUrls[uuid]] = blob;
+        }
+      } catch (err) {
+        console.error('Failed to decode asset ' + uuid + ':', err);
+        const blob = new Blob([], { type: entry.mime });
+        blobUrls[uuid] = URL.createObjectURL(blob);
+        resourceBlobs[blobUrls[uuid]] = blob;
+      }
+    }));
+
+    const extResEl = document.querySelector('script[type="__bundler/ext_resources"]');
+    const extResources = extResEl ? JSON.parse(extResEl.textContent) : [];
+    const resourceMap = {};
+    for (const entry of extResources) {
+      if (blobUrls[entry.uuid]) resourceMap[entry.id] = blobUrls[entry.uuid];
+    }
+
+    // Artifact-host CSP (connect-src 'self') refuses fetch() of blob: URLs —
+    // consumers read these Blobs directly. Survives the swap like the error sink.
+    window.__resourceBlobs = resourceBlobs;
+
+    setStatus('Rendering...');
+    // Page uuids have no blob here — they ride inside about:blank#<uuid>
+    // frame markers the pass below resolves after the swap.
+    for (const uuid of uuids) {
+      if (pageSet.has(uuid)) continue;
+      template = template.split(uuid).join(blobUrls[uuid]);
+    }
+
+    // Strip integrity + crossorigin — blob URLs from a file:// document inherit
+    // a null origin, so crossorigin forces a CORS fetch that SRI then rejects.
+    // The manifest bytes are ours; SRI protects against CDN compromise, not this.
+    template = template.replace(/\s+integrity="[^"]*"/gi, '').replace(/\s+crossorigin="[^"]*"/gi, '');
+
+    const resourceScript = '<script>window.__resources = ' +
+      JSON.stringify(resourceMap).replace(/<\//g, '<\\/') +
+      ';</' + 'script>';
+    // Inject after <head> so the DOCTYPE stays first; prepending the script
+    // would push the parser into quirks mode. DOMParser always emits a <head>
+    // (synthesizing one if the source HTML omitted it) but may carry
+    // attributes through, so match the full opening tag. slice() rather than
+    // replace() keeps us clear of $-pattern substitution in resourceScript.
+    const headOpen = template.match(/<head[^>]*>/i);
+    if (headOpen) {
+      const i = headOpen.index + headOpen[0].length;
+      template = template.slice(0, i) + resourceScript + template.slice(i);
+    }
+
+    // Parse the template and swap the root element. Scripts inserted via
+    // DOMParser/replaceWith are inert per spec — re-create each with
+    // createElement so they execute, awaiting onload for src scripts to
+    // preserve ordering (React before ReactDOM before Babel before text/babel).
+    const doc = new DOMParser().parseFromString(template, 'text/html');
+    document.documentElement.replaceWith(doc.documentElement);
+
+    // Resolve page-frame markers: mint this document's own blob for each
+    // framed page — from local text when this is the root, otherwise by
+    // asking the direct parent over the relay protocol above. An
+    // unanswered request leaves the frame on about:blank, the same
+    // degraded state as a refused embed.
+    {
+      const MARKER = /^about:blank#([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(#.*)?$/;
+      const needed = [];
+      for (const el of Array.from(document.querySelectorAll('iframe'))) {
+        const m = MARKER.exec(el.getAttribute('src') || '');
+        if (!m) continue;
+        const text = pageTexts[m[1]];
+        if (typeof text === 'string') {
+          mountPage(el, m[2] || '', text);
+        } else if (window.parent !== window && !isPageRoot) {
+          const had = pendingFrames[m[1]];
+          (pendingFrames[m[1]] = had || []).push({ el: el, frag: m[2] || '' });
+          if (!had) needed.push(m[1]);
+        }
+      }
+      for (const uuid of needed) {
+        window.parent.postMessage({ __bundler_need: uuid }, OWN_TARGET);
+      }
+    }
+
+    const dead = Array.from(document.scripts);
+    for (const old of dead) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.textContent = old.textContent;
+      // text/babel scripts with a src: read and inline. transformScriptTags
+      // does XHR against the src, but blob:null/ from a file:// origin is
+      // silently dropped. Inlining makes it a plain inline babel script,
+      // which transformScriptTags handles unconditionally.
+      if ((s.type === 'text/babel' || s.type === 'text/jsx') && s.src) {
+        const pre = resourceBlobs[s.src.split('#')[0]];
+        s.textContent = pre ? await pre.text() : await (await fetch(s.src)).text();
+        s.removeAttribute('src');
+      }
+      const p = s.src ? new Promise(function(r) { s.onload = s.onerror = r; }) : null;
+      old.replaceWith(s);
+      if (p) await p;
+    }
+    // Babel standalone auto-transforms type=text/babel on DOMContentLoaded,
+    // which fired before we swapped the document. Trigger manually if present.
+    if (window.Babel && typeof window.Babel.transformScriptTags === 'function') {
+      window.Babel.transformScriptTags();
+    }
+  } catch (err) {
+    setStatus('Error unpacking: ' + err.message);
+    console.error('Bundle unpack error:', err);
+  }
+});
+
+  </script>
+
+  <script type="__bundler/manifest">
+{}
+  </script>
+
+  <script type="__bundler/ext_resources">
+[]
+  </script>
+
+  <script type="__bundler/page_order">
+[]
+  </script>
+
+  <script type="__bundler/template">
+"<!DOCTYPE html>\n<html lang=\"id\"><head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>BagiBill — Detail Grup · Transaksi<\u002Ftitle>\n<style>\n/* ============================================================\n   BagiBill — Detail Grup / Tab Transaksi\n   Token dari tokens.css. Tidak ada nilai mentah yang diulang;\n   semua warna/spacing/radius/durasi lewat variabel.\n   ============================================================ */\n\n/* ---- member palette (light & dark sama) ---- */\n:root{\n  --bb-font:-apple-system,BlinkMacSystemFont,\"SF Pro Text\",\"SF Pro Display\",system-ui,\"Segoe UI\",Roboto,sans-serif;\n  --m-1:#E5484D;--m-2:#E1620F;--m-3:#A9820C;--m-4:#4B9E2F;--m-5:#12967A;--m-6:#0E8FB0;\n  --m-7:#3A5BD9;--m-8:#5B4BD6;--m-9:#7C3AED;--m-10:#A83BC0;--m-11:#C42C86;--m-12:#D33B63;\n\n  --fs-caption2:11px;--fs-caption:12px;--fs-footnote:13px;--fs-subhead:15px;--fs-body:17px;\n  --fs-title3:20px;--fs-title2:22px;\n  --fw-regular:400;--fw-medium:500;--fw-semibold:600;--fw-bold:700;\n\n  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-7:32px;\n  --r-btn:10px;--r-card:14px;--r-field:10px;--r-pill:999px;\n  --dur-tap:120ms;--dur-base:200ms;--ease:cubic-bezier(.2,.8,.2,1);\n}\n[data-theme=\"light\"]{\n  --n-0:#F6F7F9;--n-1:#FFFFFF;--n-2:#EDF0F3;--n-3:#E1E5EA;--n-4:#C8CED7;--n-5:#98A0AC;--n-6:#69717E;--n-7:#49515D;--n-8:#282D35;--n-9:#12161C;\n  --surface:#FFFFFF;--surface-sunken:#F6F7F9;--surface-raised:#FFFFFF;--border:#E1E5EA;\n  --text:#12161C;--text-secondary:#49515D;--text-muted:#69717E;\n  --brand:#1E63E9;--brand-strong:#1750C9;--brand-tint:#E7EEFD;--on-brand:#FFFFFF;\n  --pos:#0E9E8E;--pos-text:#0A6E63;--pos-tint:#DBF4F0;\n  --neg:#E5484D;--neg-text:#B22026;--neg-tint:#FCE4E5;\n  --elev-1:0 1px 2px rgba(16,22,30,.06);--elev-2:0 2px 10px rgba(16,22,30,.08);--elev-3:0 8px 26px rgba(16,22,30,.12);\n  --scrim:rgba(16,22,30,.28);\n}\n[data-theme=\"dark\"]{\n  --n-0:#0E1116;--n-1:#161A21;--n-2:#1D222B;--n-3:#242A34;--n-4:#313945;--n-5:#48525F;--n-6:#79838F;--n-7:#9AA4B2;--n-8:#C8CED7;--n-9:#F2F4F7;\n  --surface:#161A21;--surface-sunken:#0E1116;--surface-raised:#1D222B;--border:#242A34;\n  --text:#F2F4F7;--text-secondary:#9AA4B2;--text-muted:#79838F;\n  --brand:#5B8CFF;--brand-strong:#7AA2FF;--brand-tint:#182338;--on-brand:#0B1220;\n  --pos:#2FC7B4;--pos-text:#54D6C6;--pos-tint:#0F2B29;\n  --neg:#FF6B6E;--neg-text:#FF8E90;--neg-tint:#331A1C;\n  --elev-1:0 1px 2px rgba(0,0,0,.4);--elev-2:0 4px 14px rgba(0,0,0,.5);--elev-3:0 10px 28px rgba(0,0,0,.6);\n  --scrim:rgba(0,0,0,.5);\n}\n\n*{box-sizing:border-box;}\nbody{margin:0;font-family:var(--bb-font);background:var(--stage,#E8EAEE);-webkit-font-smoothing:antialiased;\n  min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:var(--sp-6);padding:var(--sp-7) var(--sp-4) var(--sp-9);}\nbody{--stage:#E8EAEE;}\n.num{font-variant-numeric:tabular-nums;font-feature-settings:\"tnum\" 1,\"lnum\" 1;}\n.scr::-webkit-scrollbar{width:0;height:0;}\n\n/* ---- page controls ---- */\n.controls{display:flex;align-items:center;gap:var(--sp-3);background:#fff;border:1px solid #E1E5EA;\n  border-radius:var(--r-pill);padding:var(--sp-1) var(--sp-1) var(--sp-1) var(--sp-4);box-shadow:0 1px 3px rgba(16,22,30,.08);}\n.controls span{font-size:var(--fs-footnote);font-weight:var(--fw-semibold);color:#49515D;}\n.controls button{border:none;background:#EDF0F3;color:#282D35;height:34px;padding:0 var(--sp-4);border-radius:var(--r-pill);\n  font-size:var(--fs-subhead);font-weight:var(--fw-semibold);cursor:pointer;font-family:inherit;}\n\n.frames{display:flex;flex-wrap:wrap;gap:var(--sp-8);justify-content:center;align-items:flex-start;}\n\n/* ---- phone frame ---- */\n.phone{width:360px;height:780px;border-radius:44px;background:#000;padding:11px;position:relative;\n  box-shadow:0 30px 70px var(--scrim),0 8px 20px rgba(16,22,30,.18);}\n.screen{width:100%;height:100%;border-radius:34px;overflow:hidden;background:var(--surface-sunken);\n  display:flex;flex-direction:column;position:relative;color:var(--text);}\n.notch{position:absolute;left:50%;top:14px;transform:translateX(-50%);width:118px;height:32px;background:#000;border-radius:20px;z-index:5;}\n\n.statusbar{height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:space-between;padding:0 var(--sp-6) 0 var(--sp-6);font-size:var(--fs-subhead);}\n.statusbar .t{font-weight:var(--fw-semibold);}\n.statusbar .r{display:flex;align-items:center;gap:var(--sp-1);font-size:var(--fs-caption);}\n.batt{width:22px;height:11px;border:1.5px solid var(--text);border-radius:3px;position:relative;display:inline-block;}\n.batt::after{content:\"\";position:absolute;inset:1.5px;right:6px;background:var(--text);border-radius:1px;}\n\n/* ---- group header ---- */\n.ghead{flex:0 0 auto;background:var(--surface);border-bottom:1px solid var(--border);\n  padding:var(--sp-1) var(--sp-4) 0;box-shadow:var(--elev-1);z-index:2;}\n.ghead-top{display:flex;align-items:center;gap:var(--sp-2);height:36px;}\n.icobtn{border:none;background:none;color:var(--brand);font-size:26px;line-height:1;cursor:pointer;width:30px;height:30px;\n  display:flex;align-items:center;justify-content:center;padding:0;border-radius:var(--r-pill);}\n.gtitle{flex:1;min-width:0;text-align:center;}\n.gtitle h1{margin:0;font-size:var(--fs-body);font-weight:var(--fw-semibold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n.icobtn.menu{font-size:20px;color:var(--text-secondary);}\n\n/* member stack + your position */\n.ghead-mid{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) 0 var(--sp-4);}\n.avstack{display:flex;flex:0 0 auto;}\n.avstack .av{width:32px;height:32px;border-radius:var(--r-pill);border:2px solid var(--surface);color:#fff;\n  font-size:var(--fs-caption);font-weight:var(--fw-semibold);display:flex;align-items:center;justify-content:center;margin-left:-8px;background:var(--av,var(--n-5));}\n.avstack .av:first-child{margin-left:0;}\n.avstack .more{background:var(--n-3);color:var(--text-secondary);}\n\n/* the most-sought info: your position */\n.position{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-end;text-align:right;\n  background:var(--surface-sunken);border:1px solid var(--border);border-radius:var(--r-card);padding:var(--sp-2) var(--sp-3);cursor:pointer;}\n.position .lbl{font-size:var(--fs-caption);color:var(--text-muted);}\n.position .amt{font-size:var(--fs-title3);font-weight:var(--fw-bold);letter-spacing:-.01em;line-height:1.15;}\n.position .amt.neg{color:var(--neg-text);}\n.position .amt.pos{color:var(--pos-text);}\n.position .sub{font-size:var(--fs-caption);color:var(--text-secondary);}\n.position .sub b{color:var(--text);font-weight:var(--fw-semibold);}\n\n/* tabs */\n.tabs{display:flex;gap:var(--sp-5);}\n.tab{border:none;background:none;font-family:inherit;font-size:var(--fs-subhead);font-weight:var(--fw-medium);\n  color:var(--text-muted);padding:var(--sp-2) 0 var(--sp-3);cursor:pointer;position:relative;}\n.tab.active{color:var(--text);font-weight:var(--fw-semibold);}\n.tab.active::after{content:\"\";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand);border-radius:var(--r-pill);}\n.tab .count{color:var(--text-muted);font-weight:var(--fw-regular);}\n\n/* ---- toolbar: search + filter ---- */\n.toolbar{flex:0 0 auto;display:flex;gap:var(--sp-2);padding:var(--sp-3) var(--sp-4);background:var(--surface-sunken);}\n.search{flex:1;display:flex;align-items:center;gap:var(--sp-2);height:38px;padding:0 var(--sp-3);border-radius:var(--r-field);\n  background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:var(--fs-subhead);}\n.filter{flex:0 0 auto;display:flex;align-items:center;gap:var(--sp-1);height:38px;padding:0 var(--sp-3);border-radius:var(--r-field);\n  background:var(--surface);border:1px solid var(--border);color:var(--text-secondary);font-size:var(--fs-footnote);font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;}\n.filter .dot{width:6px;height:6px;border-radius:var(--r-pill);background:var(--brand);}\n\n/* ---- list ---- */\n.list{flex:1;overflow-y:auto;padding-bottom:110px;}\n.daysep{display:flex;align-items:baseline;justify-content:space-between;padding:var(--sp-4) var(--sp-4) var(--sp-2);position:sticky;top:0;\n  background:var(--surface-sunken);z-index:1;}\n.daysep .d{font-size:var(--fs-footnote);font-weight:var(--fw-semibold);color:var(--text-secondary);}\n.daysep .s{font-size:var(--fs-caption);color:var(--text-muted);}\n.group{background:var(--surface);margin:0 var(--sp-4) var(--sp-3);border:1px solid var(--border);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--elev-1);}\n\n/* transaction row — ONE pattern, diulang */\n.tx{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:var(--sp-4);\n  padding:var(--sp-3);border-bottom:1px solid var(--border);cursor:pointer;transition:background var(--dur-tap) var(--ease);}\n.tx:last-child{border-bottom:none;}\n.tx:active{background:var(--surface-sunken);}\n.cat{width:40px;height:40px;border-radius:var(--r-pill);display:flex;align-items:center;justify-content:center;font-size:19px;\n  background:color-mix(in srgb, var(--cat,var(--n-5)) 16%, transparent);}\n.tx-main{min-width:0;}\n.tx-title{font-size:var(--fs-subhead);font-weight:var(--fw-medium);color:var(--text);line-height:1.3;\n  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}\n.tx-meta{display:flex;align-items:center;gap:var(--sp-2);margin-top:3px;min-width:0;flex-wrap:wrap;row-gap:var(--sp-1);}\n.tx-meta .payer{flex:0 0 auto;font-size:var(--fs-caption);color:var(--text-muted);white-space:nowrap;}\n.marks{display:flex;align-items:center;gap:var(--sp-2);flex:0 0 auto;}\n.mk{font-size:var(--fs-caption);color:var(--text-muted);display:inline-flex;align-items:center;gap:2px;font-style:normal;}\n.fx{flex:0 0 auto;display:inline-flex;align-items:center;height:18px;padding:0 var(--sp-1);border-radius:var(--r-pill);\n  font-size:var(--fs-caption2);font-weight:var(--fw-semibold);background:var(--n-2);color:var(--text-secondary);}\n\n/* effect-on-you column */\n.tx-eff{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;text-align:right;min-width:84px;padding-left:var(--sp-2);}\n.eff-amt{font-size:var(--fs-subhead);font-weight:var(--fw-semibold);white-space:nowrap;}\n.eff-lbl{font-size:var(--fs-caption2);color:var(--text-muted);margin-top:1px;}\n.tx-eff.neg .eff-amt{color:var(--neg-text);}\n.tx-eff.pos .eff-amt{color:var(--pos-text);}\n.tx-eff.out .eff-amt{color:var(--text-muted);font-weight:var(--fw-medium);}\n\n/* not-involved: mute the whole row without adding noise */\n.tx.out .cat{background:var(--n-2);filter:grayscale(1);opacity:.7;}\n.tx.out .tx-title{color:var(--text-secondary);}\n\n/* settlement — bentuk beda, ga boleh ketuker dgn pengeluaran */\n.tx.settle{grid-template-columns:40px 1fr auto;background:var(--pos-tint);}\n.tx.settle .cat{background:transparent;color:var(--pos-text);border:1.5px dashed color-mix(in srgb,var(--pos) 55%,transparent);font-size:16px;font-weight:var(--fw-bold);}\n.tx.settle .tx-title{font-size:var(--fs-footnote);font-weight:var(--fw-semibold);color:var(--pos-text);letter-spacing:.02em;text-transform:uppercase;}\n.tx.settle .flow{font-size:var(--fs-subhead);color:var(--text);font-weight:var(--fw-medium);margin-top:1px;}\n.tx.settle .eff-amt{color:var(--pos-text);}\n\n/* ---- FAB: tambah + jalur cepat scan ---- */\n.fab{position:absolute;right:var(--sp-4);bottom:var(--sp-6);display:flex;align-items:center;gap:2px;\n  background:var(--brand);border-radius:var(--r-pill);box-shadow:var(--elev-3);}\n.fab-scan{border:none;background:none;color:var(--on-brand);width:48px;height:52px;font-size:20px;cursor:pointer;\n  border-radius:var(--r-pill) 0 0 var(--r-pill);display:flex;align-items:center;justify-content:center;opacity:.92;}\n.fab-scan::after{content:\"\";width:1px;height:24px;background:color-mix(in srgb,var(--on-brand) 30%,transparent);position:absolute;right:0;}\n.fab-main{position:relative;border:none;background:none;color:var(--on-brand);height:52px;padding:0 var(--sp-5) 0 var(--sp-4);\n  font-size:var(--fs-subhead);font-weight:var(--fw-semibold);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:var(--sp-2);border-radius:0 var(--r-pill) var(--r-pill) 0;}\n.fab-main .plus{font-size:20px;line-height:0;}\n\n/* ---- empty state ---- */\n.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:var(--sp-6);gap:var(--sp-4);}\n.empty .art{width:150px;height:150px;border-radius:var(--r-card);border:1px dashed var(--border);\n  background:repeating-linear-gradient(135deg,var(--surface) 0 10px,var(--surface-sunken) 10px 20px);\n  display:flex;align-items:center;justify-content:center;font-size:44px;opacity:.9;}\n.empty h2{margin:0;font-size:var(--fs-title3);font-weight:var(--fw-bold);color:var(--text);}\n.empty p{margin:0;font-size:var(--fs-footnote);color:var(--text-muted);line-height:1.45;max-width:230px;}\n.empty .cta{width:100%;max-width:250px;display:flex;flex-direction:column;gap:var(--sp-2);margin-top:var(--sp-2);}\n.btn-primary{height:50px;border:none;border-radius:var(--r-card);background:var(--brand);color:var(--on-brand);\n  font-size:var(--fs-body);font-weight:var(--fw-semibold);cursor:pointer;font-family:inherit;box-shadow:var(--elev-1);}\n.btn-ghost{height:44px;border:none;background:none;color:var(--brand);font-size:var(--fs-subhead);font-weight:var(--fw-medium);cursor:pointer;font-family:inherit;}\n\n.notes{max-width:760px;font-size:var(--fs-footnote);color:#69717E;line-height:1.6;}\n.notes h3{font-size:var(--fs-subhead);color:#282D35;margin:0 0 var(--sp-2);}\n.notes b{color:#282D35;}\n.notes code{background:#EDF0F3;padding:1px 5px;border-radius:6px;font-size:var(--fs-caption);}\n<\u002Fstyle>\n<\u002Fhead>\n<body>\n\n\n\n<div class=\"controls\">\n  <span>BagiBill · Detail Grup — Transaksi<\u002Fspan>\n  <button id=\"themeBtn\" onclick=\"toggleTheme()\">Gelap<\u002Fbutton>\n<\u002Fdiv>\n\n<div class=\"frames\">\n\n  <!-- ================= MAIN: filled ================= -->\n  <div class=\"phone\" data-theme=\"light\">\n    <div class=\"notch\"><\u002Fdiv>\n    <div class=\"screen\">\n      <div class=\"statusbar\"><span class=\"t num\">9:41<\u002Fspan><span class=\"r\"><span>●●●<\u002Fspan><b>5G<\u002Fb><span class=\"batt\"><\u002Fspan><\u002Fspan><\u002Fdiv>\n\n      <header class=\"ghead\">\n        <div class=\"ghead-top\">\n          <button class=\"icobtn\">‹<\u002Fbutton>\n          <div class=\"gtitle\"><h1>Trip Bali 2026<\u002Fh1><\u002Fdiv>\n          <button class=\"icobtn menu\">⋯<\u002Fbutton>\n        <\u002Fdiv>\n\n        <div class=\"ghead-mid\">\n          <div class=\"avstack\">\n            <span class=\"av\" style=\"--av:var(--m-7)\">A<\u002Fspan>\n            <span class=\"av\" style=\"--av:var(--m-4)\">B<\u002Fspan>\n            <span class=\"av\" style=\"--av:var(--m-11)\">C<\u002Fspan>\n            <span class=\"av\" style=\"--av:var(--m-2)\">D<\u002Fspan>\n            <span class=\"av more\">+3<\u002Fspan>\n          <\u002Fdiv>\n          <div class=\"position\">\n            <span class=\"lbl\">Posisi kamu<\u002Fspan>\n            <span class=\"amt neg num\">−Rp&nbsp;485.000<\u002Fspan>\n            <span class=\"sub\"><b>Kamu utang<\u002Fb> ke grup ›<\u002Fspan>\n          <\u002Fdiv>\n        <\u002Fdiv>\n\n        <nav class=\"tabs\">\n          <button class=\"tab active\">Transaksi<\u002Fbutton>\n          <button class=\"tab\">Saldo<\u002Fbutton>\n          <button class=\"tab\">Ringkasan<\u002Fbutton>\n        <\u002Fnav>\n      <\u002Fheader>\n\n      <div class=\"toolbar\">\n        <div class=\"search\">🔍 Cari transaksi<\u002Fdiv>\n        <button class=\"filter\"><span class=\"dot\"><\u002Fspan>Filter<\u002Fbutton>\n      <\u002Fdiv>\n\n      <div class=\"list scr\">\n\n        <div class=\"daysep\"><span class=\"d\">Hari ini<\u002Fspan><span class=\"s num\">Rp 636.000<\u002Fspan><\u002Fdiv>\n        <div class=\"group\">\n\n          <div class=\"tx\">\n            <div class=\"cat\" style=\"--cat:var(--m-2)\">🍝<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Sate Padang Ajo Ramon<\u002Fdiv>\n              <div class=\"tx-meta\">\n                <span class=\"payer\">Andi bayar<\u002Fspan>\n                <span class=\"marks\"><i class=\"mk\">📎<\u002Fi><i class=\"mk\">💬 3<\u002Fi><\u002Fspan>\n              <\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff neg\"><span class=\"eff-amt num\">−Rp 60.000<\u002Fspan><span class=\"eff-lbl\">bagianmu<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n\n          <div class=\"tx\">\n            <div class=\"cat\" style=\"--cat:var(--m-3)\">☕<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Kopi Kenangan<\u002Fdiv>\n              <div class=\"tx-meta\">\n                <span class=\"payer\">Kamu bayar<\u002Fspan>\n                <span class=\"marks\"><i class=\"mk\">🧾 per item<\u002Fi><\u002Fspan>\n              <\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff pos\"><span class=\"eff-amt num\">+Rp 72.000<\u002Fspan><span class=\"eff-lbl\">buat kamu<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n\n          <div class=\"tx\">\n            <div class=\"cat\" style=\"--cat:var(--m-7)\">⛽<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Bensin Cirebon<\u002Fdiv>\n              <div class=\"tx-meta\"><span class=\"payer\">Budi bayar<\u002Fspan><\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff neg\"><span class=\"eff-amt num\">−Rp 75.000<\u002Fspan><span class=\"eff-lbl\">bagianmu<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n        <\u002Fdiv>\n\n        <div class=\"daysep\"><span class=\"d\">Kemarin<\u002Fspan><span class=\"s num\">Rp 2.478.000<\u002Fspan><\u002Fdiv>\n        <div class=\"group\">\n\n          <div class=\"tx\">\n            <div class=\"cat\" style=\"--cat:var(--m-6)\">🎟<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Tiket masuk Pantai Pandawa buat rombongan tujuh belas orang plus parkir bus<\u002Fdiv>\n              <div class=\"tx-meta\">\n                <span class=\"payer\">Citra bayar<\u002Fspan>\n                <span class=\"marks\"><i class=\"mk\">📎<\u002Fi><\u002Fspan>\n              <\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff neg\"><span class=\"eff-amt num\">−Rp 100.000<\u002Fspan><span class=\"eff-lbl\">bagianmu<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n\n          <div class=\"tx\">\n            <div class=\"cat\" style=\"--cat:var(--m-5)\">🤨<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Sewa alat snorkeling<\u002Fdiv>\n              <div class=\"tx-meta\">\n                <span class=\"payer\">Dewi bayar · <span class=\"num\">S$&nbsp;45,00<\u002Fspan><\u002Fspan>\n                <span class=\"fx num\">SGD<\u002Fspan>\n              <\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff neg\"><span class=\"eff-amt num\">−Rp 132.000<\u002Fspan><span class=\"eff-lbl\">bagianmu<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n\n          <div class=\"tx settle\">\n            <div class=\"cat\">→<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Pelunasan<\u002Fdiv>\n              <div class=\"flow\">Budi melunasi ke <b>kamu<\u002Fb><\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff pos\"><span class=\"eff-amt num\">+Rp 250.000<\u002Fspan><span class=\"eff-lbl\">diterima<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n        <\u002Fdiv>\n\n        <div class=\"daysep\"><span class=\"d\">6 Agu<\u002Fspan><span class=\"s num\">Rp 118.625.000<\u002Fspan><\u002Fdiv>\n        <div class=\"group\">\n\n          <div class=\"tx\">\n            <div class=\"cat\" style=\"--cat:var(--m-8)\">🏨<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Villa Uluwatu 3 malam<\u002Fdiv>\n              <div class=\"tx-meta\">\n                <span class=\"payer\">Farhan bayar<\u002Fspan>\n                <span class=\"marks\"><i class=\"mk\">📎<\u002Fi><i class=\"mk\">💬 5<\u002Fi><\u002Fspan>\n              <\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff neg\"><span class=\"eff-amt num\">−Rp 3.750.000<\u002Fspan><span class=\"eff-lbl\">bagianmu<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n\n          <div class=\"tx out\">\n            <div class=\"cat\" style=\"--cat:var(--m-1)\">🧼<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Laundry baju Sarah<\u002Fdiv>\n              <div class=\"tx-meta\"><span class=\"payer\">Sarah bayar<\u002Fspan><\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff out\"><span class=\"eff-amt\">—<\u002Fspan><span class=\"eff-lbl\">nggak ikut<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n\n          <div class=\"tx settle\">\n            <div class=\"cat\">→<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Pelunasan<\u002Fdiv>\n              <div class=\"flow\"><b>Kamu<\u002Fb> melunasi ke Andi<\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff neg\"><span class=\"eff-amt num\">−Rp 180.000<\u002Fspan><span class=\"eff-lbl\">dibayar<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n\n          <div class=\"tx\">\n            <div class=\"cat\" style=\"--cat:var(--m-6)\">💧<\u002Fdiv>\n            <div class=\"tx-main\">\n              <div class=\"tx-title\">Air mineral galon<\u002Fdiv>\n              <div class=\"tx-meta\"><span class=\"payer\">Andi bayar<\u002Fspan><\u002Fdiv>\n            <\u002Fdiv>\n            <div class=\"tx-eff neg\"><span class=\"eff-amt num\">−Rp 10.000<\u002Fspan><span class=\"eff-lbl\">bagianmu<\u002Fspan><\u002Fdiv>\n          <\u002Fdiv>\n        <\u002Fdiv>\n\n      <\u002Fdiv>\n\n      <div class=\"fab\">\n        <button class=\"fab-scan\" title=\"Scan struk\">📷<\u002Fbutton>\n        <button class=\"fab-main\"><span class=\"plus\">+<\u002Fspan>Tambah<\u002Fbutton>\n      <\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n  <!-- ================= EMPTY STATE ================= -->\n  <div class=\"phone\" data-theme=\"light\">\n    <div class=\"notch\"><\u002Fdiv>\n    <div class=\"screen\">\n      <div class=\"statusbar\"><span class=\"t num\">9:41<\u002Fspan><span class=\"r\"><span>●●●<\u002Fspan><b>5G<\u002Fb><span class=\"batt\"><\u002Fspan><\u002Fspan><\u002Fdiv>\n\n      <header class=\"ghead\">\n        <div class=\"ghead-top\">\n          <button class=\"icobtn\">‹<\u002Fbutton>\n          <div class=\"gtitle\"><h1>Kopdar Bandung<\u002Fh1><\u002Fdiv>\n          <button class=\"icobtn menu\">⋯<\u002Fbutton>\n        <\u002Fdiv>\n        <div class=\"ghead-mid\">\n          <div class=\"avstack\">\n            <span class=\"av\" style=\"--av:var(--m-9)\">R<\u002Fspan>\n            <span class=\"av\" style=\"--av:var(--m-5)\">S<\u002Fspan>\n            <span class=\"av\" style=\"--av:var(--m-7)\">A<\u002Fspan>\n          <\u002Fdiv>\n          <div class=\"position\">\n            <span class=\"lbl\">Posisi kamu<\u002Fspan>\n            <span class=\"amt num\" style=\"color:var(--text-secondary)\">Rp&nbsp;0<\u002Fspan>\n            <span class=\"sub\">Belum ada apa-apa<\u002Fspan>\n          <\u002Fdiv>\n        <\u002Fdiv>\n        <nav class=\"tabs\">\n          <button class=\"tab active\">Transaksi<\u002Fbutton>\n          <button class=\"tab\">Saldo<\u002Fbutton>\n          <button class=\"tab\">Ringkasan<\u002Fbutton>\n        <\u002Fnav>\n      <\u002Fheader>\n\n      <div class=\"empty\">\n        <div class=\"art\">🧾<\u002Fdiv>\n        <h2>Belum ada transaksi<\u002Fh2>\n        <p>Catat pengeluaran pertama grup ini. Bayar dulu, bagi belakangan.<\u002Fp>\n        <div class=\"cta\">\n          <button class=\"btn-primary\">+ Tambah pengeluaran<\u002Fbutton>\n          <button class=\"btn-ghost\">📷 Scan struk<\u002Fbutton>\n        <\u002Fdiv>\n      <\u002Fdiv>\n    <\u002Fdiv>\n  <\u002Fdiv>\n\n<\u002Fdiv>\n\n<div class=\"notes\">\n  <h3>Catatan desain<\u002Fh3>\n  <p><b>Posisi kamu<\u002Fb> dinaikkan ke header sebagai kartu di kanan avatar — angka + tanda + label (bukan warna saja), ketuk untuk lompat ke tab Saldo. <b>Baris transaksi<\u002Fb> satu pola grid <code>ikon · isi · efek<\u002Fcode>, diulang dengan isi beda. Efek ke kamu ada di kolom kanan: <span style=\"color:var(--neg-text)\">− bagianmu<\u002Fspan>, <span style=\"color:var(--pos-text)\">+ buat kamu<\u002Fspan>, atau <b>nggak ikut<\u002Fb> (baris diredupkan, ikon grayscale, tanpa nambah elemen). <b>Penanda<\u002Fb> struk/komentar/per-item sebagai ikon kecil di baris meta. <b>Beda mata uang<\u002Fb> pakai badge <code>SGD<\u002Fcode> + nominal asli; efek tetap dikonversi ke Rp grup. <b>Pelunasan<\u002Fb> dibedakan total: latar hijau tipis, ikon panah putus-putus, judul kapital, arah \"X melunasi ke kamu\" — tak akan ketuker dengan pengeluaran.<\u002Fp>\n  <p><b>Warna di luar token:<\u002Fb> tokens.css belum punya <b>warna kategori<\u002Fb>. Saya turunkan tint kategori dari palet member (<code>--m-*<\u002Fcode>) via <code>color-mix()<\u002Fcode> alih-alih memaksakan warna semantik yang salah. Kalau kategori mau jadi elemen tetap, sebaiknya tambah set token khusus, mis. <code>--cat-makan<\u002Fcode>, <code>--cat-transport<\u002Fcode>, dst. Sisanya (surface, border, text, brand, pos/neg, elevasi, spacing, radius, durasi) murni dari token.<\u002Fp>\n<\u002Fdiv>\n\n<script>\nfunction toggleTheme(){\n  var next = document.querySelector('.phone').getAttribute('data-theme')==='light'?'dark':'light';\n  document.querySelectorAll('.phone').forEach(function(p){p.setAttribute('data-theme',next);});\n  document.body.style.setProperty('--stage', next==='dark'?'#0A0C10':'#E8EAEE');\n  document.getElementById('themeBtn').textContent = next==='dark'?'Terang':'Gelap';\n}\n<\u002Fscript>\n\n\n<\u002Fbody><\u002Fhtml>"
+  </script>
+</body>
+</html>
