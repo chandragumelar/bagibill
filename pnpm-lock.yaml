@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@bagibill/tokens':
+        specifier: workspace:*
+        version: link:packages/tokens
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -75,6 +78,8 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
+
+  packages/tokens: {}
 
 packages:
 

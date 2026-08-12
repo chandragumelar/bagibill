@@ -1,0 +1,36 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--bb-font);
+  background: var(--surface-sunken);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cincin fokus konsisten di seluruh app, terlihat, tidak cuma outline default. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
