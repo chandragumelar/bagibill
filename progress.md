@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 12 Agustus 2026
-Fase aktif: F0 (fondasi). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -34,7 +34,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [x] F0-08 Gerbang kualitas di CI
 
 ### F1. Split engine
-- [ ] F1-01 Tipe uang dan minor unit
+- [x] F1-01 Tipe uang dan minor unit
 - [ ] F1-02 Pembagi sisa largest remainder
 - [ ] F1-03 Mode Rata, Nominal, Persentase
 - [ ] F1-04 Mode Porsi dan Selisih
@@ -291,3 +291,6 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F0-07: `useFocusTrap` sengaja BUKAN nyaring elemen fokusabel lewat `el.offsetParent !== null` (beda dari `trapFocus()` di mockup). Di jsdom, `offsetParent` selalu `null` (nol layout engine) jadi filter itu bikin trap mati total di test. Pemakaian nyata (`DangerSheet`) juga gak pernah nyembunyiin salah satu tombolnya secara kondisional, jadi filter itu gak kepake buat kasus ini — kalau nanti ada sheet lain yang butuh sembunyiin elemen fokusabel secara kondisional, filter visibility perlu ditambah lagi pakai cara yang gak bergantung `offsetParent`.
 - F0-08: papan Gelombang 1 dicentang tanpa "diuji di HP sungguhan" — F0-08 infra CI, nol UI buat ditap. Buktinya setara: push komit ke branch beneran, `gh run watch` 3x — ijo (baseline), merah (komit sengaja nulis hex literal di `Button.module.css`, ketangkep di step Test sebelum sempat nyampe Build), ijo lagi (setelah `git revert`). Ketiga run id-nya kecatet di PR #9. `check-raw-css-values.ts` sekarang punya `runCheck()`+`isMain` (pola sama `check-locale-keys.ts`) disambung ke `build` — nutup celah yang dicatat F0-05 ("belum disambungkan ke CI"). Kunci i18n dan anggaran bundle udah otomatis ke-cover masing-masing lewat `build` dan `size`, gak butuh kabel baru.
 - F0-08: `packageManager: "pnpm@11.18.0"` ditambah ke `package.json` biar `pnpm/action-setup@v4` di CI pin versi yang sama dengan lokal, bukan nebak dari `pnpm-lock.yaml`. Satu annotation non-blocking dari Actions: tiga action (`checkout`, `setup-node`, `pnpm/action-setup`) masih target runtime Node 20 yang dipaksa jalan di Node 24 sama GitHub — bukan error, cuma info, biarin sampai action-nya sendiri update.
+- F1-01: dicentang di papan Gelombang 1 tanpa "diuji di HP sungguhan" — murni modul logic (`packages/split-engine/money/`), nol UI, nol apapun buat ditap di HP. Preseden sama kayak F0-03/F0-04. Dibuktikan lewat 25 test baru (normal, batas, ditolak) plus round-trip `parseMoney`↔`formatMoney` lima currency.
+- F1-01: tabel presisi mata uang sekarang ada dua tempat, `packages/split-engine/money/money.ts` dan `src/lib/i18n/format-money.ts` — isinya identik (persis sama exception-list) tapi belum di-dedup. Alasan: dedup berarti `i18n` harus import dari `split-engine`, padahal pintu publiknya (`index.ts`) baru dibangun di F1-10, dan import ke path internal `money/money.ts` melanggar aturan satu pintu di CLAUDE.md. Ditunda ke F1-10: `getCurrencyDecimals` di `i18n` jadi re-export dari facade, nama dipertahankan biar call-site nol berubah.
+- F1-01: `packages/split-engine` didaftarkan ke `include` di `tsconfig.json` (pola sama kayak `scripts`) supaya `typecheck`/`build` nyapu tanpa tsconfig terpisah. Belum jadi dependency di root `package.json` karena belum ada consumer — nunggu F1-10 atau tugas F3 yang beneran impor lewat `index.ts`.
