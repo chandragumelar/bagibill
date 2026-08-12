@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Bundle awal (dimuat saat pertama buka app)",
+    "path": "dist/assets/*.js",
+    "limit": "120 KB",
+    "brotli": true
+  }
+]

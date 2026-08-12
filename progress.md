@@ -2,8 +2,8 @@
 
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
-Status terakhir diperbarui: 11 Agustus 2026
-Fase aktif: F0 (fondasi), belum ada tugas yang dimulai. Seluruh mockup gelombang 1 selesai.
+Status terakhir diperbarui: 12 Agustus 2026
+Fase aktif: F0 (fondasi), F0-01 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -24,7 +24,7 @@ Target rilis fase 1: (isi tanggal)
 Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 
 ### F0. Fondasi
-- [ ] F0-01 Scaffold repo dan toolchain
+- [x] F0-01 Scaffold repo dan toolchain
 - [ ] F0-02 Inventaris mockup
 - [ ] F0-03 Token masuk aplikasi
 - [ ] F0-04 Infrastruktur i18n
@@ -234,6 +234,8 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-09 SELESAI 10 Ags 2026 — Kategori default delapan dengan kunci bahasa Inggris dan ikon Lucide di-inline sebagai SVG, tabelnya di `spec.md` 12.3. Alasan: delapan ikon tidak sepadan dengan menarik satu dependensi.
 - K-10 SELESAI 10 Ags 2026 — Preset biaya Indonesia adalah service charge 5% dari subtotal, lalu PB1 10% dari subtotal ditambah service charge. Bukan dua-duanya dari subtotal. Nama PPN dicabut dari preset Indonesia karena restoran dikenai PB1, bukan PPN, dan salah nama di sini langsung menghilangkan kepercayaan orang yang paham pajak. PB1 adalah pajak daerah, jadi angkanya wajib bisa diubah dan diingat per grup. Mengoreksi `spec.md` 7.2 yang sebelumnya menulis PPN 11%.
 - K-14 SELESAI 11 Ags 2026 — `--ease` ditambahkan ke `packages/tokens` sebagai alias `var(--ease-standard)`, mengikuti pemakaian di `Detail_Grup_Transaksi.html`, `Detail_Grup_Saldo.html`, dan `Lapisan_Sistem.html`. Nilainya identik, jadi ini penamaan, bukan nilai baru. Komponen boleh memakai nama pendek. Aturan umumnya: token digenerate dari mockup, jadi kalau mockup memakai nama yang belum ada, tokennya yang menyusul, bukan mockupnya yang disesuaikan.
+- K-15 SELESAI 12 Ags 2026 — TypeScript dipin ke `^6.0.3`, ESLint ke `^9.39.5`, bukan versi mayor terbaru (TypeScript 7 dan ESLint 10 sudah rilis). Alasan: `typescript-eslint@8.67` mensyaratkan `typescript <6.1.0`, dan `eslint-plugin-import@2.32` belum menyatakan dukungan ESLint 10 di peer dependency-nya. Naikkan lagi kalau kedua plugin itu sudah update peer range-nya, jangan dipaksa duluan.
+- K-16 SELESAI 12 Ags 2026 — `eslint-import-resolver-typescript` ditambah sebagai dev dependency, di luar daftar awal. Alasan: rule `import/no-internal-modules` (larangan cross-feature import selain lewat `index.ts`) diam-diam tidak pernah nyala tanpa resolver ini, karena eslint-plugin-import mengklasifikasikan import alias `@/...` sebagai "unknown" tanpa resolver yang paham `tsconfig.json`, dan rule cuma cek tipe `parent/index/sibling/external/internal`. Sudah diverifikasi manual dengan file cross-feature sungguhan sebelum dihapus lagi — rule kena, bukan cuma keaktifin config doang.
 - K-11 TERBUKA — Bentuk protokol sync, sequence number, dan resolusi konflik per field. Tidak memblokir gelombang 1.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
@@ -260,5 +262,6 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 
 ## Catatan lepas
 
+- Baseline `pnpm size` dari F0-01 (scaffold React kosong, belum ada router/fitur): **51,2 KB brotli** dari anggaran 120 KB. Sisa ~69 KB buat router, IndexedDB, split engine, dan sebelas layar. React sudah dipisah ke chunk `react-vendor` sendiri lewat `manualChunks` di `vite.config.ts`, jadi kelihatan kalau vendor membengkak vs kode app sendiri. Lazy-load per rute belum ada, itu kerjaan F0-06 — angka di atas belum kepotong oleh code splitting rute.
 - Beberapa mockup memakai variabel lokal per elemen bernama `--c`, `--av`, dan `--stage`. Itu perancah, bukan token. Jangan ikut dipindahkan ke `packages/tokens`.
 - F3-09 (buat grup) berada setelah F3-01 di penomoran, padahal secara alur pengguna dia lebih dulu. Urutannya sengaja begitu supaya layar tambah pengeluaran bisa dikerjakan di atas data contoh dan tidak menunggu layar pembuatan grup selesai. Kalau terasa janggal waktu dikerjakan, tukar saja urutannya, dependensinya sudah ditulis eksplisit di `plan.md`.
