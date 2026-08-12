@@ -27,7 +27,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [x] F0-01 Scaffold repo dan toolchain
 - [x] F0-02 Inventaris mockup
 - [x] F0-03 Token masuk aplikasi
-- [ ] F0-04 Infrastruktur i18n
+- [x] F0-04 Infrastruktur i18n
 - [ ] F0-05 Komponen dasar dan halaman `/dev/ui`
 - [ ] F0-06 Kerangka rute dan layout
 - [ ] F0-07 Lapisan sistem (undo, offline, gagal)
@@ -269,3 +269,4 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F3-09 (buat grup) berada setelah F3-01 di penomoran, padahal secara alur pengguna dia lebih dulu. Urutannya sengaja begitu supaya layar tambah pengeluaran bisa dikerjakan di atas data contoh dan tidak menunggu layar pembuatan grup selesai. Kalau terasa janggal waktu dikerjakan, tukar saja urutannya, dependensinya sudah ditulis eksplisit di `plan.md`.
 - `pnpm size` (`.size-limit.json`) cuma ngukur `dist/assets/*.js`, nol CSS. Sejak F0-03, `tokens.css` + `global.css` ke-build jadi `dist/assets/*.css` 7,33 KB (gzip 1,92 KB) yang nol ke-track di manapun. Bukan masalah sekarang (jauh dari anggaran LCP), tapi F4-02 (cek anggaran performa) perlu tahu ini gap kalau CSS-nya nanti membengkak — anggaran yang dijaga otomatis cuma separuh cerita.
 - Guard nilai CSS mentah (`scripts/check-raw-css-values.ts`, dites di `scripts/check-raw-css-values.test.ts`) sengaja ditaruh di luar `src/` biar nggak nyisir file dirinya sendiri. Nangkep hex, `rgb()/rgba()/hsl()/hsla()`, px, durasi (ms/s), dan persen mentah di `src/**/*.css`; yang lolos cuma `0` (segala satuan), `1px` khusus baris yang nyebut border, `1ms` (idiom teknis reduced-motion, bukan pilihan desain), dan `100%`. Belum disambungkan ke CI — itu F0-08.
+- `src/locales/id.ts` dan `en.ts` (F0-04) baru diisi lima kunci demo buat buktiin infrastrukturnya jalan (parity checker, `t()`, pluralisasi, kunci K-04 `expense.mode.adjustment`), sumbernya tabel padanan spec.md 22. Bukan copy deck final — kunci per layar nyusul di tugas F3 masing-masing, jangan dianggap sudah lengkap. `scripts/check-locale-keys.ts` jalan langsung lewat `node` (bukan lewat build tool) karena Node 22 di environment ini udah bisa eksekusi `.ts` tanpa flag; kalau nanti pindah environment dan itu berhenti jalan, itu tandanya Node-nya lebih tua dari yang diasumsikan di sini.
