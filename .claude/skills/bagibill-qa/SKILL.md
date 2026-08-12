@@ -236,7 +236,9 @@ grep -rnE "(placeholder|aria-label|title)=\{?['\"][A-Za-z]{3,}" src/ --include=*
 - Identifier dan komentar di kode bahasa Inggris. Teks pengguna tidak pernah ditulis di komponen.
 - Pluralisasi memakai `Intl.PluralRules` per bahasa, bukan menambah "(s)".
 - Tanggal, angka, dan mata uang lewat Intl, bukan manual.
+- Test yang nyocokin output `Intl.NumberFormat`/format uang lewat string literal manual: cek bytenya kalau assertion gagal padahal string "kelihatan sama" di layar. `Intl` masukin non-breaking space (U+00A0) antara simbol mata uang dan angka, bukan spasi ASCII biasa — dua-duanya identik secara visual di editor tapi beda karakter.
 - Layar pemilihan bahasa muncul sekali di app, dan tidak pernah muncul di halaman join.
+- Store preferensi per device (bahasa, tema, dan sejenisnya) yang skip nulis `localStorage` kalau nilai barunya "kebetulan" sama dengan nilai sekarang: cek dulu dari mana nilai sekarang itu asalnya. Kalau berasal dari tebakan (`navigator.language`, `prefers-color-scheme`) bukan dari yang beneran tersimpan, skip itu bug — pilihan eksplisit pengguna pertama kali gak pernah ke-persist kalau kebetulan sama dengan tebakan sistem, ketauannya cuma kalau device kedua tebakannya beda.
 - Teks yang dihasilkan untuk dibagikan (tagih, ringkasan, recap) ikut bahasa pengirim.
 - Terminologi konsisten dalam satu bahasa. Jangan campur "porsi" dan "bagian" untuk konsep yang sama.
 - Nada Indonesia santai tapi tidak alay. Inggris ringkas dan langsung.
