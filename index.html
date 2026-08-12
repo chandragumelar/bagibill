@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BagiBill</title>
+    <script>
+      // Anti-kedip tema: pasang data-theme sebelum apapun ke-paint, karena
+      // modul ES (main.tsx) dieksekusi setelah parsing dan bisa telat satu
+      // frame. Kunci dan nilainya harus sama persis dengan
+      // src/shared/theme/theme.ts — tidak bisa import di sini karena script
+      // ini sengaja bukan module, harus jalan sinkron duluan.
+      (function () {
+        try {
+          var theme = localStorage.getItem("bagibill:theme");
+          if (theme === "light" || theme === "dark") {
+            document.documentElement.setAttribute("data-theme", theme);
+          }
+        } catch (_error) {
+          // localStorage bisa diblok (mode privat ketat). Diam saja, biarkan
+          // ikut prefers-color-scheme.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

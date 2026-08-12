@@ -1,0 +1,4 @@
+/* Titik sambung tunggal ke token yang digenerate di packages/tokens.
+   Nol edit tangan di sini maupun di sumbernya — kalau nilai kurang,
+   tambah di packages/tokens/tokens.css lalu regenerate, bukan di sini. */
+@import "@bagibill/tokens/tokens.css";
