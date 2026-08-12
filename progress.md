@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 12 Agustus 2026
-Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 selesai. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 dan F1-02 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -35,7 +35,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 
 ### F1. Split engine
 - [x] F1-01 Tipe uang dan minor unit
-- [ ] F1-02 Pembagi sisa largest remainder
+- [x] F1-02 Pembagi sisa largest remainder
 - [ ] F1-03 Mode Rata, Nominal, Persentase
 - [ ] F1-04 Mode Porsi dan Selisih
 - [ ] F1-05 Mode Per Item
@@ -246,6 +246,8 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
   - **Posisi Toast belum dikunci.** `useUndoQueue` cuma nyediain state (items, remainingSeconds, dst) buat dipasang ke `Toast` (F0-05) manapun pemanggil taruh — F0-07 sengaja gak bikin host/wrapper posisi baku (`position:fixed` dsb) karena tiap layar beda konteks (ada yang punya FAB, ada yang BottomBar, ada yang dua-duanya). Kriteria "Selesai kalau" F0-07 soal toast gak nutupin tombol simpan/angka total baru bisa diuji beneran pas F3-01/F3-05 masang Toast di layar sungguhan — dicatat di sini supaya gak kelewat pas itu.
   - **`useNetworkPhase.markSynced()` nunggu K-11.** Fase "sync" sengaja gak auto-pindah ke "done" lewat timer — nunggu mutasi beneran kelar ngirim, yang berarti nunggu bentuk antrean mutasi dari K-11 (protokol sync, masih TERBUKA). Jangan tergoda nambahin timer pas F3 nyambungin ini sebelum K-11 kelar.
   - **Sheet judul ikut ukuran DS (fs-title3/20px), bukan LS (fs-title2/22px).** DangerSheet numpang `Sheet` F0-05 apa adanya biar satu ukuran judul konsisten di semua sheet — mockup LS sendiri pakai ukuran lebih besar khusus buat sheet hapus grup, gak direplikasi supaya gak nambah cabang ukuran di komponen bersama.
+- K-24 SELESAI 12 Ags 2026 — F1-02 `allocateByWeights`: seri pecahan sisa (largest remainder) diputus dengan indeks array lebih kecil menang, bukan lewat id atau nama member. Alasan: hasil harus reproducible dari data yang sama di device manapun tanpa perlu tahu identitas peserta, dan urutan array sudah deterministik duluan (urutan input yang dipanggil pemanggilnya) jadi ga perlu sumber keacakan tambahan.
+- K-25 SELESAI 12 Ags 2026 — F1-02 `allocateByWeights`: total negatif (diskon, koreksi) dialokasikan dengan cara hitung di nilai absolut dulu baru tiap elemen hasil dinegasikan, bukan floor langsung di angka negatif. Alasan: arah pembulatan floor di bilangan negatif kebalik dari yang diinginkan (membulatkan menjauhi nol, bukan ke bawah menuju nol), jadi kalau dipaksa floor langsung largest-remainder-nya salah arah. Hitung di absolut lalu negasi menjaga invarian jumlah = total tetap persis dan pembulatannya konsisten sama kasus positif.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
