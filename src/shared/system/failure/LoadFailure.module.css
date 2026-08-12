@@ -1,0 +1,44 @@
+.wrap {
+  padding: var(--sp-8) var(--sp-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.art {
+  width: var(--size-loadfail-art);
+  height: var(--size-loadfail-art);
+  border-radius: var(--r-loadfail-art);
+  background: var(--fail-bg);
+  color: var(--fail-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.art svg {
+  width: var(--size-loadfail-icon);
+  height: var(--size-loadfail-icon);
+}
+
+.heading {
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-bold);
+  margin: 0;
+}
+
+.message {
+  font-size: var(--fs-footnote);
+  color: var(--text-secondary);
+  line-height: var(--line-relaxed);
+  max-width: var(--size-loadfail-message-max);
+  margin: 0;
+}
+
+.retryWrap {
+  width: 100%;
+  max-width: var(--size-loadfail-btn-max);
+  margin-top: var(--sp-2);
+}

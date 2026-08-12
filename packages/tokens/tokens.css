@@ -38,9 +38,13 @@
   /* Radius */
   --r-btn: 10px; --r-card: 14px; --r-field: 10px; --r-pill: 999px;
   --r-sheet: 20px; /* radius atas sheet dari bawah, identik DS + LS */
+  --r-loadfail-art: 22px; /* radius kotak ikon layar gagal muat, LS */
 
   /* Motion */
   --dur-tap: 120ms; --dur-base: 200ms; --dur-sheet: 320ms;
+  --dur-spin: 0.8s;    /* putaran spinner (.spin), identik beberapa mockup */
+  --dur-shimmer: 1.4s; /* siklus shimmer skeleton, LS */
+  --sync-spinner-mix: 30%; /* opasitas track spinner pita "mengirim", LS */
   --ease-standard: cubic-bezier(.2,.8,.2,1);
   --ease-emphasized: cubic-bezier(.4,0,.2,1);
   /* --ease = alias pendek untuk --ease-standard. Nilainya identik.
@@ -70,6 +74,10 @@
      karena permukaan toast sendiri selalu gelap terlepas dari tema app.
      Sumber: [data-theme="light"] .toast .tundo di Lapisan_Sistem.html. */
   --brand-on-dark: #8FB0FF;
+  /* Teks/ikon di atas fill --risk-high penuh (holdbtn selesai ditahan) —
+     putih tetap di light & dark, sama sifatnya dengan --on-member.
+     Sumber: color:#fff di .holdbtn.holding .lab/svg, Lapisan_Sistem.html. */
+  --on-risk-high: #FFFFFF;
   /* Lebar border tebal dekoratif (cincin nonaktif, cincin pengulangan warna). */
   --border-width-thick: 2px;
   /* Ukuran kotak 1x1 pada teknik visually-hidden (label TextInput/MoneyInput). */
@@ -88,6 +96,23 @@
   --size-sheet-max-h: 90%;  /* .sheet max-height, identik DS + LS */
   --size-icon-glyph: 26px;    /* ukuran glyph tombol ikon utama (back/close), identik DT + DS */
   --size-icon-glyph-sm: 20px; /* ukuran glyph tombol ikon sekunder (menu ⋯), identik DT + DS */
+  --size-skeleton-card: 74px; /* .sk-card LS */
+  --size-skeleton-line: 14px; /* .sk-line LS */
+  --size-loadfail-art: 76px;  /* kotak ikon layar gagal muat, LS */
+  --size-loadfail-icon: 38px; /* ikon di dalam kotak layar gagal muat, LS */
+  --size-icon-inline: 17px;   /* ikon nempel di teks tombol/label, identik .btn svg + .holdbtn svg LS */
+  --size-icon-micro: 13px;    /* ikon di dalam badge pil kecil (.danger-badge), LS */
+  --size-icon-badge: 30px;    /* kotak ikon dekoratif (.explain .ic), LS */
+  --r-icon-badge: 9px;        /* radius kotak ikon dekoratif, LS */
+  --size-loadfail-message-max: 250px; /* lebar maksimum paragraf layar gagal muat, LS */
+  --size-loadfail-btn-max: 220px;     /* lebar maksimum tombol muat ulang, LS */
+  /* Shimmer skeleton — angka gradient/posisi saling bergantung (satu efek
+     utuh), disimpan di sini karena tokens.css bebas dari guard nilai
+     mentah. Component CSS cuma referensi var(), nol persen mentah. */
+  --shimmer-gradient: linear-gradient(100deg, var(--n-2) 30%, var(--n-3) 50%, var(--n-2) 70%);
+  --shimmer-bg-size: 220% 100%;
+  --shimmer-pos-start: 180%;
+  --shimmer-pos-end: -40%;
 }
 
 /* ---------------- Light ---------------- */

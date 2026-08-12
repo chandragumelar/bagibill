@@ -1,0 +1,61 @@
+.explain {
+  background: var(--risk-locked-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: var(--sp-4);
+  display: flex;
+  gap: var(--sp-3);
+  color: var(--text-secondary);
+  font-size: var(--fs-footnote);
+  line-height: var(--line-relaxed);
+}
+
+.icon {
+  width: var(--size-icon-badge);
+  height: var(--size-icon-badge);
+  border-radius: var(--r-icon-badge);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--risk-locked);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.icon svg {
+  width: var(--size-icon-inline);
+  height: var(--size-icon-inline);
+}
+
+.reason,
+.instruction {
+  margin: 0 0 var(--sp-2);
+}
+
+.reason:last-child,
+.instruction:last-child {
+  margin-bottom: 0;
+}
+
+.deactivateLink {
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+  color: var(--brand);
+  font-weight: var(--fw-semibold);
+  font-size: inherit;
+  cursor: pointer;
+  min-height: var(--size-touch-min);
+}
+
+.deactivateLink svg {
+  width: var(--size-icon-inline);
+  height: var(--size-icon-inline);
+}

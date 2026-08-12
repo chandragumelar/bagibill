@@ -719,7 +719,7 @@ Kalkulator instan tanpa grup. Pintu masuk paling ringan dan alasan paling sering
 
 ### 18.1 Ikon
 
-- Satu keluarga ikon untuk UI, tanpa campuran. Stroke seragam 1.75.
+- Satu keluarga ikon untuk UI, tanpa campuran. Stroke seragam 2 (K-22).
 - Ikon kategori memakai set terpisah, tapi warnanya diatur oleh permukaan tempat dia muncul, bukan oleh kategorinya.
 
 Warna di app ini sudah punya pemilik, yaitu orang. Kalau kategori ikut berwarna, dua sistem warna bertabrakan di layar yang sama dan orang berhenti mempercayai keduanya. Jadi:

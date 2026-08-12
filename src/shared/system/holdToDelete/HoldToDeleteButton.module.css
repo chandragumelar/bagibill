@@ -1,0 +1,56 @@
+.button {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: var(--size-control);
+  border: none;
+  border-radius: var(--r-btn);
+  cursor: pointer;
+  background: var(--risk-high-tint);
+  color: var(--risk-high-text);
+  font-family: inherit;
+  font-size: var(--fs-headline);
+  font-weight: var(--fw-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  user-select: none;
+  touch-action: none;
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: var(--risk-high);
+  z-index: 0;
+}
+
+.holding .fill {
+  transition: width var(--dur-hold) linear;
+  width: 100%;
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+  transition: color var(--dur-base);
+}
+
+.holding .label {
+  color: var(--on-risk-high);
+}
+
+.button svg {
+  position: relative;
+  z-index: 1;
+  width: var(--size-icon-inline);
+  height: var(--size-icon-inline);
+}
+
+.holding svg {
+  color: var(--on-risk-high);
+}
