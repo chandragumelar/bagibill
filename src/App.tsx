@@ -1,7 +1,52 @@
-import { DevUiPage } from "@/routes/dev/ui";
+import { lazy, Suspense, type ComponentType } from "react";
+import { matchRoute } from "@/routes/router";
 
-// Sampai F0-06 memasang routing sungguhan, /dev/ui adalah satu-satunya
-// layar yang ada — dirender langsung di sini biar bisa dites di device.
+const AppRoutes = lazy(() => import("@/routes/AppRoutes").then((mod) => ({ default: mod.AppRoutes })));
+const ClaimPage = lazy(() => import("@/routes/claim/ClaimPage"));
+const JoinPage = lazy(() => import("@/routes/join/JoinPage"));
+const DevUiPage = lazy(() => import("@/routes/dev/ui").then((mod) => ({ default: mod.DevUiPage })));
+
+// Cabang di sini, sebelum apapun di-import, biar /c/ dan /j/ nggak pernah
+// narik chunk AppRoutes (yang isinya seluruh rute dalam-app). Dihitung
+// sekali waktu mount — pindah antar /c/, /j/, /dev/ui, dan app selalu
+// lewat link baru (QR/share/ketik URL), bukan navigasi client-side dalam
+// satu sesi.
+export function resolveBranch(pathname: string): ComponentType {
+  if (matchRoute(pathname, "/c/:slug/:expenseId")) return ClaimPage;
+  if (matchRoute(pathname, "/j/:slug")) return JoinPage;
+  if (pathname === "/dev/ui") return DevUiPage;
+  return AppRoutes;
+}
+
+// Tag JSX di bawah harus tetap identifier statis (ClaimPage, bukan variabel
+// yang isinya dipilih saat render) biar react-hooks/static-components diam
+// — komponen lazy tidak boleh "dibuat" waktu render, cuma dipilih.
 export function App() {
-  return <DevUiPage />;
+  const branch = resolveBranch(window.location.pathname);
+  if (branch === ClaimPage) {
+    return (
+      <Suspense fallback={null}>
+        <ClaimPage />
+      </Suspense>
+    );
+  }
+  if (branch === JoinPage) {
+    return (
+      <Suspense fallback={null}>
+        <JoinPage />
+      </Suspense>
+    );
+  }
+  if (branch === DevUiPage) {
+    return (
+      <Suspense fallback={null}>
+        <DevUiPage />
+      </Suspense>
+    );
+  }
+  return (
+    <Suspense fallback={null}>
+      <AppRoutes />
+    </Suspense>
+  );
 }

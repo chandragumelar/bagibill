@@ -1,0 +1,33 @@
+.tabs {
+  display: flex;
+  gap: var(--sp-5);
+}
+
+.tab {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  padding: var(--sp-2) 0 var(--sp-3);
+  cursor: pointer;
+  position: relative;
+  min-height: var(--size-touch-min);
+}
+
+.active {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
+.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--border-width-thick);
+  background: var(--brand);
+  border-radius: var(--r-pill);
+}
