@@ -30,6 +30,7 @@ Sudah diputuskan, tidak usah ditawar ulang kecuali anggaran bundle terlampaui.
 - Test: Vitest plus Testing Library. File test sejajar dengan file yang diuji.
 - i18n ditulis sendiri, tipis, di atas `Intl.PluralRules` dan `Intl.NumberFormat`. Jangan tarik i18next demi anggaran bundle.
 - Package manager pnpm.
+- Script build-time (`scripts/*.ts`) jalan langsung lewat `node scripts/nama.ts`, bukan lewat `tsx`/`ts-node`. Node di environment ini sudah bisa eksekusi `.ts` tanpa flag tambahan.
 
 Perintah yang wajib hijau sebelum sesuatu disebut selesai:
 
@@ -172,6 +173,29 @@ Anggaran dijaga otomatis lewat `pnpm size` di CI, bukan lewat ingatan. Setiap PR
 - Perubahan schema IndexedDB wajib migrasi plus uji data versi lama.
 - Centang di `progress.md` cuma setelah diuji di device sungguhan, bukan setelah kodenya ditulis.
 
+## Update dokumen di akhir tugas
+
+Ini bagian dari tugas, bukan pekerjaan tambahan. Tugas belum selesai kalau dokumennya belum ikut. Semuanya masuk PR yang sama dengan kodenya, jangan ditumpuk jadi PR docs terpisah.
+
+Setiap kali selesai satu tugas `plan.md`, lewati enam pertanyaan ini berurutan:
+
+1. **Tugasnya jalan di device?** Centang barisnya di papan Gelombang 1 di `progress.md`. Kalau cuma kodenya yang ditulis dan belum dites di device, jangan dicentang. Perbarui juga baris Fase aktif dan tanggal di header.
+2. **Ada fitur yang jadi utuh dari sisi pengguna?** Centang barisnya di daftar Fase 1 di `progress.md`. Satu tugas sering cuma menyentuh sebagian baris, jadi jangan mencentang yang belum utuh.
+3. **Ada yang berbeda dari `spec.md`?** Tambahkan entri baru di bagian Keputusan di `progress.md` dengan kode K berikutnya, tanggal, keputusannya, dan alasannya. Kalau perbedaannya menang atas spec, ubah juga bagian `spec.md` yang bersangkutan di PR yang sama. Spec yang dibiarkan salah lebih berbahaya daripada spec yang belum ditulis.
+4. **Ada yang mandek atau ternyata butuh keputusan?** Kalau memblokir, masuk Blocker di `progress.md`. Kalau tidak memblokir tapi harus diputuskan nanti, jadi entri K bertanda TERBUKA. Kalau cuma ide bagus, masuk Catatan lepas, jangan langsung dikerjakan.
+5. **Ada nilai visual baru?** Tambahkan tokennya di `packages/tokens` lalu regenerate, dan catat di `docs/mockup-inventory.md` bagian 2. Jangan menulis nilai mentah di komponen.
+6. **Ada mockup yang bertambah, berubah, atau ternyata sudah tidak dipakai?** Perbarui tabel dan daftar keadaan di `docs/mockups/README.md`.
+
+Tiga yang lebih jarang, tapi kalau kena wajib:
+
+- **Aturan baru yang berlaku untuk semua tugas berikutnya** masuk `CLAUDE.md` sebagai satu baris, alasannya di Keputusan di `progress.md`. Kalau baris di sini mulai berisi penjelasan panjang, penjelasannya salah tempat.
+- **Cara baru untuk salah menghitung uang atau merusak layar** masuk `.claude/skills/bagibill-qa/SKILL.md` sebagai butir yang bisa dicek. Setiap bug yang lolos sekali harusnya meninggalkan satu baris di sana supaya tidak lolos dua kali.
+- **Tugas yang ternyata perlu dipecah, digabung, atau urutannya ditukar** diperbaiki di `plan.md`, bukan dikerjakan diam-diam dengan urutan berbeda.
+
+Yang tidak perlu diperbarui: `docs/mockup-inventory.md` untuk hal di luar token, karena dia arsip sekali pakai, dan mockup HTML itu sendiri, yang tidak pernah diedit tangan.
+
+Di laporan akhir sesi, sebutkan file dokumen apa saja yang ikut berubah. Kalau tidak ada satupun, katakan begitu, jangan diam.
+
 ## Cara kerja dengan agent
 
 - Satu tugas dari `plan.md` per sesi. Jangan menggabung dua tugas biar kelihatan cepat.
@@ -179,7 +203,7 @@ Anggaran dijaga otomatis lewat `pnpm size` di CI, bukan lewat ingatan. Setiap PR
 - Jangan menambah fitur yang tidak diminta. Kalau kepikiran sesuatu yang bagus, tulis di Catatan lepas di `progress.md`, jangan langsung dikerjakan.
 - Jangan menyentuh file di luar cakupan tugas.
 - Kalau instruksi bertabrakan dengan aturan keras, charter di bawah, atau daftar di luar lingkup: berhenti dan bilang, jangan diselaraskan sendiri.
-- Sebelum bilang selesai: jalankan lima perintah di bagian Tumpukan, lalu lewati checklist yang relevan di skill QA.
+- Sebelum bilang selesai: jalankan lima perintah di bagian Tumpukan, lewati checklist yang relevan di skill QA, lalu lewati enam pertanyaan di bagian Update dokumen di akhir tugas.
 - Laporkan yang gagal apa adanya. Jangan bilang beres kalau ada test yang di-skip.
 - Bahasa laporan Indonesia casual, padat, tanpa basa-basi.
 
