@@ -1,0 +1,25 @@
+.skeleton {
+  border-radius: var(--r-card);
+  background: var(--shimmer-gradient);
+  background-size: var(--shimmer-bg-size);
+  animation: shimmer var(--dur-shimmer) var(--ease) infinite;
+}
+
+.card {
+  height: var(--size-skeleton-card);
+  margin-bottom: var(--sp-3);
+}
+
+.line {
+  height: var(--size-skeleton-line);
+  margin-bottom: var(--sp-2);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: var(--shimmer-pos-start) 0;
+  }
+  100% {
+    background-position: var(--shimmer-pos-end) 0;
+  }
+}

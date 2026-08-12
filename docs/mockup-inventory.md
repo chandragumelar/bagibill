@@ -200,7 +200,7 @@ Catatan implementasi F0-06: tombol ikon GroupHeader (30px DT/DS) dan Topbar (34p
 
 **Nilai durasi lapisan sistem sudah dipisah** jadi `--dur-undo` 6000ms, `--dur-toast` 3200ms, `--dur-move` 260ms, dan `--dur-hold` 1100ms. Empat-empatnya tidak boleh saling menumpang. Komponen yang memakai `--dur-base` untuk toast adalah temuan.
 
-**Ikon Lucide di-inline sebagai SVG**, tidak lewat paket. Delapan ikon kategori plus ikon UI. Satu keluarga, stroke seragam 1.75.
+**Ikon Lucide di-inline sebagai SVG**, tidak lewat paket. Delapan ikon kategori plus ikon UI. Satu keluarga, stroke seragam 2 (K-22 — "1.75" di catatan lama tidak ketemu di `stroke-width` manapun lintas mockup pas dicek ulang F0-07; `ic()` di `Lapisan_Sistem.html` konsisten pakai "2").
 
 **Dua mockup dibangun dengan format beda dari sisanya.** `Buat_Grup___Kelola_Member.html` dan `Tambah_Pengeluaran.html` pakai pola komponen `x-dc` / `sc-if` / `sc-for` dengan logic state di `class Component extends DCLogic` — bukan HTML statis + `document.querySelector` seperti sembilan file lain. Isinya sama-sama valid untuk dibaca (semua state ada di `buatPreset`/`kelolaPreset` dan `renderVals()`), tapi jangan coba grep nama kelas CSS langsung dari markup `sc-for`/`sc-if` karena isinya template binding (`{{ x }}`), bukan HTML final. Baca lewat definisi preset dan style function di `<script type="text/x-dc">`.
 

@@ -1,0 +1,12 @@
+.buttonRow {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.log {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-4);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}

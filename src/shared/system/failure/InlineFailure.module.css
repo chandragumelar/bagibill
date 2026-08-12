@@ -1,0 +1,50 @@
+.failure {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  background: var(--fail-bg);
+  color: var(--fail-fg);
+  font-size: var(--fs-caption);
+}
+
+.failure svg {
+  width: var(--size-icon-inline);
+  height: var(--size-icon-inline);
+  flex: 0 0 auto;
+}
+
+.boxed {
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  border: 1px solid var(--fail-border);
+  border-radius: var(--r-card);
+}
+
+.attached {
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+}
+
+.message {
+  flex: 1 1 auto;
+  line-height: var(--line-body);
+}
+
+.retry {
+  margin-left: auto;
+  appearance: none;
+  border: 1px solid var(--fail-border);
+  background: var(--surface);
+  color: var(--fail-fg);
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  border-radius: var(--r-pill);
+  padding: 0 var(--sp-3);
+  height: var(--size-touch-min);
+  min-width: var(--size-touch-min);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  flex: 0 0 auto;
+}
