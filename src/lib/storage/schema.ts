@@ -1,4 +1,5 @@
 import Dexie, { type Table } from "dexie";
+import { applyMigrations, migrations } from "./migrations";
 import type {
   ActivityLogRecord,
   ExpenseRecord,
@@ -6,8 +7,6 @@ import type {
   MemberRecord,
   SettlementRecord,
 } from "./records";
-
-const SCHEMA_VERSION = 1;
 
 // Item stays nested inside ExpenseRecord.items (spec.md 5.1: `items: [Item]`
 // under Expense, no expenseId back-reference of its own) — no separate Item
@@ -28,19 +27,7 @@ export type BagiBillDatabase = Dexie & BagiBillTables;
 function openDatabase(): BagiBillDatabase {
   const dexie = new Dexie("bagibill");
 
-  dexie.version(SCHEMA_VERSION).stores({
-    groups: "slug",
-    members: "memberId, groupSlug",
-    // [groupSlug+date] is a compound index — F2-03 needs a group's expenses
-    // back in date order without pulling in the whole table.
-    expenses: "expenseId, groupSlug, [groupSlug+date]",
-    settlements: "settlementId, groupSlug",
-    activityLog: "logId, groupSlug",
-  });
-
-  // deletedAt is deliberately not indexed: filtering soft-deleted rows is
-  // repository work (F2-03), and an index nobody queries yet is only a
-  // write-cost with no read benefit.
+  applyMigrations(dexie, migrations);
 
   // Dexie attaches groups/members/... onto the instance at runtime inside
   // .stores() above, in a way TypeScript can't see statically — this cast
