@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 19 Agustus 2026
-Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-08 selesai. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-09 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -42,7 +42,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [x] F1-06 Biaya tambahan
 - [x] F1-07 Traktir
 - [x] F1-08 Pembayar dan saldo
-- [ ] F1-09 Settlement
+- [x] F1-09 Settlement
 - [ ] F1-10 Fasad dan tabel kasus
 
 ### F2. Storage
@@ -266,6 +266,9 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-41 SELESAI 19 Ags 2026 — F1-07 traktir `partial` yang melebihi bagian penerima diterima dan dibiarkan negatif, bukan diklamp ke nol atau ditolak. Alasan: konsisten dengan K-29 (mode Selisih) dan diskon di F1-06 — mengklamp berarti uang hilang dari rincian, dan niat traktir sebagian yang lebih besar dari bagian penerima itu sah (contoh: nominal traktir dibulatkan ke angka bulat tanpa mengecek sisa dulu).
 - K-42 SELESAI 19 Ags 2026 — F1-08 `computeGroupBalances` mewajibkan `sharesMinor` dan `paymentsMinor` tiap `ExpenseLedger` persis sepanjang `participantCount`, nol array pendek per subset peserta yang ikut di pengeluaran itu. Alasan: indeks peserta harus berarti orang yang sama di seluruh grup, dan array yang panjangnya beda-beda per pengeluaran memaksa pemanggil memetakan ulang indeks tiap kali — persis tempat bug indeks bergeser muncul.
 - K-43 SELESAI 19 Ags 2026 — F1-08 ketidakcocokan total bayar dan total tagihan di `computeExpenseBalance`/`computeGroupBalances` dilempar sebagai error, bukan warning seperti `over_allocated` di F1-03. Alasan: mode Nominal F1-03 masih dalam proses ketikan pengguna, angkanya belum final. Di sini pengeluarannya sudah tersimpan dan siap dihitung jadi saldo — pengeluaran tersimpan dengan pembayaran yang tidak imbang itu data rusak, bukan keadaan sementara yang layar masih proses.
+- K-44 SELESAI 19 Ags 2026 — F1-09 `computeSettlement` menghitung pairwise per pengeluaran (lewat `computeExpenseBalance` tiap `ExpenseLedger`), bukan dari net grup yang sudah dijumlahkan. Alasan: "siapa berutang ke siapa" cuma punya arti di dalam satu pengeluaran, karena di situlah diketahui siapa yang menalangi — net grup sudah kehilangan informasi pasangannya, yang tersisa cuma angka bersih per orang.
+- K-45 SELESAI 19 Ags 2026 — F1-09 mode Langsung menetokan pasangan arah berlawanan jadi satu transfer (A→B 5000 dan B→A 3000 jadi A→B 2000; sama besar keduanya hilang). Alasan: dua orang yang saling berutang lalu diminta transfer bolak-balik itu tidak masuk akal buat siapapun yang membaca layarnya, dan mode Langsung ada supaya orang cuma berurusan dengan orang yang benar-benar dia utangi, bukan supaya daftarnya panjang.
+- K-46 SELESAI 19 Ags 2026 — F1-09 `pairwiseTransfers` selalu diisi apapun mode-nya (spec.md 11.1, layar penelusuran butuh rincian per pasangan meski Simplify aktif), dan `transfers` menduplikasinya persis saat mode Langsung. Alasan: pemanggil (layar) jadi tidak perlu tahu mode apa yang dipakai untuk merender daftar utamanya — satu bentuk balik yang konsisten di kedua mode.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
@@ -328,3 +331,6 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F1-07: `apply-treats.ts` dipecah jadi tiga file di `treats/` (`apply-treats.ts` orkestrator, `treat-validation.ts` seluruh validasi, `treat-transfer.ts` pemrosesan traktir dan mutasi bagian) karena gabungan tiga file itu 310 baris kalau digabung satu — jauh lewat 250. Sesuai opsi yang sudah disepakati di instruksi tugas, preseden sama F1-06.
 - F1-08: konversi mata uang nol ditangani di lapisan saldo (`packages/split-engine/balance/`), meski `spec.md` 11.1 menyebut "mata uang dasar grup". Seluruh fungsi di modul ini bekerja dalam satu mata uang, pemanggil yang bertanggung jawab mengonversi sebelum masuk. Nol parameter `currency` ditambahkan karena belum ada pemakainya — nyusul kalau ada layar multi mata uang yang beneran butuh.
 - F1-08: `compute-balances.ts` (158 baris) nol perlu dipecah, di bawah anggaran 250 walaupun ada dua pintu publik dan delapan kategori validasi — lebih sederhana dari F1-06/F1-07 karena nol pembulatan dan nol BigInt di jalur ini, cuma pengurangan integer.
+- F1-09: "penanganan sisa pembulatan" yang disebut spec.md 11.2 buat mode Simplify sebenarnya sudah diselesaikan lebih hulu — di pembagian bagian (F1-01 sampai F1-07) dan di alokasi pairwise lewat `allocateByWeights` (`pairwise-transfers.ts`). Greedy simplify sendiri (`simplify-transfers.ts`) nol pembulatan sama sekali, cuma `Math.min` dua integer tiap langkah, karena semua input yang masuk ke situ sudah bulat. Dicatat biar orang berikutnya nggak nyari kode pembulatan yang nggak ada di sana.
+- F1-09: pelunasan sebagian dan penuh (spec.md 11.3) belum ditangani di lapisan manapun di split engine — `computeSettlement` cuma menghasilkan daftar transfer yang disarankan, bukan mencatat transfer mana yang sudah benar-benar dieksekusi/dilunasi. Itu state tersendiri (kemungkinan di F2 storage atau F3 layar), di luar cakupan F1.
+- F1-09: `compute-settlement.ts` (193 baris) tetap satu file — sempat dipecah jadi `pairwise-transfers.ts` dan `simplify-transfers.ts` mengikuti pola F1-06/F1-07, lalu digabung balik pas ketauan gabungannya cuma 199 baris, jauh di bawah 250. Syarat pemecahan di instruksi tugas eksplisit "kalau mepet 250 baris", bukan preferensi umum — dicatat di sini biar jelas kenapa modul ini beda dari precedent F1-06/F1-07.
