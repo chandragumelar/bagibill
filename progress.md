@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 19 Agustus 2026
-Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-04 selesai. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-05 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -38,7 +38,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [x] F1-02 Pembagi sisa largest remainder
 - [x] F1-03 Mode Rata, Nominal, Persentase
 - [x] F1-04 Mode Porsi dan Selisih
-- [ ] F1-05 Mode Per Item
+- [x] F1-05 Mode Per Item
 - [ ] F1-06 Biaya tambahan
 - [ ] F1-07 Traktir
 - [ ] F1-08 Pembayar dan saldo
@@ -253,6 +253,9 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-28 SELESAI 19 Ags 2026 — F1-03 ketiga mode (`splitEvenly`, `splitByAmounts`, `splitByPercentage`) menolak daftar peserta kosong, termasuk saat `totalMinor` nol — beda dari `allocateByWeights` yang mengembalikan array kosong untuk total nol dengan nol bobot. Alasan: di level mode, peserta kosong berarti pengeluaran tanpa siapapun yang menanggung, dan itu selalu salah input, bukan kasus valid yang perlu direpresentasikan sebagai hasil kosong. F1-04 (`splitByWeights`, `splitByAdjustment`) ikut aturan yang sama.
 - K-29 SELESAI 19 Ags 2026 — F1-04 varian warning `negative_share` di `SplitResult` membawa `indices` (posisi array), bukan identitas member. Alasan: split engine tidak tahu identitas peserta, cuma urutan array yang dikirim pemanggil — pemanggil yang punya daftar member tinggal memetakan indeks ke orangnya. Konsisten dengan K-24 yang juga memakai indeks array, bukan id, sebagai satu-satunya sumber urutan yang deterministik.
 - K-30 SELESAI 19 Ags 2026 — F1-04 `splitByWeights` menolak input bobot yang tidak lengkap (panjang array beda dari jumlah peserta) alih-alih mengisi bobot kosong dengan default 1. Alasan: bobot default 1 di mode Porsi adalah keadaan awal kontrol UI (spec.md 6.4), bukan perilaku mesin — kalau mesin diam-diam mengisi bobot yang hilang, input yang salah kirim dari layar jadi kebaca sebagai default yang sah, dan bug kehilangan data lolos tanpa jejak.
+- K-31 SELESAI 19 Ags 2026 — F1-05 `splitByItems` menurunkan `totalMinor` dari `unitPriceMinor * quantity` tiap item, bukan menerima `totalMinor` sebagai input terpisah seperti lima mode lain. Alasan: di mode ini itemnya yang jadi sumber kebenaran (struk hasil scan atau input manual), dan total yang dikirim terpisah cuma nambah satu angka yang bisa bertentangan dengan jumlah itemnya sendiri tanpa cara mesin tahu mana yang benar.
+- K-32 SELESAI 19 Ags 2026 — F1-05 `quantity` item dibatasi integer positif di gelombang 1, qty pecahan (barang timbangan seperti daging per 100 gram) ditolak. Alasan: belum ada layar yang butuh input qty pecahan, dan menerimanya sekarang berarti menebak bentuk validasi dan UI sebelum ada pemakai nyata. Ditunda sampai ada kebutuhan konkret.
+- K-33 SELESAI 19 Ags 2026 — F1-05 `splitByItems` menolak klaim ganda dari `participantIndex` yang sama di satu item, bukan menggabungkan bobotnya secara diam-diam. Alasan: dua entri klaim dari orang yang sama di item yang sama itu ambigu — bisa jadi maksudnya menambah bobot, bisa jadi bug pengiriman data dobel dari layar — dan menggabungkannya otomatis menyembunyikan kasus yang kedua.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
@@ -305,3 +308,6 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F1-03: tombol "bagi sisanya rata" (`spec.md` 6.2) sengaja belum ditulis sebagai fungsi terpisah — itu tinggal panggil `splitEvenly` pada sisa yang dihitung di layar (total dikurangi yang sudah dialokasikan), jadi bukan logika baru di split engine. Fungsi yang belum ada pemakainya tidak ditulis duluan; nyusul di tugas layar F3-04 yang beneran butuh.
 - F1-04: `spec.md` 6.6 bilang "bobot klaim [Per Item] bekerja persis seperti mode Porsi tapi di level item" — kemungkinan besar F1-05 bisa panggil `splitByWeights` langsung per item alih-alih menulis ulang alokasi bobot. Belum dipastikan karena F1-05 belum dikerjakan, cuma dicatat biar ga kepikiran nulis versi kedua pas itu waktunya.
 - F1-04: `packages/split-engine/modes/split-by-adjustment.ts` punya guard `undefined` di `applyAdjustments` (lempar internal error) yang secara matematis tidak pernah tercapai — `evenSharesMinor` dan `adjustmentsMinor` selalu sepanjang sama karena bobotnya dibangun dari `adjustmentsMinor.map()`. Guard-nya cuma buat memuaskan `noUncheckedIndexedAccess` di `tsconfig.json`, bukan validasi input.
+- F1-05: dugaan di catatan F1-04 di atas ternyata gak dipakai — `splitByItems` manggil `allocateByWeights` langsung per item, bukan `splitByWeights`. Alasan: `splitByWeights` cuma pembungkus `SplitResult` (warnings selalu kosong) yang gunanya buat keseragaman bentuk balik di level pengeluaran, sementara di level item yang dibutuhkan cuma array angka mentah buat disebar ke posisi `participantIndex` masing-masing klaim — bungkus tambahannya gak kepake terus dibuang lagi.
+- F1-05: mesin mode Per Item selesai (`splitByItems`), tapi barisnya di "Fase 1 menurut spec" ada di daftar Fase 2 ("Mode Per Item dan layar assign", bukan di section Pembagian Fase 1), jadi nol dicentang di situ. K-02/K-03 sudah mutusin cuma mesinnya yang maju ke gelombang 1 (dipakai layar Klaim Item F3-08 versi satu device), layar assign versi pembuat tetap Fase 2 — baris itu baru dicentang kalau layar assign-nya jadi.
+- F1-05: tombol "bagi item ini ke semua" dan "bagi rata semua sisa" (`spec.md` 6.6) sengaja belum ditulis. Keduanya aksi layar yang tinggal menyusun ulang `claims` (isi semua peserta dengan bobot 1, atau distribusikan sisa item tak diklaim) lalu manggil `splitByItems` yang sudah ada — bukan logika baru di split engine, dan fungsi tanpa pemakai gak ditulis duluan.
