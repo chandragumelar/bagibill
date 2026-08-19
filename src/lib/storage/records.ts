@@ -90,6 +90,10 @@ export interface MemberRecord extends StoredRecord {
   readonly color: string;
   readonly joinedAt: number;
   readonly paymentNote?: string;
+  // spec.md 12.2: a member with transactions can only be deactivated, never
+  // deleted. Timestamped like deletedAt rather than a boolean flag, so both
+  // "gone" states share the same shape (F2-02).
+  readonly deactivatedAt?: number;
 }
 
 export interface ExpensePayerRecord {
