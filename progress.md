@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 19 Agustus 2026
-Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-03 selesai. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-04 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -37,7 +37,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [x] F1-01 Tipe uang dan minor unit
 - [x] F1-02 Pembagi sisa largest remainder
 - [x] F1-03 Mode Rata, Nominal, Persentase
-- [ ] F1-04 Mode Porsi dan Selisih
+- [x] F1-04 Mode Porsi dan Selisih
 - [ ] F1-05 Mode Per Item
 - [ ] F1-06 Biaya tambahan
 - [ ] F1-07 Traktir
@@ -250,7 +250,9 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-25 SELESAI 12 Ags 2026 — F1-02 `allocateByWeights`: total negatif (diskon, koreksi) dialokasikan dengan cara hitung di nilai absolut dulu baru tiap elemen hasil dinegasikan, bukan floor langsung di angka negatif. Alasan: arah pembulatan floor di bilangan negatif kebalik dari yang diinginkan (membulatkan menjauhi nol, bukan ke bawah menuju nol), jadi kalau dipaksa floor langsung largest-remainder-nya salah arah. Hitung di absolut lalu negasi menjaga invarian jumlah = total tetap persis dan pembulatannya konsisten sama kasus positif.
 - K-26 SELESAI 19 Ags 2026 — F1-03 `splitByPercentage`: toleransi jumlah persen terhadap 100 adalah 1 basis point inklusif, bukan eksklusif seperti bacaan harfiah `spec.md` 6.3. Alasan: kasus paling umum yang wajib jalan menurut checklist QA adalah 33,33 tiga kali yang totalnya 99,99, meleset persis 0,01 dari 100 — batas eksklusif menolak kasus pertama yang orang coba pakai. Koreksinya gratis lewat `allocateByWeights` yang menormalisasi terhadap jumlah bobot, jadi persen di luar toleransi tetap dilempar tapi yang di dalam toleransi tidak diutak-atik angkanya.
 - K-27 SELESAI 19 Ags 2026 — F1-03 `splitByAmounts` menolak nominal per orang yang negatif, beda dari `splitEvenly`/`splitByPercentage` yang menerima `totalMinor` negatif. Alasan: potongan personal punya modenya sendiri (Selisih, `spec.md` 6.5, dikerjakan di F1-04), dan angka minus yang diketik langsung di mode Nominal hampir selalu salah ketik, bukan diskon yang disengaja.
-- K-28 SELESAI 19 Ags 2026 — F1-03 ketiga mode (`splitEvenly`, `splitByAmounts`, `splitByPercentage`) menolak daftar peserta kosong, termasuk saat `totalMinor` nol — beda dari `allocateByWeights` yang mengembalikan array kosong untuk total nol dengan nol bobot. Alasan: di level mode, peserta kosong berarti pengeluaran tanpa siapapun yang menanggung, dan itu selalu salah input, bukan kasus valid yang perlu direpresentasikan sebagai hasil kosong.
+- K-28 SELESAI 19 Ags 2026 — F1-03 ketiga mode (`splitEvenly`, `splitByAmounts`, `splitByPercentage`) menolak daftar peserta kosong, termasuk saat `totalMinor` nol — beda dari `allocateByWeights` yang mengembalikan array kosong untuk total nol dengan nol bobot. Alasan: di level mode, peserta kosong berarti pengeluaran tanpa siapapun yang menanggung, dan itu selalu salah input, bukan kasus valid yang perlu direpresentasikan sebagai hasil kosong. F1-04 (`splitByWeights`, `splitByAdjustment`) ikut aturan yang sama.
+- K-29 SELESAI 19 Ags 2026 — F1-04 varian warning `negative_share` di `SplitResult` membawa `indices` (posisi array), bukan identitas member. Alasan: split engine tidak tahu identitas peserta, cuma urutan array yang dikirim pemanggil — pemanggil yang punya daftar member tinggal memetakan indeks ke orangnya. Konsisten dengan K-24 yang juga memakai indeks array, bukan id, sebagai satu-satunya sumber urutan yang deterministik.
+- K-30 SELESAI 19 Ags 2026 — F1-04 `splitByWeights` menolak input bobot yang tidak lengkap (panjang array beda dari jumlah peserta) alih-alih mengisi bobot kosong dengan default 1. Alasan: bobot default 1 di mode Porsi adalah keadaan awal kontrol UI (spec.md 6.4), bukan perilaku mesin — kalau mesin diam-diam mengisi bobot yang hilang, input yang salah kirim dari layar jadi kebaca sebagai default yang sah, dan bug kehilangan data lolos tanpa jejak.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
@@ -301,3 +303,5 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F1-01: `packages/split-engine` didaftarkan ke `include` di `tsconfig.json` (pola sama kayak `scripts`) supaya `typecheck`/`build` nyapu tanpa tsconfig terpisah. Belum jadi dependency di root `package.json` karena belum ada consumer — nunggu F1-10 atau tugas F3 yang beneran impor lewat `index.ts`.
 - F1-03: `scaleWeightToInteger` (allocate-by-weights.ts) dan `scalePercentToBasisPoints` (split-by-percentage.ts) sekarang dua implementasi terpisah dengan pola identik (pad-concatenate-BigInt lewat manipulasi string). Duplikasi disengaja, alasan sama K-27 F1-01 punya i18n/split-engine: pintu publik `index.ts` baru ada di F1-10, dan import ke helper internal folder lain melanggar aturan satu pintu. Kandidat dedup di F1-10, satu paket sama dedup tabel presisi mata uang yang sudah tercatat di F1-01.
 - F1-03: tombol "bagi sisanya rata" (`spec.md` 6.2) sengaja belum ditulis sebagai fungsi terpisah — itu tinggal panggil `splitEvenly` pada sisa yang dihitung di layar (total dikurangi yang sudah dialokasikan), jadi bukan logika baru di split engine. Fungsi yang belum ada pemakainya tidak ditulis duluan; nyusul di tugas layar F3-04 yang beneran butuh.
+- F1-04: `spec.md` 6.6 bilang "bobot klaim [Per Item] bekerja persis seperti mode Porsi tapi di level item" — kemungkinan besar F1-05 bisa panggil `splitByWeights` langsung per item alih-alih menulis ulang alokasi bobot. Belum dipastikan karena F1-05 belum dikerjakan, cuma dicatat biar ga kepikiran nulis versi kedua pas itu waktunya.
+- F1-04: `packages/split-engine/modes/split-by-adjustment.ts` punya guard `undefined` di `applyAdjustments` (lempar internal error) yang secara matematis tidak pernah tercapai — `evenSharesMinor` dan `adjustmentsMinor` selalu sepanjang sama karena bobotnya dibangun dari `adjustmentsMinor.map()`. Guard-nya cuma buat memuaskan `noUncheckedIndexedAccess` di `tsconfig.json`, bukan validasi input.
