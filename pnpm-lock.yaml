@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@bagibill/split-engine':
+        specifier: workspace:*
+        version: link:packages/split-engine
       '@bagibill/tokens':
         specifier: workspace:*
         version: link:packages/tokens
