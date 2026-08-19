@@ -2,8 +2,8 @@
 
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
-Status terakhir diperbarui: 12 Agustus 2026
-Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 dan F1-02 selesai. Seluruh mockup gelombang 1 selesai.
+Status terakhir diperbarui: 19 Agustus 2026
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-03 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -36,7 +36,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 ### F1. Split engine
 - [x] F1-01 Tipe uang dan minor unit
 - [x] F1-02 Pembagi sisa largest remainder
-- [ ] F1-03 Mode Rata, Nominal, Persentase
+- [x] F1-03 Mode Rata, Nominal, Persentase
 - [ ] F1-04 Mode Porsi dan Selisih
 - [ ] F1-05 Mode Per Item
 - [ ] F1-06 Biaya tambahan
@@ -248,6 +248,9 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
   - **Sheet judul ikut ukuran DS (fs-title3/20px), bukan LS (fs-title2/22px).** DangerSheet numpang `Sheet` F0-05 apa adanya biar satu ukuran judul konsisten di semua sheet — mockup LS sendiri pakai ukuran lebih besar khusus buat sheet hapus grup, gak direplikasi supaya gak nambah cabang ukuran di komponen bersama.
 - K-24 SELESAI 12 Ags 2026 — F1-02 `allocateByWeights`: seri pecahan sisa (largest remainder) diputus dengan indeks array lebih kecil menang, bukan lewat id atau nama member. Alasan: hasil harus reproducible dari data yang sama di device manapun tanpa perlu tahu identitas peserta, dan urutan array sudah deterministik duluan (urutan input yang dipanggil pemanggilnya) jadi ga perlu sumber keacakan tambahan.
 - K-25 SELESAI 12 Ags 2026 — F1-02 `allocateByWeights`: total negatif (diskon, koreksi) dialokasikan dengan cara hitung di nilai absolut dulu baru tiap elemen hasil dinegasikan, bukan floor langsung di angka negatif. Alasan: arah pembulatan floor di bilangan negatif kebalik dari yang diinginkan (membulatkan menjauhi nol, bukan ke bawah menuju nol), jadi kalau dipaksa floor langsung largest-remainder-nya salah arah. Hitung di absolut lalu negasi menjaga invarian jumlah = total tetap persis dan pembulatannya konsisten sama kasus positif.
+- K-26 SELESAI 19 Ags 2026 — F1-03 `splitByPercentage`: toleransi jumlah persen terhadap 100 adalah 1 basis point inklusif, bukan eksklusif seperti bacaan harfiah `spec.md` 6.3. Alasan: kasus paling umum yang wajib jalan menurut checklist QA adalah 33,33 tiga kali yang totalnya 99,99, meleset persis 0,01 dari 100 — batas eksklusif menolak kasus pertama yang orang coba pakai. Koreksinya gratis lewat `allocateByWeights` yang menormalisasi terhadap jumlah bobot, jadi persen di luar toleransi tetap dilempar tapi yang di dalam toleransi tidak diutak-atik angkanya.
+- K-27 SELESAI 19 Ags 2026 — F1-03 `splitByAmounts` menolak nominal per orang yang negatif, beda dari `splitEvenly`/`splitByPercentage` yang menerima `totalMinor` negatif. Alasan: potongan personal punya modenya sendiri (Selisih, `spec.md` 6.5, dikerjakan di F1-04), dan angka minus yang diketik langsung di mode Nominal hampir selalu salah ketik, bukan diskon yang disengaja.
+- K-28 SELESAI 19 Ags 2026 — F1-03 ketiga mode (`splitEvenly`, `splitByAmounts`, `splitByPercentage`) menolak daftar peserta kosong, termasuk saat `totalMinor` nol — beda dari `allocateByWeights` yang mengembalikan array kosong untuk total nol dengan nol bobot. Alasan: di level mode, peserta kosong berarti pengeluaran tanpa siapapun yang menanggung, dan itu selalu salah input, bukan kasus valid yang perlu direpresentasikan sebagai hasil kosong.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
@@ -296,3 +299,5 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F1-01: dicentang di papan Gelombang 1 tanpa "diuji di HP sungguhan" — murni modul logic (`packages/split-engine/money/`), nol UI, nol apapun buat ditap di HP. Preseden sama kayak F0-03/F0-04. Dibuktikan lewat 25 test baru (normal, batas, ditolak) plus round-trip `parseMoney`↔`formatMoney` lima currency.
 - F1-01: tabel presisi mata uang sekarang ada dua tempat, `packages/split-engine/money/money.ts` dan `src/lib/i18n/format-money.ts` — isinya identik (persis sama exception-list) tapi belum di-dedup. Alasan: dedup berarti `i18n` harus import dari `split-engine`, padahal pintu publiknya (`index.ts`) baru dibangun di F1-10, dan import ke path internal `money/money.ts` melanggar aturan satu pintu di CLAUDE.md. Ditunda ke F1-10: `getCurrencyDecimals` di `i18n` jadi re-export dari facade, nama dipertahankan biar call-site nol berubah.
 - F1-01: `packages/split-engine` didaftarkan ke `include` di `tsconfig.json` (pola sama kayak `scripts`) supaya `typecheck`/`build` nyapu tanpa tsconfig terpisah. Belum jadi dependency di root `package.json` karena belum ada consumer — nunggu F1-10 atau tugas F3 yang beneran impor lewat `index.ts`.
+- F1-03: `scaleWeightToInteger` (allocate-by-weights.ts) dan `scalePercentToBasisPoints` (split-by-percentage.ts) sekarang dua implementasi terpisah dengan pola identik (pad-concatenate-BigInt lewat manipulasi string). Duplikasi disengaja, alasan sama K-27 F1-01 punya i18n/split-engine: pintu publik `index.ts` baru ada di F1-10, dan import ke helper internal folder lain melanggar aturan satu pintu. Kandidat dedup di F1-10, satu paket sama dedup tabel presisi mata uang yang sudah tercatat di F1-01.
+- F1-03: tombol "bagi sisanya rata" (`spec.md` 6.2) sengaja belum ditulis sebagai fungsi terpisah — itu tinggal panggil `splitEvenly` pada sisa yang dihitung di layar (total dikurangi yang sudah dialokasikan), jadi bukan logika baru di split engine. Fungsi yang belum ada pemakainya tidak ditulis duluan; nyusul di tugas layar F3-04 yang beneran butuh.
