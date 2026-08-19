@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 19 Agustus 2026
-Fase aktif: F2 (storage). F1 (split engine) tutup seluruhnya (F1-01 sampai F1-10). F2-01 sampai F2-03 selesai. F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F2 (storage). F1 (split engine) tutup seluruhnya (F1-01 sampai F1-10). F2-01 sampai F2-04 selesai. F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -50,7 +50,7 @@ Bisa paralel dengan F1.
 - [x] F2-01 Schema dan Clock
 - [x] F2-02 Repository grup dan member
 - [x] F2-03 Repository pengeluaran
-- [ ] F2-04 Migrasi
+- [x] F2-04 Migrasi
 - [ ] F2-05 Export jaring pengaman (butuh persetujuan dulu)
 
 ### F3. Layar
@@ -287,6 +287,9 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-62 SELESAI 19 Ags 2026 — F2-03 `splitMode` dihapus dari `ExpenseRecord`, bukan dipertahankan di samping `splitData` bertag. Alasan: begitu `splitData` punya field `mode` sendiri lewat `SplitDataRecord`, `splitMode` jadi sumber kedua untuk fakta yang sama — dua field bisa saling menyimpang (`splitMode: "evenly"` tapi `splitData.mode: "byAmounts"`, misalnya) tanpa typecheck menangkapnya. Dicek dulu ke `schema.ts`: nol indeks Dexie yang bergantung ke `splitMode`, jadi aman dihapus tanpa migrasi indeks.
 - K-63 SELESAI 19 Ags 2026 — F2-03 `resolveMemberOrder` (`expense-mapping.ts`) mengambil urutan indeks peserta dari `ExpenseRecord.splitData` milik pengeluaran itu sendiri (`memberIds` atau urutan `entries`), bukan dari urutan member grup saat ini. Alasan: urutan member grup berubah tiap kali ada yang ditambah atau dinonaktifkan, sementara pengeluaran yang sudah tersimpan harus menghasilkan angka yang sama persis selamanya — pengeluaran membawa daftar pesertanya sendiri, itu yang jadi indeks nol sampai sekian. Dibuktikan test yang menukar urutan splitData dua pengeluaran identik dan memastikan hasil per member tidak bergeser.
 - K-64 SELESAI 19 Ags 2026 — F2-03 `createExpense`/`updateExpense` (`expense-repository.ts`) menjaga penyimpanan lewat gerbang `calculateExpense` dari fasad engine (via `toCalculationInput`), tapi hasil perhitungannya sendiri tidak ikut disimpan — cuma dipakai sebagai validasi lalu dibuang. Alasan: pengeluaran tersimpan yang tidak bisa dihitung adalah data rusak yang baru ketahuan berminggu-minggu kemudian di layar saldo, dan menyimpan angka turunan di samping input yang menghasilkannya berarti dua sumber kebenaran untuk satu fakta. Warning dari engine (mis. `negative_share`) bukan alasan menolak, cuma error yang menolak penyimpanan.
+- K-65 SELESAI 19 Ags 2026 — F2-04 nol versi 2 sungguhan ditambahkan ke `migrations.ts`. Alasan: repo baru punya versi 1, nol perubahan bentuk data yang tertunda, dan menambahkan versi 2 yang isinya cuma supaya ada yang dimigrasi berarti menaruh langkah upgrade permanen di setiap database pengguna untuk selamanya demi kenyamanan satu test hari ini. Yang dibangun mesinnya (`applyMigrations`) dan buktinya (test yang membuka data lama dan memastikan nol baris hilang), bukan penumpangnya. Versi 2 di kepala `migrations.ts` cuma komentar contoh bentuk, bukan kode hidup.
+- K-66 SELESAI 19 Ags 2026 — F2-04 `applyMigrations(dexie, steps)` menerima daftar langkah sebagai argumen, bukan membaca `migrations` dari modul. Alasan: itu yang bikin `migrations.test.ts` bisa menjalankan mesin produksi yang sama persis dengan daftar migrasi sintetis buatan test sendiri (versi 1 asli plus versi 2 buatan test yang nambah indeks dan ngisi field baru lewat `upgrade`), tanpa menyentuh skema produksi ataupun bikin versi 2 palsu di `migrations.ts`.
+- K-67 SELESAI 19 Ags 2026 — F2-04 `CURRENT_SCHEMA_VERSION` diturunkan dari `migrations[migrations.length - 1].version`, bukan angka literal yang ditulis tangan terpisah. Alasan: literal terpisah berarti dua sumber untuk satu fakta yang bisa saling menyimpang begitu ada yang nambah versi baru dan lupa update konstantanya — persis pola yang sudah dihindari K-62 buat `splitMode`. Konsekuensinya penjaga urutan versi di `applyMigrations` cuma menolak tiga cacat yang murni properti daftar `steps` itu sendiri (nggak mulai dari 1, ada versi kembar, ada versi lompat/gap) — bukan empat seperti draf instruksi tugas awal yang nyebut cacat keempat "`CURRENT_SCHEMA_VERSION` nggak cocok sama versi tertinggi di daftar" sebagai pemeriksaan terpisah di dalam `applyMigrations`. Draf itu nggak bisa dipakai apa adanya: kalau `applyMigrations` beneran ngecek versi tertinggi daftar yang lewat terhadap `CURRENT_SCHEMA_VERSION` module-level yang tetap (=1 di produksi), maka pemanggilan kedua di test migrasi sintetis (daftar versi 1 ditambah versi 2 buatan test) bakal ditolak duluan oleh guard itu sendiri, padahal justru itu skenario yang harus lolos. Dikonfirmasi ke pengguna sebelum diputuskan, bukan diselaraskan sepihak.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
