@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 19 Agustus 2026
-Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-05 selesai. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-06 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -39,7 +39,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [x] F1-03 Mode Rata, Nominal, Persentase
 - [x] F1-04 Mode Porsi dan Selisih
 - [x] F1-05 Mode Per Item
-- [ ] F1-06 Biaya tambahan
+- [x] F1-06 Biaya tambahan
 - [ ] F1-07 Traktir
 - [ ] F1-08 Pembayar dan saldo
 - [ ] F1-09 Settlement
@@ -256,6 +256,10 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-31 SELESAI 19 Ags 2026 — F1-05 `splitByItems` menurunkan `totalMinor` dari `unitPriceMinor * quantity` tiap item, bukan menerima `totalMinor` sebagai input terpisah seperti lima mode lain. Alasan: di mode ini itemnya yang jadi sumber kebenaran (struk hasil scan atau input manual), dan total yang dikirim terpisah cuma nambah satu angka yang bisa bertentangan dengan jumlah itemnya sendiri tanpa cara mesin tahu mana yang benar.
 - K-32 SELESAI 19 Ags 2026 — F1-05 `quantity` item dibatasi integer positif di gelombang 1, qty pecahan (barang timbangan seperti daging per 100 gram) ditolak. Alasan: belum ada layar yang butuh input qty pecahan, dan menerimanya sekarang berarti menebak bentuk validasi dan UI sebelum ada pemakai nyata. Ditunda sampai ada kebutuhan konkret.
 - K-33 SELESAI 19 Ags 2026 — F1-05 `splitByItems` menolak klaim ganda dari `participantIndex` yang sama di satu item, bukan menggabungkan bobotnya secara diam-diam. Alasan: dua entri klaim dari orang yang sama di item yang sama itu ambigu — bisa jadi maksudnya menambah bobot, bisa jadi bug pengiriman data dobel dari layar — dan menggabungkannya otomatis menyembunyikan kasus yang kedua.
+- K-34 SELESAI 19 Ags 2026 — F1-06 `ChargeAmount` mode `percent` wajib menyebut `basis` eksplisit (`subtotal` atau `running_total`), nol nilai default. Alasan: urutan Indonesia butuh service charge dari subtotal lalu PB1 dari subtotal ditambah service (`running_total`), sementara tip Amerika dihitung dari subtotal walaupun posisinya setelah pajak (`subtotal`) — satu default apapun bakal salah di salah satu dari dua kasus itu, dan spec.md 7.2 sendiri bilang urutan ini yang paling sering salah.
+- K-35 SELESAI 19 Ags 2026 — F1-06 pembulatan hasil komponen persen ke minor unit pakai aturan setengah dibulatkan menjauhi nol (2,5 jadi 3, minus 2,5 jadi minus 3), bukan pembulatan bankir. Alasan: struk fisik dan kalkulator kasir memakai aturan yang sama, jadi pembulatan bankir bikin angka app beda dari kertas yang dipegang orang di meja. Simetris terhadap nol supaya diskon persen dan pajak persen membulat dengan cara yang konsisten.
+- K-36 SELESAI 19 Ags 2026 — F1-06 `allocateExtraCharges` nol tahu nama jenis biaya (pajak, service, tip, ongkir) — engine cuma tahu angka dan cara alokasinya, nama dan preset per locale urusan layar dan file string. Konsekuensinya urutan array `charges` jadi kontrak, karena basis `running_total` didefinisikan relatif terhadap komponen sebelumnya di array yang sama.
+- K-37 SELESAI 19 Ags 2026 — F1-06 mode alokasi `items` cuma sah untuk nominal komponen negatif, nominal nol atau positif ditolak. Alasan: spec.md 7.3 mode ini khusus buat voucher menu tertentu (diskon), dan biaya positif yang ditarget ke item tertentu bukan kasus yang didukung sekarang — belum jelas apa artinya (misal ongkir yang cuma berlaku ke sebagian item) dan lebih aman ditolak daripada ditebak.
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
@@ -311,3 +315,6 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F1-05: dugaan di catatan F1-04 di atas ternyata gak dipakai — `splitByItems` manggil `allocateByWeights` langsung per item, bukan `splitByWeights`. Alasan: `splitByWeights` cuma pembungkus `SplitResult` (warnings selalu kosong) yang gunanya buat keseragaman bentuk balik di level pengeluaran, sementara di level item yang dibutuhkan cuma array angka mentah buat disebar ke posisi `participantIndex` masing-masing klaim — bungkus tambahannya gak kepake terus dibuang lagi.
 - F1-05: mesin mode Per Item selesai (`splitByItems`), tapi barisnya di "Fase 1 menurut spec" ada di daftar Fase 2 ("Mode Per Item dan layar assign", bukan di section Pembagian Fase 1), jadi nol dicentang di situ. K-02/K-03 sudah mutusin cuma mesinnya yang maju ke gelombang 1 (dipakai layar Klaim Item F3-08 versi satu device), layar assign versi pembuat tetap Fase 2 — baris itu baru dicentang kalau layar assign-nya jadi.
 - F1-05: tombol "bagi item ini ke semua" dan "bagi rata semua sisa" (`spec.md` 6.6) sengaja belum ditulis. Keduanya aksi layar yang tinggal menyusun ulang `claims` (isi semua peserta dengan bobot 1, atau distribusikan sisa item tak diklaim) lalu manggil `splitByItems` yang sudah ada — bukan logika baru di split engine, dan fungsi tanpa pemakai gak ditulis duluan.
+- F1-06: kombinasi bagian dasar minus (hasil mode Selisih yang ekstrem) dengan komponen biaya bermode `proportional` ditolak untuk sekarang (`assertProportionalIsPossible` di `allocate-extra-charges.ts` menolak `baseSharesMinor` yang punya elemen negatif kalau ada komponen proporsional). Alasan: bobot negatif ga punya arti di alokasi proporsional dan `allocateByWeights` juga menolaknya. Ditunda sampai ada layar yang beneran memunculkan kombinasi Selisih-ekstrem-lalu-biaya-proporsional — belum jelas perilaku yang benar (proporsional terhadap nilai absolut? terhadap bagian sebelum penyesuaian?) tanpa kasus nyata di tangan.
+- F1-06: `scalePercentToBasisPoints` di `charges/charge-amount.ts` sekarang implementasi ketiga dari pola pad-concatenate-BigInt yang sama (setelah `allocate-by-weights.ts` dan `split-by-percentage.ts`), masuk paket dedup F1-10 bareng dua yang sudah tercatat di F1-01 dan F1-03.
+- F1-06: `allocate-extra-charges.ts` dipecah jadi tiga file di `charges/` (`allocate-extra-charges.ts` orkestrator, `charge-amount.ts` perhitungan nominal per komponen termasuk pembulatan, `charge-allocation.ts` penyebaran ke peserta per mode) karena satu file gabungan bakal jauh lewat 250 baris dengan sembilan kategori validasi plus empat mode alokasi. Sesuai opsi yang sudah disepakati di instruksi tugas.
