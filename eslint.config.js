@@ -38,5 +38,25 @@ export default tseslint.config(
       "import/no-internal-modules": ["error", { forbid: ["@/features/*/**", "@bagibill/split-engine/*"] }],
     },
   },
+  {
+    // spec.md 24: a device with a wrong clock must not corrupt ordering, so
+    // storage logic takes a Clock instead of reading the system clock
+    // itself. clock.ts is the one place allowed to touch it.
+    files: ["src/lib/storage/**/*.{ts,tsx}"],
+    ignores: ["src/lib/storage/clock.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+          message: "Inject a Clock instead of calling Date.now() directly — see clock.ts.",
+        },
+        {
+          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+          message: "Inject a Clock instead of using new Date() directly — see clock.ts.",
+        },
+      ],
+    },
+  },
   eslintConfigPrettier,
 );
