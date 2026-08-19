@@ -1,12 +1,14 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { db } from "./schema";
+import { createDexieAdapter } from "./adapter";
 import { createFixedClock } from "./clock";
 import { createSequentialIdGenerator } from "./id";
 import { createMemberRepository } from "./member-repository";
 import type { ExpenseRecord, SettlementRecord } from "./records";
 
 const GROUP_SLUG = "group-1";
+const adapter = createDexieAdapter(db);
 
 beforeAll(async () => {
   await db.open();
@@ -17,7 +19,7 @@ afterEach(async () => {
 });
 
 function makeRepository() {
-  return createMemberRepository(db, createFixedClock(1_000), createSequentialIdGenerator("member-"));
+  return createMemberRepository(adapter, createFixedClock(1_000), createSequentialIdGenerator("member-"));
 }
 
 function makeExpense(overrides: Partial<ExpenseRecord>): ExpenseRecord {
@@ -32,8 +34,7 @@ function makeExpense(overrides: Partial<ExpenseRecord>): ExpenseRecord {
     fxRate: 1,
     amountTotalMinor: 10_000,
     payers: [],
-    splitMode: "evenly",
-    splitData: {},
+    splitData: { mode: "evenly", memberIds: [] },
     charges: [],
     items: [],
     treats: [],

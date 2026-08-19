@@ -3,7 +3,6 @@ import type {
   ExpenseItem,
   ExtraCharge,
   ItemClaim,
-  SplitInput,
   Treat,
 } from "@bagibill/split-engine";
 
@@ -101,6 +100,35 @@ export interface ExpensePayerRecord {
   readonly amountMinor: number;
 }
 
+// One variant per SplitInput mode, tagged with the same "mode" literals the
+// engine uses — memberId replaces participantIndex, same derivation
+// principle as the rest of this file. evenly and byItems only need to know
+// who's participating (and in what order), so they carry memberIds; the
+// other four modes need a per-member number, so they carry entries.
+//
+// splitMode was dropped as a separate field once splitData became tagged —
+// splitData.mode already carries the same fact, and two fields for one
+// truth is exactly how the two can drift out of sync (K-62).
+export type SplitDataRecord =
+  | { readonly mode: "evenly"; readonly memberIds: readonly string[] }
+  | {
+      readonly mode: "byAmounts";
+      readonly entries: readonly { readonly memberId: string; readonly amountMinor: number }[];
+    }
+  | {
+      readonly mode: "byPercentage";
+      readonly entries: readonly { readonly memberId: string; readonly percent: number }[];
+    }
+  | {
+      readonly mode: "byWeights";
+      readonly entries: readonly { readonly memberId: string; readonly weight: number }[];
+    }
+  | {
+      readonly mode: "byAdjustment";
+      readonly entries: readonly { readonly memberId: string; readonly adjustmentMinor: number }[];
+    }
+  | { readonly mode: "byItems"; readonly memberIds: readonly string[] };
+
 export interface ExpenseRecord extends StoredRecord {
   readonly expenseId: string;
   readonly groupSlug: string;
@@ -112,12 +140,7 @@ export interface ExpenseRecord extends StoredRecord {
   readonly fxRate: number;
   readonly amountTotalMinor: number;
   readonly payers: readonly ExpensePayerRecord[];
-  // splitMode reuses the engine's own mode literals rather than inventing
-  // new ones. splitData's per-mode shape (and the memberId<->index mapping
-  // it needs) is deferred to the repository in F2-03, alongside the same
-  // mapping already deferred there for items — see Catatan lepas.
-  readonly splitMode: SplitInput["mode"];
-  readonly splitData: unknown;
+  readonly splitData: SplitDataRecord;
   readonly charges: readonly ChargeRecord[];
   readonly items: readonly ExpenseItemRecord[];
   readonly treats: readonly TreatRecord[];

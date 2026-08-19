@@ -331,6 +331,9 @@ describe("computeSettlement — property", () => {
   const SEED = 777;
   const ITERATIONS = 3000;
 
+  // Default 5000ms timeout is mepet on CI's shared runners for 3000
+  // iterations (observed 5.4-5.7s across three consecutive CI runs, vs.
+  // ~1.4s locally) — 15s gives headroom without hiding a genuine hang.
   it(`keeps settlement transfers exact across ${ITERATIONS} random cases (seed ${SEED})`, () => {
     const random = mulberry32(SEED);
 
@@ -365,5 +368,5 @@ describe("computeSettlement — property", () => {
         });
       }
     }
-  });
+  }, 15_000);
 });
