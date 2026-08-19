@@ -3,7 +3,7 @@
 Sumber kebenaran fitur ada di `spec.md`. Urutan kerja ada di `plan.md`. File ini cuma melacak status, keputusan, dan hal yang masih menggantung.
 
 Status terakhir diperbarui: 19 Agustus 2026
-Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-06 selesai. Seluruh mockup gelombang 1 selesai.
+Fase aktif: F1 (split engine). F0-01 sampai F0-04 dan F0-08 selesai; F0-05 sampai F0-07 kodenya selesai, menunggu uji HP fisik. F1-01 sampai F1-07 selesai. Seluruh mockup gelombang 1 selesai.
 Gelombang aktif: 1 — beranda, buat grup dan kelola member, tambah pengeluaran, detail grup tab Transaksi dan tab Saldo, klaim item
 Target rilis fase 1: (isi tanggal)
 
@@ -40,7 +40,7 @@ Ini yang dipakai harian. Kode tugas mengikuti `plan.md`.
 - [x] F1-04 Mode Porsi dan Selisih
 - [x] F1-05 Mode Per Item
 - [x] F1-06 Biaya tambahan
-- [ ] F1-07 Traktir
+- [x] F1-07 Traktir
 - [ ] F1-08 Pembayar dan saldo
 - [ ] F1-09 Settlement
 - [ ] F1-10 Fasad dan tabel kasus
@@ -260,6 +260,10 @@ Format: kode, tanggal, keputusan, alasan. Yang masih terbuka ditandai TERBUKA da
 - K-35 SELESAI 19 Ags 2026 — F1-06 pembulatan hasil komponen persen ke minor unit pakai aturan setengah dibulatkan menjauhi nol (2,5 jadi 3, minus 2,5 jadi minus 3), bukan pembulatan bankir. Alasan: struk fisik dan kalkulator kasir memakai aturan yang sama, jadi pembulatan bankir bikin angka app beda dari kertas yang dipegang orang di meja. Simetris terhadap nol supaya diskon persen dan pajak persen membulat dengan cara yang konsisten.
 - K-36 SELESAI 19 Ags 2026 — F1-06 `allocateExtraCharges` nol tahu nama jenis biaya (pajak, service, tip, ongkir) — engine cuma tahu angka dan cara alokasinya, nama dan preset per locale urusan layar dan file string. Konsekuensinya urutan array `charges` jadi kontrak, karena basis `running_total` didefinisikan relatif terhadap komponen sebelumnya di array yang sama.
 - K-37 SELESAI 19 Ags 2026 — F1-06 mode alokasi `items` cuma sah untuk nominal komponen negatif, nominal nol atau positif ditolak. Alasan: spec.md 7.3 mode ini khusus buat voucher menu tertentu (diskon), dan biaya positif yang ditarget ke item tertentu bukan kasus yang didukung sekarang — belum jelas apa artinya (misal ongkir yang cuma berlaku ke sebagian item) dan lebih aman ditolak daripada ditebak.
+- K-38 SELESAI 19 Ags 2026 — F1-07 traktir level komponen tidak dibangun sebagai varian `Treat` (union cuma punya `person`, `partial`, `item`). Alasan: "pajaknya dari saya" sudah persis sama dengan mode alokasi `single_payer` yang dibangun di F1-06 — nambah varian di sini berarti dua jalan kode buat satu perilaku yang sama, dan itu cara paling cepat bikin dua layar menampilkan angka berbeda.
+- K-39 SELESAI 19 Ags 2026 — F1-07 `applyTreats` memproses `treats` berurutan di atas hasil traktir sebelumnya, bukan diselesaikan transitif. Alasan: tiap traktir adalah janji pada satu momen, bukan sistem yang diselesaikan serentak. Konsekuensinya buat traktir bertingkat (A menraktir B lalu B menraktir C): bagian B jadi nol dulu baru naik lagi sebesar bagian C, dan A tetap cuma menanggung bagian B yang lama, bukan bagian B setelah C ikut masuk.
+- K-40 SELESAI 19 Ags 2026 — F1-07 traktir item cuma memindahkan nominal item, tidak termasuk biaya tambahan proporsional yang menempel di atasnya. Alasan: `itemSharesMinor` berasal dari `splitByItems` yang jalan sebelum lapisan biaya tambahan F1-06, jadi engine belum pernah tahu berapa pajak yang menempel di item itu di titik ini. Bacaan lain ("ditraktir berarti termasuk pajaknya") sama masuk akalnya, dicatat di Catatan lepas.
+- K-41 SELESAI 19 Ags 2026 — F1-07 traktir `partial` yang melebihi bagian penerima diterima dan dibiarkan negatif, bukan diklamp ke nol atau ditolak. Alasan: konsisten dengan K-29 (mode Selisih) dan diskon di F1-06 — mengklamp berarti uang hilang dari rincian, dan niat traktir sebagian yang lebih besar dari bagian penerima itu sah (contoh: nominal traktir dibulatkan ke angka bulat tanpa mengecek sisa dulu).
 - K-12 TERBUKA — Storage foto struk, penyedia OCR, dan angka kuota harian. Menunggu scan struk dijadwalkan. Tidak memblokir gelombang 1.
 - K-13 TERBUKA — Preset biaya untuk locale di luar Indonesia, Amerika Serikat, dan Eropa. Defaultnya nol sampai ada.
 
@@ -318,3 +322,5 @@ Hal yang sengaja tidak dikerjakan sekarang, supaya tidak dibahas berulang.
 - F1-06: kombinasi bagian dasar minus (hasil mode Selisih yang ekstrem) dengan komponen biaya bermode `proportional` ditolak untuk sekarang (`assertProportionalIsPossible` di `allocate-extra-charges.ts` menolak `baseSharesMinor` yang punya elemen negatif kalau ada komponen proporsional). Alasan: bobot negatif ga punya arti di alokasi proporsional dan `allocateByWeights` juga menolaknya. Ditunda sampai ada layar yang beneran memunculkan kombinasi Selisih-ekstrem-lalu-biaya-proporsional — belum jelas perilaku yang benar (proporsional terhadap nilai absolut? terhadap bagian sebelum penyesuaian?) tanpa kasus nyata di tangan.
 - F1-06: `scalePercentToBasisPoints` di `charges/charge-amount.ts` sekarang implementasi ketiga dari pola pad-concatenate-BigInt yang sama (setelah `allocate-by-weights.ts` dan `split-by-percentage.ts`), masuk paket dedup F1-10 bareng dua yang sudah tercatat di F1-01 dan F1-03.
 - F1-06: `allocate-extra-charges.ts` dipecah jadi tiga file di `charges/` (`allocate-extra-charges.ts` orkestrator, `charge-amount.ts` perhitungan nominal per komponen termasuk pembulatan, `charge-allocation.ts` penyebaran ke peserta per mode) karena satu file gabungan bakal jauh lewat 250 baris dengan sembilan kategori validasi plus empat mode alokasi. Sesuai opsi yang sudah disepakati di instruksi tugas.
+- F1-07: bacaan alternatif traktir item yang ikut memindahkan bagian biaya tambahan proporsional yang menempel di item itu (bukan cuma nominal itemnya) ditunda sampai ada layar yang menuntutnya. Alasan lengkap di K-40 — belum ada kasus nyata yang mastiin bacaan mana yang benar, dan dua-duanya sama masuk akal secara spec.
+- F1-07: `apply-treats.ts` dipecah jadi tiga file di `treats/` (`apply-treats.ts` orkestrator, `treat-validation.ts` seluruh validasi, `treat-transfer.ts` pemrosesan traktir dan mutasi bagian) karena gabungan tiga file itu 310 baris kalau digabung satu — jauh lewat 250. Sesuai opsi yang sudah disepakati di instruksi tugas, preseden sama F1-06.
