@@ -1,4 +1,4 @@
-import type { BagiBillDatabase } from "./schema";
+import type { StorageAdapter } from "./adapter";
 import type { Clock } from "./clock";
 import type { IdGenerator } from "./id";
 import type { ExpenseRecord, MemberRecord, SettlementRecord, TreatRecord } from "./records";
@@ -35,10 +35,10 @@ function treatReferencesMember(treat: TreatRecord, memberId: string): boolean {
   return treat.sponsorMemberId === memberId || treat.beneficiaryMemberId === memberId;
 }
 
-// splitData's per-mode shape isn't designed yet (deferred to F2-03, see
-// records.ts), so it can't be checked field by field. This walks the
-// unknown value looking for the memberId anywhere in it — a generic
-// fallback until F2-03 gives splitData a real shape to check precisely.
+// splitData now has a real per-mode shape (F2-03, records.ts), but this
+// walk stays generic rather than switching on splitData.mode — it's cheap,
+// it already covers every mode without a switch to keep in sync, and the
+// id space is random and opaque so a generic string scan can't false-match.
 function splitDataReferencesMember(splitData: unknown, memberId: string): boolean {
   if (typeof splitData === "string") {
     return splitData === memberId;
@@ -68,7 +68,7 @@ function settlementReferencesMember(settlement: SettlementRecord, memberId: stri
 
 // Same injection reasoning as group-repository.ts.
 export function createMemberRepository(
-  db: BagiBillDatabase,
+  adapter: StorageAdapter,
   clock: Clock,
   idGenerator: IdGenerator,
 ): MemberRepository {
@@ -77,8 +77,8 @@ export function createMemberRepository(
     // and soft-deleted ones — spec.md 18.5 says a color is fixed for life,
     // so counting only active members would eventually hand the same color
     // to two different people in the same group's history.
-    const historicalCount = await db.members.where("groupSlug").equals(input.groupSlug).count();
-    const colorNumber = (historicalCount % MEMBER_PALETTE_SIZE) + 1;
+    const historicalMembers = await adapter.members.findBy("groupSlug", input.groupSlug);
+    const colorNumber = (historicalMembers.length % MEMBER_PALETTE_SIZE) + 1;
     const member: MemberRecord = {
       memberId: idGenerator.nextId(),
       groupSlug: input.groupSlug,
@@ -87,7 +87,7 @@ export function createMemberRepository(
       joinedAt: clock.now(),
       seq: 0,
     };
-    await db.members.add(member);
+    await adapter.members.put(member);
     return member;
   }
 
@@ -95,7 +95,7 @@ export function createMemberRepository(
     groupSlug: string,
     options: ListMembersOptions = {},
   ): Promise<readonly MemberRecord[]> {
-    const members = await db.members.where("groupSlug").equals(groupSlug).toArray();
+    const members = await adapter.members.findBy("groupSlug", groupSlug);
     const notDeleted = members.filter((member) => member.deletedAt === undefined);
     if (options.includeInactive === true) {
       return notDeleted;
@@ -103,27 +103,35 @@ export function createMemberRepository(
     return notDeleted.filter((member) => member.deactivatedAt === undefined);
   }
 
+  async function requireMember(memberId: string, functionName: string): Promise<MemberRecord> {
+    const member = await adapter.members.get(memberId);
+    if (member === undefined) {
+      throw new Error(`${functionName}: no member found for the given id`);
+    }
+    return member;
+  }
+
   async function renameMember(memberId: string, name: string): Promise<void> {
     // Color and memberId are untouched — spec.md 18.5 fixes the color for
     // life, a rename is not a re-join.
-    await db.members.update(memberId, { name });
+    const member = await requireMember(memberId, "renameMember");
+    await adapter.members.put({ ...member, name });
   }
 
   async function deactivateMember(memberId: string): Promise<void> {
-    await db.members.update(memberId, { deactivatedAt: clock.now() });
+    const member = await requireMember(memberId, "deactivateMember");
+    await adapter.members.put({ ...member, deactivatedAt: clock.now() });
   }
 
   async function reactivateMember(memberId: string): Promise<void> {
-    await db.members.update(memberId, { deactivatedAt: undefined });
+    const member = await requireMember(memberId, "reactivateMember");
+    await adapter.members.put({ ...member, deactivatedAt: undefined });
   }
 
   async function deleteMember(memberId: string): Promise<void> {
-    const member = await db.members.get(memberId);
-    if (member === undefined) {
-      throw new Error("deleteMember: no member found for the given id");
-    }
-    const expenses = await db.expenses.where("groupSlug").equals(member.groupSlug).toArray();
-    const settlements = await db.settlements.where("groupSlug").equals(member.groupSlug).toArray();
+    const member = await requireMember(memberId, "deleteMember");
+    const expenses = await adapter.expenses.findBy("groupSlug", member.groupSlug);
+    const settlements = await adapter.settlements.findBy("groupSlug", member.groupSlug);
     const hasTransaction =
       expenses.some((expense) => expenseReferencesMember(expense, memberId)) ||
       settlements.some((settlement) => settlementReferencesMember(settlement, memberId));
@@ -134,7 +142,7 @@ export function createMemberRepository(
           "participant, treat party, or settlement) — deactivate the member instead of deleting them",
       );
     }
-    await db.members.update(memberId, { deletedAt: clock.now() });
+    await adapter.members.put({ ...member, deletedAt: clock.now() });
   }
 
   return { addMember, listMembers, renameMember, deactivateMember, reactivateMember, deleteMember };

@@ -1,10 +1,13 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { db } from "./schema";
+import { createDexieAdapter } from "./adapter";
 import { createFixedClock } from "./clock";
 import { createSequentialIdGenerator } from "./id";
 import { createGroupRepository } from "./group-repository";
 import { GROUP_TEMPLATES, type GroupTemplateKey } from "./templates";
+
+const adapter = createDexieAdapter(db);
 
 beforeAll(async () => {
   await db.open();
@@ -16,7 +19,7 @@ afterEach(async () => {
 
 describe("createGroup", () => {
   it("applies each template's settings to the created group", async () => {
-    const repository = createGroupRepository(db, createFixedClock(1_000), createSequentialIdGenerator());
+    const repository = createGroupRepository(adapter, createFixedClock(1_000), createSequentialIdGenerator());
     const templateKeys = Object.keys(GROUP_TEMPLATES) as GroupTemplateKey[];
 
     for (const templateKey of templateKeys) {
@@ -33,7 +36,7 @@ describe("createGroup", () => {
   });
 
   it("gives two groups different slugs", async () => {
-    const repository = createGroupRepository(db, createFixedClock(0), createSequentialIdGenerator());
+    const repository = createGroupRepository(adapter, createFixedClock(0), createSequentialIdGenerator());
     const groupA = await repository.createGroup({ name: "A", baseCurrency: "IDR", template: "blank" });
     const groupB = await repository.createGroup({ name: "B", baseCurrency: "IDR", template: "blank" });
     expect(groupA.slug).not.toBe(groupB.slug);
@@ -42,7 +45,7 @@ describe("createGroup", () => {
 
 describe("getGroupBySlug", () => {
   it("returns nothing for a deleted group", async () => {
-    const repository = createGroupRepository(db, createFixedClock(0), createSequentialIdGenerator());
+    const repository = createGroupRepository(adapter, createFixedClock(0), createSequentialIdGenerator());
     const group = await repository.createGroup({ name: "Trip", baseCurrency: "IDR", template: "trip" });
     await repository.deleteGroup(group.slug);
     expect(await repository.getGroupBySlug(group.slug)).toBeUndefined();
@@ -51,7 +54,7 @@ describe("getGroupBySlug", () => {
 
 describe("listGroups", () => {
   it("excludes deleted groups", async () => {
-    const repository = createGroupRepository(db, createFixedClock(0), createSequentialIdGenerator());
+    const repository = createGroupRepository(adapter, createFixedClock(0), createSequentialIdGenerator());
     const keep = await repository.createGroup({ name: "Keep", baseCurrency: "IDR", template: "blank" });
     const gone = await repository.createGroup({ name: "Gone", baseCurrency: "IDR", template: "blank" });
     await repository.deleteGroup(gone.slug);
@@ -62,7 +65,7 @@ describe("listGroups", () => {
 
 describe("archiveGroup", () => {
   it("does not remove the group from storage", async () => {
-    const repository = createGroupRepository(db, createFixedClock(0), createSequentialIdGenerator());
+    const repository = createGroupRepository(adapter, createFixedClock(0), createSequentialIdGenerator());
     const group = await repository.createGroup({ name: "Trip", baseCurrency: "IDR", template: "trip" });
     await repository.archiveGroup(group.slug);
     const stored = await repository.getGroupBySlug(group.slug);
@@ -72,7 +75,7 @@ describe("archiveGroup", () => {
 
 describe("updateGroupSettings", () => {
   it("patches without dropping other settings fields", async () => {
-    const repository = createGroupRepository(db, createFixedClock(0), createSequentialIdGenerator());
+    const repository = createGroupRepository(adapter, createFixedClock(0), createSequentialIdGenerator());
     const group = await repository.createGroup({ name: "Trip", baseCurrency: "IDR", template: "trip" });
     await repository.updateGroupSettings(group.slug, { locked: true });
     const stored = await repository.getGroupBySlug(group.slug);
