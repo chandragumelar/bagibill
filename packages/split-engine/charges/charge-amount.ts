@@ -1,3 +1,4 @@
+import { scaleDecimalToInteger } from "../shared/decimal-scale";
 import type { ChargeAmount, ExtraCharge } from "./extra-charge.types";
 
 const MAX_PERCENT_DECIMAL_PLACES = 2;
@@ -48,7 +49,7 @@ function assertValidFixedAmount(amountMinor: number, chargeIndex: number): void 
 
 function computePercentAmountMinor(percent: number, basisMinor: number, chargeIndex: number): number {
   assertValidPercent(percent, chargeIndex);
-  const basisPoints = scalePercentToBasisPoints(percent);
+  const basisPoints = scaleDecimalToInteger(percent, MAX_PERCENT_DECIMAL_PLACES);
   // Rounded half away from zero, like a receipt or a cashier's calculator —
   // banker's rounding would make the app's number disagree with the paper in
   // front of the person holding it. Symmetric around zero so a percent
@@ -72,17 +73,6 @@ function countDecimalPlaces(value: number): number {
   const text = value.toString();
   const dotIndex = text.indexOf(".");
   return dotIndex === -1 ? 0 : text.length - dotIndex - 1;
-}
-
-// Local duplicate of the pad-concatenate-BigInt scaling technique used in
-// allocate-by-weights.ts and split-by-percentage.ts. This is the third
-// implementation, a dedup candidate for F1-10 alongside the other two.
-function scalePercentToBasisPoints(percent: number): bigint {
-  const text = percent.toString();
-  const [wholeDigits, fractionDigits = ""] = text.split(".");
-  const paddedFraction = fractionDigits.padEnd(MAX_PERCENT_DECIMAL_PLACES, "0");
-  const digits = `${wholeDigits}${paddedFraction}`.replace(/^0+(?=\d)/, "");
-  return BigInt(digits);
 }
 
 function roundHalfAwayFromZero(numerator: bigint, denominator: bigint): bigint {

@@ -1,4 +1,5 @@
 import { allocateByWeights } from "../allocation/allocate-by-weights";
+import { scaleDecimalToInteger } from "../shared/decimal-scale";
 import type { SplitResult } from "./split-result";
 
 const MAX_PERCENTAGE_DECIMAL_PLACES = 2;
@@ -56,7 +57,7 @@ function assertValidPercentages(percentages: readonly number[], totalMinor: numb
 
 function assertWithinTolerance(percentages: readonly number[], totalMinor: number): void {
   const sumBasisPoints = percentages.reduce(
-    (sum, percentage) => sum + scalePercentToBasisPoints(percentage),
+    (sum, percentage) => sum + scaleDecimalToInteger(percentage, MAX_PERCENTAGE_DECIMAL_PLACES),
     0n,
   );
   const differenceBasisPoints = sumBasisPoints - BigInt(TOTAL_BASIS_POINTS);
@@ -75,16 +76,4 @@ function countDecimalPlaces(value: number): number {
   const text = value.toString();
   const dotIndex = text.indexOf(".");
   return dotIndex === -1 ? 0 : text.length - dotIndex - 1;
-}
-
-// Local duplicate of allocate-by-weights.ts's scaleWeightToInteger, kept
-// separate because importing a non-public helper across the allocation/
-// and modes/ folders would bypass the single-entry-point rule before the
-// facade index.ts exists (F1-10).
-function scalePercentToBasisPoints(percentage: number): bigint {
-  const text = percentage.toString();
-  const [wholeDigits, fractionDigits = ""] = text.split(".");
-  const paddedFraction = fractionDigits.padEnd(MAX_PERCENTAGE_DECIMAL_PLACES, "0");
-  const digits = `${wholeDigits}${paddedFraction}`.replace(/^0+(?=\d)/, "");
-  return BigInt(digits);
 }

@@ -35,7 +35,7 @@ export default tseslint.config(
       "no-nested-ternary": "error",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       // Cross-feature imports must go through a feature's index.ts, never its internals.
-      "import/no-internal-modules": ["error", { forbid: ["@/features/*/**"] }],
+      "import/no-internal-modules": ["error", { forbid: ["@/features/*/**", "@bagibill/split-engine/*"] }],
     },
   },
   eslintConfigPrettier,

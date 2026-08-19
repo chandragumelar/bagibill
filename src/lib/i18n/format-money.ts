@@ -1,16 +1,12 @@
 import { getLocale } from "@/lib/i18n/locale-store";
 import { LOCALE_BCP47 } from "@/lib/i18n/types";
+import { getCurrencyDecimalDigits } from "@bagibill/split-engine";
 
-// spec.md 10: presisi desimal mengikuti standar per mata uang, bukan
-// default ISO yang dipakai Intl (IDR di ISO tercatat 2 desimal, tapi
-// praktiknya nol sen dipakai di mana-mana).
-const ZERO_DECIMAL_CURRENCIES = new Set(["IDR", "JPY", "KRW", "VND"]);
-const THREE_DECIMAL_CURRENCIES = new Set(["KWD", "BHD", "OMR"]);
-
+// Re-export under the name this module has always used, so call sites don't
+// change — the precision table itself now lives once, in the split engine
+// (F1-01 debt, paid off in F1-10).
 export function getCurrencyDecimals(currency: string): number {
-  if (ZERO_DECIMAL_CURRENCIES.has(currency)) return 0;
-  if (THREE_DECIMAL_CURRENCIES.has(currency)) return 3;
-  return 2;
+  return getCurrencyDecimalDigits(currency);
 }
 
 /**

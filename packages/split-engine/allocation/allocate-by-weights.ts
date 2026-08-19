@@ -1,3 +1,5 @@
+import { scaleDecimalToInteger } from "../shared/decimal-scale";
+
 export function allocateByWeights(input: { totalMinor: number; weights: readonly number[] }): number[] {
   const { totalMinor, weights } = input;
   assertIntegerTotal(totalMinor, weights);
@@ -9,7 +11,7 @@ export function allocateByWeights(input: { totalMinor: number; weights: readonly
   }
 
   const decimalPlaces = Math.max(0, ...weights.map(countDecimalPlaces));
-  const scaledWeights = weights.map((weight) => scaleWeightToInteger(weight, decimalPlaces));
+  const scaledWeights = weights.map((weight) => scaleDecimalToInteger(weight, decimalPlaces));
   const sumScaledWeights = scaledWeights.reduce((sum, weight) => sum + weight, 0n);
   if (sumScaledWeights === 0n) {
     throw allocationError("all weights are zero", totalMinor, weights);
@@ -42,17 +44,6 @@ function countDecimalPlaces(weight: number): number {
   const text = weight.toString();
   const dotIndex = text.indexOf(".");
   return dotIndex === -1 ? 0 : text.length - dotIndex - 1;
-}
-
-// Scaling through the decimal string (pad, concatenate, BigInt-parse) keeps
-// fractional weights like 0.1 or 33.33 exact — multiplying the float by
-// 10^decimalPlaces can drift for values that aren't exact in binary.
-function scaleWeightToInteger(weight: number, decimalPlaces: number): bigint {
-  const text = weight.toString();
-  const [wholeDigits, fractionDigits = ""] = text.split(".");
-  const paddedFraction = fractionDigits.padEnd(decimalPlaces, "0");
-  const digits = `${wholeDigits}${paddedFraction}`.replace(/^0+(?=\d)/, "");
-  return BigInt(digits);
 }
 
 interface WeightedShare {
