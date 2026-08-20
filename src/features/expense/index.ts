@@ -1,1 +1,1 @@
-export { AddExpenseEvenly } from "./AddExpenseEvenly";
+export { AddExpenseScreen } from "./AddExpenseScreen";

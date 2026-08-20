@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { t } from "@/lib/i18n";
 import { Screen } from "@/app/layout/Screen/Screen";
 import { Topbar, TopbarButton } from "@/app/layout/Topbar/Topbar";
@@ -7,7 +7,9 @@ import { systemClock } from "@/lib/storage/clock";
 import { groupRepository, memberRepository } from "@/lib/storage/repositories";
 import { GROUP_TEMPLATES, type CategoryKey } from "@/lib/storage/templates";
 import type { DraftInit } from "./expense-draft";
+import { useExpenseDraft } from "./use-expense-draft";
 import { ExpenseFormRata } from "./ExpenseFormRata";
+import { ExpenseFormPorsi } from "./ExpenseFormPorsi";
 
 function firstCategoryForTemplate(templateKey: string): CategoryKey {
   const template = Object.values(GROUP_TEMPLATES).find((candidate) => candidate.key === templateKey);
@@ -23,10 +25,29 @@ function topbarHeader(slug: string) {
   );
 }
 
+interface ExpenseFormRouterProps {
+  readonly slug: string;
+  readonly init: DraftInit;
+  readonly header: ReactNode;
+}
+
+// One draft, chosen by draft.mode which mode-specific form renders it — the
+// hook lives here, not inside either form, so switching modes never
+// remounts the draft and never resets title/amount/membership (plan.md F3-02).
+function ExpenseFormRouter({ slug, init, header }: ExpenseFormRouterProps) {
+  const draftState = useExpenseDraft(init);
+  const formProps = { slug, header, ...draftState };
+  return draftState.draft.mode === "byWeights" ? (
+    <ExpenseFormPorsi {...formProps} />
+  ) : (
+    <ExpenseFormRata {...formProps} />
+  );
+}
+
 // Reads group + member data are local IndexedDB, not network — per F0-07,
 // local data never gets a spinner or skeleton, so the gap before `init` is
 // ready renders no loading chrome at all, just the screen shell.
-export function AddExpenseEvenly() {
+export function AddExpenseScreen() {
   const { slug = "" } = useRouteParams();
   const [init, setInit] = useState<DraftInit | null>(null);
 
@@ -62,5 +83,5 @@ export function AddExpenseEvenly() {
     return <Screen header={topbarHeader(slug)}>{null}</Screen>;
   }
 
-  return <ExpenseFormRata slug={slug} init={init} header={topbarHeader(slug)} />;
+  return <ExpenseFormRouter slug={slug} init={init} header={topbarHeader(slug)} />;
 }

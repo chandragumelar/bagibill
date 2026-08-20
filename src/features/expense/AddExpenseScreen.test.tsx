@@ -8,7 +8,7 @@ import { expenseRepository } from "@/lib/storage/repositories";
 import { toCalculationInput as toEngineCalculationInput } from "@/lib/storage/expense-mapping";
 import { t, formatMoney } from "@/lib/i18n";
 import { AppRouter } from "@/routes/router";
-import { AddExpenseEvenly } from "./AddExpenseEvenly";
+import { AddExpenseScreen } from "./AddExpenseScreen";
 
 beforeAll(async () => {
   await db.open();
@@ -49,9 +49,26 @@ async function seedGroup(): Promise<void> {
   });
 }
 
+async function seedGroupThree(): Promise<void> {
+  await seedGroup();
+  const adapter = createDexieAdapter(db);
+  await adapter.members.put({
+    memberId: "m3",
+    groupSlug: "g1",
+    name: "Andi",
+    color: "--m-3",
+    joinedAt: 3_000,
+    seq: 0,
+  });
+}
+
 function renderScreen() {
   window.history.pushState(null, "", "/g/g1/add");
-  return render(<AppRouter routes={[{ path: "/g/:slug/add", Component: AddExpenseEvenly }]} fallbackPath="/app" />);
+  return render(<AppRouter routes={[{ path: "/g/:slug/add", Component: AddExpenseScreen }]} fallbackPath="/app" />);
+}
+
+function switchToPorsi(): void {
+  fireEvent.click(screen.getByText(t("expense.mode.byWeights")));
 }
 
 function typeAmount(rawDigits: string): void {
@@ -66,7 +83,7 @@ function renderedMoney(amountMinor: number, currency: string): string {
   return formatMoney(amountMinor, currency).replace(/\u00a0/g, " ");
 }
 
-describe("AddExpenseEvenly", () => {
+describe("AddExpenseScreen", () => {
   it("renders and shows the result panel in its empty state from the start", async () => {
     await seedGroup();
     renderScreen();
@@ -131,5 +148,76 @@ describe("AddExpenseEvenly", () => {
 
     expect(await screen.findByText(t("common.saveFailed"))).toBeInTheDocument();
     expect(window.location.pathname).toBe("/g/g1/add");
+  });
+
+  it("switching from Rata to Porsi keeps the amount and the excluded member, no reset", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    fireEvent.click(screen.getByText("Sarah"));
+    expect(screen.getByText(t("expense.participants.excluded"))).toBeInTheDocument();
+
+    switchToPorsi();
+
+    expect(screen.getAllByText(renderedMoney(10_000, "IDR")).length).toBeGreaterThan(0);
+    expect(screen.getByText(t("expense.participants.excluded"))).toBeInTheDocument();
+  });
+
+  it("changing a weight updates the result panel in the same render, no calculate button involved", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("9000");
+    switchToPorsi();
+
+    fireEvent.click(screen.getByLabelText(t("expense.weight.increase", { name: "Farhan Maulana" })));
+
+    expect(screen.getAllByText(renderedMoney(6_000, "IDR")).length).toBeGreaterThan(0);
+  });
+
+  it("saves a byWeights split expense with the entries the repository expects", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("9000");
+    switchToPorsi();
+    fireEvent.click(screen.getByLabelText(t("expense.weight.increase", { name: "Farhan Maulana" })));
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    expect(expenses).toHaveLength(1);
+    const stored = expenses[0];
+    if (stored === undefined) throw new Error("expected one stored expense");
+
+    expect(stored.splitData).toEqual({
+      mode: "byWeights",
+      entries: [
+        { memberId: "m1", weight: 2 },
+        { memberId: "m2", weight: 1 },
+      ],
+    });
+
+    const recalculated = calculateExpense(toEngineCalculationInput(stored));
+    expect(recalculated.sharesMinor).toEqual([6_000, 3_000]);
+  });
+
+  it("three people at the 1/3 preset split a bill exactly three ways", async () => {
+    await seedGroupThree();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("9000");
+    switchToPorsi();
+
+    for (const name of ["Farhan Maulana", "Sarah", "Andi"]) {
+      fireEvent.click(screen.getByLabelText(t("expense.weight.presetThirdAria", { name })));
+    }
+
+    expect(screen.getAllByText(renderedMoney(3_000, "IDR")).length).toBeGreaterThanOrEqual(3);
   });
 });
