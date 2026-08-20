@@ -1,0 +1,156 @@
+.field {
+  margin-bottom: var(--sp-4);
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-footnote);
+  color: var(--text-secondary);
+}
+
+.section {
+  margin-bottom: var(--sp-5);
+}
+
+.sectionHeadingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-2);
+}
+
+.sectionHeading {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.selectAll {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--brand);
+  font-family: inherit;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-medium);
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-2);
+  cursor: pointer;
+}
+
+.modeGroup {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.modePill {
+  flex: 0 0 auto;
+  appearance: none;
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-4);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.modePill:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.modePillActive {
+  background: var(--brand-tint);
+  color: var(--brand);
+  border-color: var(--brand);
+  font-weight: var(--fw-semibold);
+}
+
+.participantList {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.memberName {
+  display: block;
+  color: var(--text);
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+}
+
+.roundingBadge {
+  display: inline-block;
+  margin-top: var(--sp-1);
+  font-size: var(--fs-caption2);
+  color: var(--text-muted);
+}
+
+.amount {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.amountExcluded {
+  color: var(--text-muted);
+  font-weight: var(--fw-regular);
+}
+
+.resultRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resultKicker {
+  font-size: var(--fs-footnote);
+  color: var(--text-muted);
+}
+
+.resultTotal {
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  margin-top: var(--sp-1);
+}
+
+.resultRight {
+  text-align: right;
+}
+
+.resultRightValue {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-bold);
+  margin-top: var(--sp-1);
+}
+
+.resultRightReady {
+  color: var(--state-exact-text);
+}
+
+.resultRightPending {
+  color: var(--text-muted);
+}
