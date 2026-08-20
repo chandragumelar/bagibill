@@ -59,6 +59,36 @@ describe("useExpenseDraft", () => {
     expect(result.current.draft.members.every((member) => member.checked)).toBe(true);
   });
 
+  it("setMode switches the split mode without touching amount or membership", () => {
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.setAmountMinor(9_000);
+      result.current.toggleMember("m2");
+    });
+    act(() => {
+      result.current.setMode("byWeights");
+    });
+    expect(result.current.draft.mode).toBe("byWeights");
+    expect(result.current.draft.amountMinor).toBe(9_000);
+    expect(result.current.draft.members.find((member) => member.memberId === "m2")?.checked).toBe(false);
+  });
+
+  it("setWeight updates one member's weight and recomputes a byWeights result", () => {
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.setAmountMinor(9_000);
+      result.current.setMode("byWeights");
+    });
+    act(() => {
+      result.current.setWeight("m1", 2);
+    });
+    expect(result.current.draft.members.find((member) => member.memberId === "m1")?.weight).toBe(2);
+    expect(result.current.result.ready).toBe(true);
+    if (result.current.result.ready) {
+      expect(result.current.result.calculation.sharesMinor).toEqual([6_000, 3_000]);
+    }
+  });
+
   it("reflects two draft changes made back to back within the same render, with no effect delay", () => {
     const { result } = renderHook(() => useExpenseDraft(INIT));
     act(() => {

@@ -47,7 +47,7 @@ describe("toCalculationInput", () => {
   it("is not calculable when no member is checked", () => {
     const draft = draftWith({
       amountMinor: 9_000,
-      members: INIT.members.map((member) => ({ ...member, checked: false })),
+      members: INIT.members.map((member) => ({ ...member, checked: false, weight: 1 })),
     });
     const result = toCalculationInput(draft);
     expect(result).toEqual({ ready: false, reason: "noParticipants" });
@@ -57,9 +57,9 @@ describe("toCalculationInput", () => {
     const draft = draftWith({
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: false },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: false, weight: 1 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 1 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
       ],
       payerMemberId: "m1",
     });
@@ -85,9 +85,9 @@ describe("toCalculationInput", () => {
     const draft = draftWith({
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
       ],
     });
     const result = toCalculationInput(draft);
@@ -99,6 +99,64 @@ describe("toCalculationInput", () => {
   });
 });
 
+describe("toCalculationInput — byWeights mode", () => {
+  function weightedDraft(weights: readonly [number, number, number], overrides: Partial<ExpenseDraft> = {}): ExpenseDraft {
+    return draftWith({
+      mode: "byWeights",
+      amountMinor: 9_000,
+      members: [
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: weights[0] },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: weights[1] },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: weights[2] },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("builds a byWeights calculateExpense input carrying each checked member's weight, fractional values passed through as-is", () => {
+    const result = toCalculationInput(weightedDraft([2, 1, 0.33]));
+    expect(result).toEqual({
+      ready: true,
+      memberOrder: ["m1", "m2", "m3"],
+      input: {
+        totalMinor: 9_000,
+        split: { mode: "byWeights", weights: [2, 1, 0.33] },
+        paymentsMinor: [9_000, 0, 0],
+      },
+    });
+  });
+
+  it("drops an unchecked member from memberOrder and weights entirely — they never appear in the result", () => {
+    const draft = weightedDraft([1, 1, 1], {
+      members: [
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+      ],
+    });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (result.ready) {
+      expect(result.memberOrder).toEqual(["m1", "m3"]);
+      expect(result.input.split).toEqual({ mode: "byWeights", weights: [1, 1] });
+    }
+  });
+
+  it("keeps a checked member at weight zero in memberOrder — they're recorded, not removed", () => {
+    const result = toCalculationInput(weightedDraft([1, 0, 1]));
+    expect(result.ready).toBe(true);
+    if (result.ready) {
+      expect(result.memberOrder).toEqual(["m1", "m2", "m3"]);
+      expect(result.input.split).toEqual({ mode: "byWeights", weights: [1, 0, 1] });
+    }
+  });
+
+  it("is not calculable when every checked member is at weight zero", () => {
+    const result = toCalculationInput(weightedDraft([0, 0, 0]));
+    expect(result).toEqual({ ready: false, reason: "allWeightsZero" });
+  });
+});
+
 describe("toCreateExpenseInput", () => {
   const save = { groupSlug: "g1", createdBy: "m1", date: 2_000 };
 
@@ -106,7 +164,7 @@ describe("toCreateExpenseInput", () => {
     expect(toCreateExpenseInput(draftWith({ amountMinor: 0 }), save)).toBeNull();
     const noParticipants = draftWith({
       amountMinor: 9_000,
-      members: INIT.members.map((member) => ({ ...member, checked: false })),
+      members: INIT.members.map((member) => ({ ...member, checked: false, weight: 1 })),
     });
     expect(toCreateExpenseInput(noParticipants, save)).toBeNull();
   });
@@ -131,5 +189,39 @@ describe("toCreateExpenseInput", () => {
       attachments: [],
       createdBy: "m1",
     });
+  });
+
+  it("shapes a byWeights SplitDataRecord with one {memberId, weight} entry per checked member — the exact shape createExpense's calculation gate expects", () => {
+    const draft = draftWith({
+      mode: "byWeights",
+      amountMinor: 9_000,
+      title: "Nasi goreng",
+      members: [
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 2 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+      ],
+    });
+    const input = toCreateExpenseInput(draft, save);
+    expect(input?.splitData).toEqual({
+      mode: "byWeights",
+      entries: [
+        { memberId: "m1", weight: 2 },
+        { memberId: "m3", weight: 1 },
+      ],
+    });
+  });
+
+  it("returns null when every checked member is at weight zero", () => {
+    const draft = draftWith({
+      mode: "byWeights",
+      amountMinor: 9_000,
+      members: [
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 0 },
+      ],
+    });
+    expect(toCreateExpenseInput(draft, save)).toBeNull();
   });
 });

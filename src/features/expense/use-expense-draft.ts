@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { calculateExpense } from "@bagibill/split-engine";
 import type { ExpenseCalculation } from "@bagibill/split-engine";
 import { createInitialDraft, toCalculationInput } from "./expense-draft";
-import type { DraftInit, DraftNotReadyReason, ExpenseDraft } from "./expense-draft";
+import type { DraftInit, DraftNotReadyReason, ExpenseDraft, ExpenseSplitMode } from "./expense-draft";
 
 export type ExpenseDraftResult =
   | { readonly ready: true; readonly calculation: ExpenseCalculation; readonly memberOrder: readonly string[] }
@@ -13,6 +13,8 @@ export interface UseExpenseDraftResult {
   readonly result: ExpenseDraftResult;
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
+  readonly setMode: (mode: ExpenseSplitMode) => void;
+  readonly setWeight: (memberId: string, weight: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
 }
@@ -44,6 +46,20 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
     setDraft((current) => ({ ...current, amountMinor }));
   }
 
+  // Switching modes never touches title, amount, or membership — the same
+  // draft.members array (checked flags and all) carries over, which is
+  // what keeps a Rata-to-Porsi switch from resetting anything (plan.md F3-02).
+  function setMode(mode: ExpenseSplitMode): void {
+    setDraft((current) => ({ ...current, mode }));
+  }
+
+  function setWeight(memberId: string, weight: number): void {
+    setDraft((current) => ({
+      ...current,
+      members: current.members.map((member) => (member.memberId === memberId ? { ...member, weight } : member)),
+    }));
+  }
+
   function toggleMember(memberId: string): void {
     setDraft((current) => ({
       ...current,
@@ -60,5 +76,5 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
     }));
   }
 
-  return { draft, result, setTitle, setAmountMinor, toggleMember, checkAllMembers };
+  return { draft, result, setTitle, setAmountMinor, setMode, setWeight, toggleMember, checkAllMembers };
 }

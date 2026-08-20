@@ -10,19 +10,16 @@ import { expenseRepository } from "@/lib/storage/repositories";
 import type { CategoryKey } from "@/lib/storage/templates";
 import { toCreateExpenseInput, type DraftNotReadyReason, type ExpenseDraft, type ExpenseSplitMode } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
+import { WeightStepper } from "./WeightStepper";
 import styles from "./AddExpenseScreen.module.css";
 
-// Six modes share one screen (mockup-inventory 1.1). Rata is the only one
-// wired up — F3-02..F3-04 enable the rest — but rendering all six disabled
-// is what keeps this screen's shape matching the mockup now instead of
-// getting rebuilt three tasks from now (plan.md F3-01).
+// Kept identical to ExpenseFormRata's mode row so both forms render the
+// same pill list mid-switch — duplicated rather than shared because these
+// two files are still each other's only consumer; F3-03 revisits this row
+// anyway when the third interactive mode lands (see progress.md Catatan lepas).
 const SPLIT_MODE_KEYS = ["evenly", "byAmounts", "byPercentage", "byWeights", "byAdjustment", "byItems"] as const;
 type SplitModeKey = (typeof SPLIT_MODE_KEYS)[number];
 
-// Only these two modes have a screen wired up yet (F3-01, F3-02) — the
-// other four stay disabled pills until F3-03/F3-04 build their forms. A
-// type guard (not a Set + cast) so a click handler can call setMode with a
-// narrowed ExpenseSplitMode instead of asserting one.
 function isInteractiveMode(mode: SplitModeKey): mode is ExpenseSplitMode {
   return mode === "evenly" || mode === "byWeights";
 }
@@ -54,7 +51,6 @@ const NOT_READY_MESSAGE_KEY: Record<DraftNotReadyReason, string> = {
   allWeightsZero: "expense.result.needWeights",
 };
 
-// spec.md 12.3 wants initials from words, not letters ("Dimas Prasetyo" -> "DP").
 function initialsFromName(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const first = words[0]?.charAt(0) ?? "";
@@ -62,7 +58,7 @@ function initialsFromName(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export interface ExpenseFormRataProps {
+export interface ExpenseFormPorsiProps {
   readonly slug: string;
   readonly header: ReactNode;
   readonly draft: ExpenseDraft;
@@ -70,11 +66,14 @@ export interface ExpenseFormRataProps {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
+  readonly setWeight: (memberId: string, weight: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
 }
 
-export function ExpenseFormRata({
+const PERCENT_MULTIPLIER = 100;
+
+export function ExpenseFormPorsi({
   slug,
   header,
   draft,
@@ -82,14 +81,16 @@ export function ExpenseFormRata({
   setTitle,
   setAmountMinor,
   setMode,
+  setWeight,
   toggleMember,
   checkAllMembers,
-}: ExpenseFormRataProps) {
+}: ExpenseFormPorsiProps) {
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const checkedCount = draft.members.filter((member) => member.checked).length;
-  const minShareMinor = result.ready ? Math.min(...result.calculation.sharesMinor) : 0;
+  const checkedMembers = draft.members.filter((member) => member.checked);
+  const totalWeight = checkedMembers.reduce((sum, member) => sum + member.weight, 0);
   const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
 
   function shareFor(memberId: string): number | undefined {
@@ -117,9 +118,12 @@ export function ExpenseFormRata({
     }
   }
 
-  const rightLabel = result.ready ? t("expense.result.perPerson") : t("expense.result.status");
+  // Porsi shares aren't uniform like Rata's, so the panel's second number
+  // is the largest share rather than a "per person" figure that wouldn't
+  // mean the same thing for everyone (mockup: panelRightLabel "terbesar").
+  const rightLabel = result.ready ? t("expense.result.largest") : t("expense.result.status");
   const rightValue = result.ready
-    ? formatMoney(result.calculation.sharesMinor[0] ?? 0, draft.currency)
+    ? formatMoney(Math.max(...result.calculation.sharesMinor), draft.currency)
     : t(NOT_READY_MESSAGE_KEY[result.reason]);
 
   return (
@@ -207,31 +211,64 @@ export function ExpenseFormRata({
           })}
         </div>
 
+        <div className={styles.explainerBox}>
+          <span className={styles.explainerTitle}>{t("expense.porsi.explainerTitle")}</span>{" "}
+          <span className={styles.explainerBody}>{t("expense.porsi.explainerBody")}</span>
+        </div>
+
+        {totalWeight > 0 ? (
+          <>
+            <div className={styles.proportionBar}>
+              {checkedMembers.map((member) => (
+                <div
+                  key={member.memberId}
+                  className={styles.proportionSegment}
+                  style={{ width: `${((member.weight / totalWeight) * PERCENT_MULTIPLIER).toFixed(3)}%`, background: `var(${member.color})` }}
+                />
+              ))}
+            </div>
+            <div className={styles.proportionMeta}>
+              <span>{t("expense.porsi.totalWeight", { count: totalWeight })}</span>
+              <span>{t("expense.porsi.boxHint")}</span>
+            </div>
+          </>
+        ) : null}
+
         <div className={styles.participantList}>
           {draft.members.map((member) => {
             const shareMinor = shareFor(member.memberId);
-            const isRounded = member.checked && shareMinor !== undefined && shareMinor > minShareMinor;
+            if (!member.checked) {
+              return (
+                <ListRow
+                  key={member.memberId}
+                  onClick={() => toggleMember(member.memberId)}
+                  leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
+                  trailing={
+                    <span className={`${styles.amount} ${styles.amountExcluded}`}>{t("expense.participants.excluded")}</span>
+                  }
+                >
+                  <span className={styles.memberName}>{member.name}</span>
+                </ListRow>
+              );
+            }
             return (
               <ListRow
                 key={member.memberId}
-                onClick={() => toggleMember(member.memberId)}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
                 trailing={
-                  member.checked ? (
+                  <div className={styles.weightTrailing}>
+                    <WeightStepper
+                      memberName={member.name}
+                      weight={member.weight}
+                      onChange={(weight) => setWeight(member.memberId, weight)}
+                    />
                     <span className={`${styles.amount} bb-numeral`}>
                       {shareMinor === undefined ? "—" : formatMoney(shareMinor, draft.currency)}
                     </span>
-                  ) : (
-                    <span className={`${styles.amount} ${styles.amountExcluded}`}>{t("expense.participants.excluded")}</span>
-                  )
+                  </div>
                 }
               >
                 <span className={styles.memberName}>{member.name}</span>
-                {isRounded ? (
-                  <span className={styles.roundingBadge}>
-                    {t("expense.rounding.badge", { amount: formatMoney(1, draft.currency) })}
-                  </span>
-                ) : null}
               </ListRow>
             );
           })}

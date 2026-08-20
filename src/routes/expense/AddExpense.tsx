@@ -1,3 +1,3 @@
-import { AddExpenseEvenly } from "@/features/expense";
+import { AddExpenseScreen } from "@/features/expense";
 
-export default AddExpenseEvenly;
+export default AddExpenseScreen;

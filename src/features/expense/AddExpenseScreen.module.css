@@ -154,3 +154,49 @@
 .resultRightPending {
   color: var(--text-muted);
 }
+
+.explainerBox {
+  background: var(--brand-tint);
+  border-radius: var(--r-btn);
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  line-height: var(--line-relaxed);
+}
+
+.explainerTitle {
+  color: var(--text);
+  font-weight: var(--fw-semibold);
+}
+
+.explainerBody {
+  color: var(--text-secondary);
+}
+
+.proportionBar {
+  display: flex;
+  height: var(--sp-6);
+  border-radius: var(--r-field);
+  overflow: hidden;
+  margin-bottom: var(--sp-1);
+}
+
+.proportionSegment {
+  min-width: var(--border-width-thick);
+  transition: width var(--dur-base) var(--ease-standard);
+}
+
+.proportionMeta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--sp-5);
+  font-size: var(--fs-caption2);
+  color: var(--text-muted);
+}
+
+.weightTrailing {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
