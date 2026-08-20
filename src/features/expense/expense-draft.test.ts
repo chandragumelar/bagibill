@@ -3,8 +3,10 @@ import {
   createInitialDraft,
   toCalculationInput,
   toCreateExpenseInput,
+  type ChargeDraft,
   type DraftInit,
   type ExpenseDraft,
+  type TreatDraft,
 } from "./expense-draft";
 
 // MoneyInput (F0-05) already turns typed digits into a clean amountMinor
@@ -221,6 +223,196 @@ describe("toCreateExpenseInput", () => {
         { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 0 },
         { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 0 },
       ],
+    });
+    expect(toCreateExpenseInput(draft, save)).toBeNull();
+  });
+});
+
+function chargeDraft(overrides: Partial<ChargeDraft> = {}): ChargeDraft {
+  return {
+    id: "c1",
+    name: "Service",
+    amountKind: "percent",
+    rawValue: "10",
+    percentBasis: "subtotal",
+    allocationMode: "proportional",
+    allocationMemberId: "",
+    ...overrides,
+  };
+}
+
+function treatDraft(overrides: Partial<TreatDraft> = {}): TreatDraft {
+  return {
+    id: "t1",
+    kind: "person",
+    sponsorMemberId: "m1",
+    beneficiaryMemberId: "m2",
+    partialAmountMinor: 0,
+    ...overrides,
+  };
+}
+
+describe("toCalculationInput — charges", () => {
+  it("translates a percent charge with its basis, and a negative fixed charge as a discount", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      charges: [
+        chargeDraft({ id: "c1", amountKind: "percent", rawValue: "10", percentBasis: "subtotal" }),
+        chargeDraft({ id: "c2", amountKind: "fixed", rawValue: "-2000" }),
+      ],
+    });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (!result.ready) return;
+    expect(result.input.charges).toEqual([
+      { amount: { kind: "percent", percent: 10, basis: "subtotal" }, allocation: { mode: "proportional" } },
+      { amount: { kind: "fixed", amountMinor: -2_000 }, allocation: { mode: "proportional" } },
+    ]);
+  });
+
+  it("preserves charge order — running_total basis depends on what came before it in the array", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      charges: [
+        chargeDraft({ id: "service", rawValue: "5", percentBasis: "subtotal" }),
+        chargeDraft({ id: "pb1", rawValue: "10", percentBasis: "running_total" }),
+      ],
+    });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (!result.ready) return;
+    expect(result.input.charges?.map((charge) => charge.amount)).toEqual([
+      { kind: "percent", percent: 5, basis: "subtotal" },
+      { kind: "percent", percent: 10, basis: "running_total" },
+    ]);
+  });
+
+  it("resolves single_payer to the sponsor's participant index", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      charges: [chargeDraft({ allocationMode: "single_payer", allocationMemberId: "m2" })],
+    });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (!result.ready) return;
+    expect(result.input.charges).toEqual([
+      { amount: { kind: "percent", percent: 10, basis: "subtotal" }, allocation: { mode: "single_payer", participantIndex: 1 } },
+    ]);
+  });
+
+  it("falls back single_payer to even when the target member is no longer checked", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      members: [
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+      ],
+      charges: [chargeDraft({ allocationMode: "single_payer", allocationMemberId: "m2" })],
+    });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (!result.ready) return;
+    expect(result.input.charges).toEqual([
+      { amount: { kind: "percent", percent: 10, basis: "subtotal" }, allocation: { mode: "even" } },
+    ]);
+  });
+
+  it("omits charges entirely from the engine input when the draft has none", () => {
+    const draft = draftWith({ amountMinor: 9_000 });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (!result.ready) return;
+    expect(result.input.charges).toBeUndefined();
+  });
+});
+
+describe("toCalculationInput — treats", () => {
+  it("translates a person treat with sponsor/beneficiary participant indices", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      treats: [treatDraft({ kind: "person", sponsorMemberId: "m1", beneficiaryMemberId: "m3" })],
+    });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (!result.ready) return;
+    expect(result.input.treats).toEqual([{ kind: "person", sponsorIndex: 0, beneficiaryIndex: 2 }]);
+  });
+
+  it("translates a partial treat with its amount", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      treats: [treatDraft({ kind: "partial", sponsorMemberId: "m1", beneficiaryMemberId: "m2", partialAmountMinor: 1_500 })],
+    });
+    const result = toCalculationInput(draft);
+    expect(result.ready).toBe(true);
+    if (!result.ready) return;
+    expect(result.input.treats).toEqual([{ kind: "partial", sponsorIndex: 0, beneficiaryIndex: 1, amountMinor: 1_500 }]);
+  });
+
+  it("is not calculable when a treat's sponsor and beneficiary are the same person", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      treats: [treatDraft({ sponsorMemberId: "m1", beneficiaryMemberId: "m1" })],
+    });
+    expect(toCalculationInput(draft)).toEqual({ ready: false, reason: "treatSponsorEqualsBeneficiary" });
+  });
+
+  it("is not calculable when a treat points at a member who isn't checked", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      members: [
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+      ],
+      treats: [treatDraft({ sponsorMemberId: "m1", beneficiaryMemberId: "m2" })],
+    });
+    expect(toCalculationInput(draft)).toEqual({ ready: false, reason: "treatMemberUnchecked" });
+  });
+
+  it("is not calculable when a partial treat has no amount yet", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      treats: [treatDraft({ kind: "partial", partialAmountMinor: 0 })],
+    });
+    expect(toCalculationInput(draft)).toEqual({ ready: false, reason: "treatPartialAmountMissing" });
+  });
+});
+
+describe("toCreateExpenseInput — charges and treats", () => {
+  const save = { groupSlug: "g1", createdBy: "m1", date: 2_000 };
+
+  it("shapes charges with memberId (not a participant index) for single_payer", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      charges: [
+        chargeDraft({ amountKind: "fixed", rawValue: "-1000", allocationMode: "single_payer", allocationMemberId: "m2" }),
+      ],
+    });
+    const input = toCreateExpenseInput(draft, save);
+    expect(input?.charges).toEqual([
+      { amount: { kind: "fixed", amountMinor: -1_000 }, allocation: { mode: "single_payer", memberId: "m2" } },
+    ]);
+  });
+
+  it("shapes treats with sponsorMemberId/beneficiaryMemberId, not indices", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      treats: [
+        treatDraft({ kind: "partial", sponsorMemberId: "m1", beneficiaryMemberId: "m3", partialAmountMinor: 2_000 }),
+      ],
+    });
+    const input = toCreateExpenseInput(draft, save);
+    expect(input?.treats).toEqual([
+      { kind: "partial", sponsorMemberId: "m1", beneficiaryMemberId: "m3", amountMinor: 2_000 },
+    ]);
+  });
+
+  it("returns null when a treat is invalid, same as an incomplete split", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      treats: [treatDraft({ sponsorMemberId: "m1", beneficiaryMemberId: "m1" })],
     });
     expect(toCreateExpenseInput(draft, save)).toBeNull();
   });

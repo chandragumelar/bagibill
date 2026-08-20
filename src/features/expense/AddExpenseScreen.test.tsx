@@ -207,6 +207,61 @@ describe("AddExpenseScreen", () => {
     expect(recalculated.sharesMinor).toEqual([6_000, 3_000]);
   });
 
+  it("Rata with two charge components and one treat: panel and stored shape both reflect the grand total", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+
+    fireEvent.click(screen.getByText(t("expense.charge.loadPreset")));
+    fireEvent.click(screen.getByText(t("expense.treat.add")));
+
+    // subtotal 10,000 -> service 5% of subtotal (500) -> PB1 10% of
+    // subtotal+service (1,050) -> 11,550 total, all moved onto the sponsor
+    // (Farhan Maulana) by the person treat, Sarah left at zero.
+    const grandTotal = renderedMoney(11_550, "IDR");
+    expect(screen.getAllByText(grandTotal).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(renderedMoney(0, "IDR")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sarah").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    const stored = expenses[0];
+    if (stored === undefined) throw new Error("expected one stored expense");
+
+    expect(stored.amountTotalMinor).toBe(10_000);
+    expect(stored.payers).toEqual([{ memberId: "m1", amountMinor: 11_550 }]);
+    expect(stored.charges).toEqual([
+      { amount: { kind: "percent", percent: 5, basis: "subtotal" }, allocation: { mode: "proportional" } },
+      { amount: { kind: "percent", percent: 10, basis: "running_total" }, allocation: { mode: "proportional" } },
+    ]);
+    expect(stored.treats).toEqual([{ kind: "person", sponsorMemberId: "m1", beneficiaryMemberId: "m2" }]);
+
+    const recalculated = calculateExpense(toEngineCalculationInput(stored));
+    expect(recalculated.sharesMinor).toEqual([11_550, 0]);
+  });
+
+  it("switching from Rata to Porsi keeps the charges and treats already filled in", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+
+    fireEvent.click(screen.getByText(t("expense.charge.loadPreset")));
+    fireEvent.click(screen.getByText(t("expense.treat.add")));
+    expect(screen.getAllByLabelText(t("expense.treat.remove"))).toHaveLength(1);
+
+    switchToPorsi();
+
+    expect(screen.getByDisplayValue("Service charge")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("PB1")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(t("expense.treat.remove"))).toHaveLength(1);
+  });
+
   it("three people at the 1/3 preset split a bill exactly three ways", async () => {
     await seedGroupThree();
     renderScreen();

@@ -1,0 +1,128 @@
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.heading {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--sp-3);
+}
+
+.notReady {
+  font-size: var(--fs-subhead);
+  color: var(--text-muted);
+}
+
+.memberList,
+.chargeList,
+.treatList,
+.warningList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--sp-4);
+}
+
+.memberList:last-child,
+.chargeList:last-child,
+.treatList:last-child,
+.warningList:last-child {
+  margin-bottom: 0;
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.memberRow:last-child {
+  border-bottom: none;
+}
+
+.memberName {
+  font-size: var(--fs-subhead);
+  color: var(--text);
+}
+
+.memberAmountGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.memberAmount {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.memberAmountNegative {
+  color: var(--neg-text);
+}
+
+.negativeBadge {
+  font-size: var(--fs-caption2);
+  color: var(--neg-text);
+}
+
+.chargeRow {
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.chargeRow:last-child {
+  border-bottom: none;
+}
+
+.chargeRowMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.chargeName {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+}
+
+.chargeRule {
+  font-size: var(--fs-caption2);
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+}
+
+.chargeAmount {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.sponsorNote {
+  font-size: var(--fs-caption2);
+  color: var(--pos-text);
+  margin-top: var(--sp-1);
+}
+
+.treatRow {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  padding: var(--sp-1) 0;
+}
+
+.warningRow {
+  font-size: var(--fs-caption);
+  color: var(--warn-text);
+  padding: var(--sp-1) 0;
+}
