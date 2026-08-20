@@ -7,8 +7,9 @@ describe("resolveBranch", () => {
     const claim = resolveBranch("/c/trip-bali/exp-1");
     const join = resolveBranch("/j/trip-bali");
     const devUi = resolveBranch("/dev/ui");
+    const devData = resolveBranch("/dev/data");
     const app = resolveBranch("/app");
-    const branches = [claim, join, devUi, app];
+    const branches = [claim, join, devUi, devData, app];
     expect(new Set(branches).size).toBe(branches.length);
   });
 
@@ -38,5 +39,11 @@ describe("App", () => {
     window.history.pushState(null, "", "/dev/ui");
     const { findByText } = render(<App />);
     expect(await findByText("Button")).toBeInTheDocument();
+  });
+
+  it("renders the dev/data page directly at /dev/data", async () => {
+    window.history.pushState(null, "", "/dev/data");
+    const { findByText } = render(<App />);
+    expect(await findByText("Export data")).toBeInTheDocument();
   });
 });

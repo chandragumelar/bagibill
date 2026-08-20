@@ -5,6 +5,7 @@ const AppRoutes = lazy(() => import("@/routes/AppRoutes").then((mod) => ({ defau
 const ClaimPage = lazy(() => import("@/routes/claim/ClaimPage"));
 const JoinPage = lazy(() => import("@/routes/join/JoinPage"));
 const DevUiPage = lazy(() => import("@/routes/dev/ui").then((mod) => ({ default: mod.DevUiPage })));
+const DevDataPage = lazy(() => import("@/routes/dev/data").then((mod) => ({ default: mod.DevDataPage })));
 
 // Cabang di sini, sebelum apapun di-import, biar /c/ dan /j/ nggak pernah
 // narik chunk AppRoutes (yang isinya seluruh rute dalam-app). Dihitung
@@ -15,6 +16,7 @@ export function resolveBranch(pathname: string): ComponentType {
   if (matchRoute(pathname, "/c/:slug/:expenseId")) return ClaimPage;
   if (matchRoute(pathname, "/j/:slug")) return JoinPage;
   if (pathname === "/dev/ui") return DevUiPage;
+  if (pathname === "/dev/data") return DevDataPage;
   return AppRoutes;
 }
 
@@ -41,6 +43,13 @@ export function App() {
     return (
       <Suspense fallback={null}>
         <DevUiPage />
+      </Suspense>
+    );
+  }
+  if (branch === DevDataPage) {
+    return (
+      <Suspense fallback={null}>
+        <DevDataPage />
       </Suspense>
     );
   }
