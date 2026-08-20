@@ -1,8 +1,23 @@
 import { useMemo, useState } from "react";
 import { calculateExpense } from "@bagibill/split-engine";
 import type { ExpenseCalculation } from "@bagibill/split-engine";
+import { t } from "@/lib/i18n";
+import { getChargePresets } from "./charge-presets";
 import { createInitialDraft, toCalculationInput } from "./expense-draft";
-import type { DraftInit, DraftNotReadyReason, ExpenseDraft, ExpenseSplitMode } from "./expense-draft";
+import type {
+  ChargeDraft,
+  DraftInit,
+  DraftNotReadyReason,
+  ExpenseDraft,
+  ExpenseSplitMode,
+  TreatDraft,
+} from "./expense-draft";
+
+// spec.md 7.1's default allocation for a fresh custom charge — proportional
+// is also what the preset uses for tax/service (spec.md 7.3: "default untuk
+// pajak dan service").
+const DEFAULT_CHARGE_ALLOCATION_MODE = "proportional";
+const DEFAULT_PERCENT_BASIS = "subtotal";
 
 export type ExpenseDraftResult =
   | { readonly ready: true; readonly calculation: ExpenseCalculation; readonly memberOrder: readonly string[] }
@@ -17,6 +32,17 @@ export interface UseExpenseDraftResult {
   readonly setWeight: (memberId: string, weight: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
+  readonly addEmptyCharge: () => void;
+  readonly loadChargePresets: () => void;
+  readonly updateCharge: (id: string, patch: Partial<ChargeDraft>) => void;
+  readonly removeCharge: (id: string) => void;
+  readonly addTreat: () => void;
+  readonly updateTreat: (id: string, patch: Partial<TreatDraft>) => void;
+  readonly removeTreat: (id: string) => void;
+}
+
+function firstCheckedMemberId(members: ExpenseDraft["members"]): string {
+  return members.find((member) => member.checked)?.memberId ?? "";
 }
 
 // The result is a plain useMemo over draft — never a second piece of state
@@ -76,5 +102,100 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
     }));
   }
 
-  return { draft, result, setTitle, setAmountMinor, setMode, setWeight, toggleMember, checkAllMembers };
+  function addEmptyCharge(): void {
+    setDraft((current) => ({
+      ...current,
+      charges: [
+        ...current.charges,
+        {
+          id: crypto.randomUUID(),
+          name: "",
+          amountKind: "percent",
+          rawValue: "",
+          percentBasis: DEFAULT_PERCENT_BASIS,
+          allocationMode: DEFAULT_CHARGE_ALLOCATION_MODE,
+          allocationMemberId: firstCheckedMemberId(current.members),
+        },
+      ],
+    }));
+  }
+
+  // Presets seed editable rows, not locked values — the name is resolved to
+  // display text once, here, rather than carrying the translation key
+  // forward into the draft (ChargeEditor's rename field is plain text either
+  // way, custom or preset).
+  function loadChargePresets(): void {
+    setDraft((current) => {
+      const allocationMemberId = firstCheckedMemberId(current.members);
+      const newCharges: ChargeDraft[] = getChargePresets(current.currency).map((preset) => ({
+        id: crypto.randomUUID(),
+        name: t(preset.nameKey),
+        amountKind: preset.amountKind,
+        rawValue: preset.rawValue,
+        percentBasis: preset.percentBasis,
+        allocationMode: preset.allocationMode,
+        allocationMemberId,
+      }));
+      return { ...current, charges: [...current.charges, ...newCharges] };
+    });
+  }
+
+  function updateCharge(id: string, patch: Partial<ChargeDraft>): void {
+    setDraft((current) => ({
+      ...current,
+      charges: current.charges.map((charge) => (charge.id === id ? { ...charge, ...patch } : charge)),
+    }));
+  }
+
+  function removeCharge(id: string): void {
+    setDraft((current) => ({ ...current, charges: current.charges.filter((charge) => charge.id !== id) }));
+  }
+
+  // Seeds sponsor/beneficiary from the first two checked members when
+  // there are enough of them — TreatEditor disables its own add control
+  // below two checked members, so the same-person fallback here is never
+  // actually reachable through the UI.
+  function addTreat(): void {
+    setDraft((current) => {
+      const checkedMembers = current.members.filter((member) => member.checked);
+      const sponsorMemberId = checkedMembers[0]?.memberId ?? "";
+      const beneficiaryMemberId = checkedMembers[1]?.memberId ?? "";
+      return {
+        ...current,
+        treats: [
+          ...current.treats,
+          { id: crypto.randomUUID(), kind: "person", sponsorMemberId, beneficiaryMemberId, partialAmountMinor: 0 },
+        ],
+      };
+    });
+  }
+
+  function updateTreat(id: string, patch: Partial<TreatDraft>): void {
+    setDraft((current) => ({
+      ...current,
+      treats: current.treats.map((treat) => (treat.id === id ? { ...treat, ...patch } : treat)),
+    }));
+  }
+
+  function removeTreat(id: string): void {
+    setDraft((current) => ({ ...current, treats: current.treats.filter((treat) => treat.id !== id) }));
+  }
+
+  return {
+    draft,
+    result,
+    setTitle,
+    setAmountMinor,
+    setMode,
+    setWeight,
+    toggleMember,
+    checkAllMembers,
+    addEmptyCharge,
+    loadChargePresets,
+    updateCharge,
+    removeCharge,
+    addTreat,
+    updateTreat,
+    removeTreat,
+  };
 }

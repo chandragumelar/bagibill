@@ -8,9 +8,19 @@ import { navigate } from "@/routes/router";
 import { systemClock } from "@/lib/storage/clock";
 import { expenseRepository } from "@/lib/storage/repositories";
 import type { CategoryKey } from "@/lib/storage/templates";
-import { toCreateExpenseInput, type DraftNotReadyReason, type ExpenseDraft, type ExpenseSplitMode } from "./expense-draft";
+import {
+  NOT_READY_MESSAGE_KEY,
+  toCreateExpenseInput,
+  type ChargeDraft,
+  type ExpenseDraft,
+  type ExpenseSplitMode,
+  type TreatDraft,
+} from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
 import { WeightStepper } from "./WeightStepper";
+import { ChargeEditor } from "./ChargeEditor";
+import { TreatEditor } from "./TreatEditor";
+import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 
 // Kept identical to ExpenseFormRata's mode row so both forms render the
@@ -44,13 +54,6 @@ const CATEGORY_LABEL_KEY: Record<CategoryKey, string> = {
   other: "category.other",
 };
 
-const NOT_READY_MESSAGE_KEY: Record<DraftNotReadyReason, string> = {
-  emptyAmount: "expense.result.needAmount",
-  noParticipants: "expense.result.needParticipants",
-  payerExcluded: "expense.result.payerExcluded",
-  allWeightsZero: "expense.result.needWeights",
-};
-
 function initialsFromName(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const first = words[0]?.charAt(0) ?? "";
@@ -69,6 +72,13 @@ export interface ExpenseFormPorsiProps {
   readonly setWeight: (memberId: string, weight: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
+  readonly addEmptyCharge: () => void;
+  readonly loadChargePresets: () => void;
+  readonly updateCharge: (id: string, patch: Partial<ChargeDraft>) => void;
+  readonly removeCharge: (id: string) => void;
+  readonly addTreat: () => void;
+  readonly updateTreat: (id: string, patch: Partial<TreatDraft>) => void;
+  readonly removeTreat: (id: string) => void;
 }
 
 const PERCENT_MULTIPLIER = 100;
@@ -84,6 +94,13 @@ export function ExpenseFormPorsi({
   setWeight,
   toggleMember,
   checkAllMembers,
+  addEmptyCharge,
+  loadChargePresets,
+  updateCharge,
+  removeCharge,
+  addTreat,
+  updateTreat,
+  removeTreat,
 }: ExpenseFormPorsiProps) {
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -274,6 +291,30 @@ export function ExpenseFormPorsi({
           })}
         </div>
       </div>
+
+      <ChargeEditor
+        charges={draft.charges}
+        checkedMembers={checkedMembers}
+        onAdd={addEmptyCharge}
+        onLoadPreset={loadChargePresets}
+        onUpdate={updateCharge}
+        onRemove={removeCharge}
+      />
+      <TreatEditor
+        treats={draft.treats}
+        checkedMembers={checkedMembers}
+        currency={draft.currency}
+        onAdd={addTreat}
+        onUpdate={updateTreat}
+        onRemove={removeTreat}
+      />
+      <ResultPanel
+        members={checkedMembers}
+        charges={draft.charges}
+        treatCount={draft.treats.length}
+        currency={draft.currency}
+        result={result}
+      />
     </Screen>
   );
 }

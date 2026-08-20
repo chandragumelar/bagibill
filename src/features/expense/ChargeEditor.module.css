@@ -1,0 +1,166 @@
+.section {
+  margin-bottom: var(--sp-5);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-2);
+}
+
+.sectionHeading {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.headerAction {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--brand);
+  font-family: inherit;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-medium);
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-2);
+  cursor: pointer;
+}
+
+.list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.row {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.visuallyHiddenLabel {
+  position: absolute;
+  width: var(--size-visually-hidden);
+  height: var(--size-visually-hidden);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.rowHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.nameInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--size-touch-min);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  padding: 0 var(--sp-3);
+}
+
+.removeButton {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  min-width: var(--size-touch-min);
+  min-height: var(--size-touch-min);
+  cursor: pointer;
+  font-size: var(--fs-subhead);
+}
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.kindGroup,
+.basisGroup,
+.allocationGroup {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+}
+
+.kindButton,
+.basisButton,
+.allocationButton {
+  appearance: none;
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.kindButtonActive,
+.basisButtonActive,
+.allocationButtonActive {
+  background: var(--brand-tint);
+  color: var(--brand);
+  border-color: var(--brand);
+  font-weight: var(--fw-semibold);
+}
+
+.valueInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--size-touch-min);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-family: inherit;
+  text-align: right;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  padding: 0 var(--sp-3);
+}
+
+.payerField {
+  margin-top: var(--sp-1);
+}
+
+.payerSelect {
+  width: 100%;
+  height: var(--size-touch-min);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  padding: 0 var(--sp-3);
+}

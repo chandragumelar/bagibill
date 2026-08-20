@@ -89,6 +89,65 @@ describe("useExpenseDraft", () => {
     }
   });
 
+  it("addEmptyCharge adds one editable, unfilled charge row", () => {
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.addEmptyCharge();
+    });
+    expect(result.current.draft.charges).toHaveLength(1);
+    expect(result.current.draft.charges[0]).toMatchObject({ name: "", rawValue: "", amountKind: "percent" });
+  });
+
+  it("loadChargePresets appends the currency's presets as editable rows", () => {
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.loadChargePresets();
+    });
+    expect(result.current.draft.charges).toHaveLength(2);
+    expect(result.current.draft.charges.map((charge) => charge.name)).toEqual(["Service charge", "PB1"]);
+  });
+
+  it("updateCharge patches one charge by id, removeCharge drops it", () => {
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.addEmptyCharge();
+    });
+    const id = result.current.draft.charges[0]?.id;
+    if (id === undefined) throw new Error("expected a charge to be added");
+    act(() => {
+      result.current.updateCharge(id, { rawValue: "5" });
+    });
+    expect(result.current.draft.charges[0]?.rawValue).toBe("5");
+    act(() => {
+      result.current.removeCharge(id);
+    });
+    expect(result.current.draft.charges).toHaveLength(0);
+  });
+
+  it("addTreat seeds sponsor/beneficiary from the first two checked members, updateTreat and removeTreat work by id", () => {
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.addTreat();
+    });
+    expect(result.current.draft.treats).toHaveLength(1);
+    expect(result.current.draft.treats[0]).toMatchObject({
+      kind: "person",
+      sponsorMemberId: "m1",
+      beneficiaryMemberId: "m2",
+      partialAmountMinor: 0,
+    });
+    const id = result.current.draft.treats[0]?.id;
+    if (id === undefined) throw new Error("expected a treat to be added");
+    act(() => {
+      result.current.updateTreat(id, { kind: "partial", partialAmountMinor: 3_000 });
+    });
+    expect(result.current.draft.treats[0]).toMatchObject({ kind: "partial", partialAmountMinor: 3_000 });
+    act(() => {
+      result.current.removeTreat(id);
+    });
+    expect(result.current.draft.treats).toHaveLength(0);
+  });
+
   it("reflects two draft changes made back to back within the same render, with no effect delay", () => {
     const { result } = renderHook(() => useExpenseDraft(INIT));
     act(() => {

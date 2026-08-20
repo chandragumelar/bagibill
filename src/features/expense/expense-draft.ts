@@ -1,8 +1,8 @@
-import { calculateExpense } from "@bagibill/split-engine";
-import type { SplitInput } from "@bagibill/split-engine";
+import { allocateExtraCharges, calculateExpense, splitByWeights, splitEvenly } from "@bagibill/split-engine";
+import type { ChargeAllocation, ChargeAmount, ExtraCharge, SplitInput, Treat } from "@bagibill/split-engine";
 import type { CategoryKey } from "@/lib/storage/templates";
 import type { CreateExpenseInput } from "@/lib/storage/expense-repository";
-import type { SplitDataRecord } from "@/lib/storage/records";
+import type { ChargeAllocationRecord, ChargeRecord, SplitDataRecord, TreatRecord } from "@/lib/storage/records";
 
 type CalculateExpenseInput = Parameters<typeof calculateExpense>[0];
 
@@ -11,6 +11,37 @@ type CalculateExpenseInput = Parameters<typeof calculateExpense>[0];
 const DEFAULT_MEMBER_WEIGHT = 1;
 
 export type ExpenseSplitMode = "evenly" | "byWeights";
+
+export type ChargeAmountKind = "percent" | "fixed";
+export type ChargeDraftAllocationMode = "proportional" | "even" | "single_payer";
+
+// The value is kept as raw typed text, not a parsed number — parsing "5" as
+// 5 percent vs 5 rupiah depends on amountKind, and re-parsing on every
+// keystroke while the field is still incomplete (a bare "-") would either
+// throw or silently coerce to 0 mid-type. Translation to a real ChargeAmount
+// happens once, at toCalculationInput/toCreateExpenseInput time.
+export interface ChargeDraft {
+  readonly id: string;
+  readonly name: string;
+  readonly amountKind: ChargeAmountKind;
+  readonly rawValue: string;
+  /** Only meaningful when amountKind is "percent" (K-34: no default basis). */
+  readonly percentBasis: "subtotal" | "running_total";
+  readonly allocationMode: ChargeDraftAllocationMode;
+  /** Only meaningful when allocationMode is "single_payer". */
+  readonly allocationMemberId: string;
+}
+
+export type TreatDraftKind = "person" | "partial";
+
+export interface TreatDraft {
+  readonly id: string;
+  readonly kind: TreatDraftKind;
+  readonly sponsorMemberId: string;
+  readonly beneficiaryMemberId: string;
+  /** Only meaningful when kind is "partial". */
+  readonly partialAmountMinor: number;
+}
 
 export interface ExpenseDraftMember {
   readonly memberId: string;
@@ -39,6 +70,8 @@ export interface ExpenseDraft {
   readonly mode: ExpenseSplitMode;
   readonly members: readonly ExpenseDraftMember[];
   readonly payerMemberId: string;
+  readonly charges: readonly ChargeDraft[];
+  readonly treats: readonly TreatDraft[];
 }
 
 export interface DraftInitMember {
@@ -69,10 +102,34 @@ export function createInitialDraft(init: DraftInit): ExpenseDraft {
     mode: "evenly",
     members: init.members.map((member) => ({ ...member, checked: true, weight: DEFAULT_MEMBER_WEIGHT })),
     payerMemberId: init.members[0]?.memberId ?? "",
+    charges: [],
+    treats: [],
   };
 }
 
-export type DraftNotReadyReason = "emptyAmount" | "noParticipants" | "payerExcluded" | "allWeightsZero";
+export type DraftNotReadyReason =
+  | "emptyAmount"
+  | "noParticipants"
+  | "payerExcluded"
+  | "allWeightsZero"
+  | "treatSponsorEqualsBeneficiary"
+  | "treatMemberUnchecked"
+  | "treatPartialAmountMissing";
+
+// Shared with ExpenseFormRata/ExpenseFormPorsi so the reason -> message
+// mapping lives once instead of duplicated per form (both already
+// duplicate SPLIT_MODE_KEYS et al., but this one grows every time a new
+// not-ready reason is added, and a Record<DraftNotReadyReason, string>
+// missing a key is a type error the moment the union grows).
+export const NOT_READY_MESSAGE_KEY: Record<DraftNotReadyReason, string> = {
+  emptyAmount: "expense.result.needAmount",
+  noParticipants: "expense.result.needParticipants",
+  payerExcluded: "expense.result.payerExcluded",
+  allWeightsZero: "expense.result.needWeights",
+  treatSponsorEqualsBeneficiary: "expense.result.treatSponsorEqualsBeneficiary",
+  treatMemberUnchecked: "expense.result.treatMemberUnchecked",
+  treatPartialAmountMissing: "expense.result.treatPartialAmountMissing",
+};
 
 export type DraftCalculationInput =
   | { readonly ready: true; readonly input: CalculateExpenseInput; readonly memberOrder: readonly string[] }
@@ -100,6 +157,105 @@ function buildSplitInput(mode: ExpenseSplitMode, checked: readonly ExpenseDraftM
   return { mode: "evenly", participantCount: checked.length };
 }
 
+// A charge row mid-typing ("", "-", "12.") parses to nothing yet — treated
+// as 0 rather than blocking the whole panel, the same way a fresh row
+// contributes nothing until filled in. Once ChargeEditor sanitizes keystrokes
+// to digits/one-dot/leading-minus only, this never sees genuine garbage.
+function parseChargeRawValue(rawValue: string): number {
+  const trimmed = rawValue.trim();
+  if (trimmed === "" || trimmed === "-" || trimmed === ".") return 0;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildChargeAmount(charge: ChargeDraft): ChargeAmount {
+  const value = parseChargeRawValue(charge.rawValue);
+  return charge.amountKind === "percent"
+    ? { kind: "percent", percent: value, basis: charge.percentBasis }
+    : { kind: "fixed", amountMinor: value };
+}
+
+// A single_payer target that no longer maps to a checked participant (the
+// member got unchecked after being picked) degrades to "even" rather than
+// crashing or blocking the whole draft — ChargeEditor only ever offers
+// checked members as options, so this is a stale-selection fallback, not
+// the everyday path.
+function resolveSinglePayerIndex(
+  charge: ChargeDraft,
+  checked: readonly ExpenseDraftMember[],
+): number | undefined {
+  const index = checked.findIndex((member) => member.memberId === charge.allocationMemberId);
+  return index === -1 ? undefined : index;
+}
+
+function buildChargeAllocation(charge: ChargeDraft, checked: readonly ExpenseDraftMember[]): ChargeAllocation {
+  if (charge.allocationMode !== "single_payer") return { mode: charge.allocationMode };
+  const participantIndex = resolveSinglePayerIndex(charge, checked);
+  return participantIndex === undefined ? { mode: "even" } : { mode: "single_payer", participantIndex };
+}
+
+function buildCharges(charges: readonly ChargeDraft[], checked: readonly ExpenseDraftMember[]): readonly ExtraCharge[] {
+  return charges.map((charge) => ({
+    amount: buildChargeAmount(charge),
+    allocation: buildChargeAllocation(charge, checked),
+  }));
+}
+
+function computeBaseSharesMinor(
+  mode: ExpenseSplitMode,
+  totalMinor: number,
+  checked: readonly ExpenseDraftMember[],
+): readonly number[] {
+  if (mode === "byWeights") {
+    return splitByWeights({ totalMinor, weights: checked.map((member) => member.weight) }).sharesMinor;
+  }
+  return splitEvenly({ totalMinor, participantCount: checked.length }).sharesMinor;
+}
+
+// The single payer's payment must equal what they actually paid at
+// checkout — the grand total after extra charges (tax, service, discounts),
+// not the subtotal typed into the amount field. Treats never change this:
+// a treat only moves an existing share between two people, it never adds
+// or removes money from the bill (K-39). Only entered here through public
+// split-engine exports (splitEvenly/splitByWeights/allocateExtraCharges),
+// the same functions calculateExpense itself calls — never reaching into
+// the engine's internal modules.
+function computeGrandTotalMinor(draft: ExpenseDraft, checked: readonly ExpenseDraftMember[]): number {
+  if (draft.charges.length === 0) return draft.amountMinor;
+  const baseSharesMinor = computeBaseSharesMinor(draft.mode, draft.amountMinor, checked);
+  const chargeResult = allocateExtraCharges({ baseSharesMinor, charges: buildCharges(draft.charges, checked) });
+  return chargeResult.totalSharesMinor.reduce((sum, shareMinor) => sum + shareMinor, 0);
+}
+
+// The three new not-ready reasons plan.md F3-03 asks for, checked in the
+// order spec.md 7.4 lists them: same person on both sides, a side pointing
+// at someone not in the split, then an empty/zero partial amount. Only the
+// first offending treat is reported — one clear reason beats a list of them
+// while the draft is still being filled in.
+function findInvalidTreatReason(
+  treats: readonly TreatDraft[],
+  checked: readonly ExpenseDraftMember[],
+): DraftNotReadyReason | undefined {
+  for (const treat of treats) {
+    if (treat.sponsorMemberId === treat.beneficiaryMemberId) return "treatSponsorEqualsBeneficiary";
+    const sponsorChecked = checked.some((member) => member.memberId === treat.sponsorMemberId);
+    const beneficiaryChecked = checked.some((member) => member.memberId === treat.beneficiaryMemberId);
+    if (!sponsorChecked || !beneficiaryChecked) return "treatMemberUnchecked";
+    if (treat.kind === "partial" && treat.partialAmountMinor <= 0) return "treatPartialAmountMissing";
+  }
+  return undefined;
+}
+
+function buildTreats(treats: readonly TreatDraft[], checked: readonly ExpenseDraftMember[]): readonly Treat[] {
+  return treats.map((treat) => {
+    const sponsorIndex = checked.findIndex((member) => member.memberId === treat.sponsorMemberId);
+    const beneficiaryIndex = checked.findIndex((member) => member.memberId === treat.beneficiaryMemberId);
+    return treat.kind === "partial"
+      ? { kind: "partial", sponsorIndex, beneficiaryIndex, amountMinor: treat.partialAmountMinor }
+      : { kind: "person", sponsorIndex, beneficiaryIndex };
+  });
+}
+
 // The result panel must show something the moment the screen opens, before
 // any typing happens — so an incomplete draft (no amount yet, nobody
 // checked, or every checked person weighs zero) returns a reason to
@@ -120,8 +276,17 @@ export function toCalculationInput(draft: ExpenseDraft): DraftCalculationInput {
     return { ready: false, reason: "allWeightsZero" };
   }
 
-  const paymentsMinor = checked.map((_, index) => (index === payerIndex ? draft.amountMinor : 0));
+  const treatReason = findInvalidTreatReason(draft.treats, checked);
+  if (treatReason !== undefined) return { ready: false, reason: treatReason };
 
+  const payerAmountMinor = computeGrandTotalMinor(draft, checked);
+  const paymentsMinor = checked.map((_, index) => (index === payerIndex ? payerAmountMinor : 0));
+
+  // charges/treats are omitted entirely (not sent as []) when the draft has
+  // none — calculateExpense already defaults both to [] internally, and
+  // this keeps the input shape identical to before charges/treats existed
+  // for every draft that isn't using them, which is what the pre-existing
+  // Rata/Porsi tests assert with toEqual.
   return {
     ready: true,
     memberOrder: checked.map((member) => member.memberId),
@@ -129,6 +294,8 @@ export function toCalculationInput(draft: ExpenseDraft): DraftCalculationInput {
       totalMinor: draft.amountMinor,
       split: buildSplitInput(draft.mode, checked),
       paymentsMinor,
+      ...(draft.charges.length > 0 ? { charges: buildCharges(draft.charges, checked) } : {}),
+      ...(draft.treats.length > 0 ? { treats: buildTreats(draft.treats, checked) } : {}),
     },
   };
 }
@@ -141,6 +308,40 @@ function buildSplitData(mode: ExpenseSplitMode, checked: readonly ExpenseDraftMe
     };
   }
   return { mode: "evenly", memberIds: checked.map((member) => member.memberId) };
+}
+
+// ChargeRecord (src/lib/storage/records.ts) has no name field — the engine
+// never learns a charge's name (K-36) and the record layer hasn't grown one
+// either, so a component's display name only lives in this draft/session
+// and is not persisted. Flagged in progress.md rather than fixed here,
+// since records.ts is out of this task's scope.
+function buildChargeAllocationRecord(
+  charge: ChargeDraft,
+  checked: readonly ExpenseDraftMember[],
+): ChargeAllocationRecord {
+  if (charge.allocationMode !== "single_payer") return { mode: charge.allocationMode };
+  const isValidTarget = checked.some((member) => member.memberId === charge.allocationMemberId);
+  return isValidTarget ? { mode: "single_payer", memberId: charge.allocationMemberId } : { mode: "even" };
+}
+
+function buildChargeRecords(charges: readonly ChargeDraft[], checked: readonly ExpenseDraftMember[]): readonly ChargeRecord[] {
+  return charges.map((charge) => ({
+    amount: buildChargeAmount(charge),
+    allocation: buildChargeAllocationRecord(charge, checked),
+  }));
+}
+
+function buildTreatRecords(treats: readonly TreatDraft[]): readonly TreatRecord[] {
+  return treats.map((treat) =>
+    treat.kind === "partial"
+      ? {
+          kind: "partial",
+          sponsorMemberId: treat.sponsorMemberId,
+          beneficiaryMemberId: treat.beneficiaryMemberId,
+          amountMinor: treat.partialAmountMinor,
+        }
+      : { kind: "person", sponsorMemberId: treat.sponsorMemberId, beneficiaryMemberId: treat.beneficiaryMemberId },
+  );
 }
 
 // Mirrors toCalculationInput's readiness check, but returns the shape
@@ -156,6 +357,7 @@ export function toCreateExpenseInput(
   const resolved = resolveParticipants(draft);
   if (resolved === undefined) return null;
   if (draft.mode === "byWeights" && resolved.checked.every((member) => member.weight === 0)) return null;
+  if (findInvalidTreatReason(draft.treats, resolved.checked) !== undefined) return null;
 
   return {
     groupSlug: save.groupSlug,
@@ -166,11 +368,11 @@ export function toCreateExpenseInput(
     currency: draft.currency,
     fxRate: 1,
     amountTotalMinor: draft.amountMinor,
-    payers: [{ memberId: draft.payerMemberId, amountMinor: draft.amountMinor }],
+    payers: [{ memberId: draft.payerMemberId, amountMinor: computeGrandTotalMinor(draft, resolved.checked) }],
     splitData: buildSplitData(draft.mode, resolved.checked),
-    charges: [],
+    charges: buildChargeRecords(draft.charges, resolved.checked),
     items: [],
-    treats: [],
+    treats: buildTreatRecords(draft.treats),
     attachments: [],
     createdBy: save.createdBy,
   };

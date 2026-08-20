@@ -8,8 +8,18 @@ import { navigate } from "@/routes/router";
 import { systemClock } from "@/lib/storage/clock";
 import { expenseRepository } from "@/lib/storage/repositories";
 import type { CategoryKey } from "@/lib/storage/templates";
-import { toCreateExpenseInput, type DraftNotReadyReason, type ExpenseDraft, type ExpenseSplitMode } from "./expense-draft";
+import {
+  NOT_READY_MESSAGE_KEY,
+  toCreateExpenseInput,
+  type ChargeDraft,
+  type ExpenseDraft,
+  type ExpenseSplitMode,
+  type TreatDraft,
+} from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
+import { ChargeEditor } from "./ChargeEditor";
+import { TreatEditor } from "./TreatEditor";
+import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 
 // Six modes share one screen (mockup-inventory 1.1). Rata is the only one
@@ -47,13 +57,6 @@ const CATEGORY_LABEL_KEY: Record<CategoryKey, string> = {
   other: "category.other",
 };
 
-const NOT_READY_MESSAGE_KEY: Record<DraftNotReadyReason, string> = {
-  emptyAmount: "expense.result.needAmount",
-  noParticipants: "expense.result.needParticipants",
-  payerExcluded: "expense.result.payerExcluded",
-  allWeightsZero: "expense.result.needWeights",
-};
-
 // spec.md 12.3 wants initials from words, not letters ("Dimas Prasetyo" -> "DP").
 function initialsFromName(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -72,6 +75,13 @@ export interface ExpenseFormRataProps {
   readonly setMode: (mode: ExpenseSplitMode) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
+  readonly addEmptyCharge: () => void;
+  readonly loadChargePresets: () => void;
+  readonly updateCharge: (id: string, patch: Partial<ChargeDraft>) => void;
+  readonly removeCharge: (id: string) => void;
+  readonly addTreat: () => void;
+  readonly updateTreat: (id: string, patch: Partial<TreatDraft>) => void;
+  readonly removeTreat: (id: string) => void;
 }
 
 export function ExpenseFormRata({
@@ -84,11 +94,19 @@ export function ExpenseFormRata({
   setMode,
   toggleMember,
   checkAllMembers,
+  addEmptyCharge,
+  loadChargePresets,
+  updateCharge,
+  removeCharge,
+  addTreat,
+  updateTreat,
+  removeTreat,
 }: ExpenseFormRataProps) {
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const checkedCount = draft.members.filter((member) => member.checked).length;
+  const checkedMembers = draft.members.filter((member) => member.checked);
+  const checkedCount = checkedMembers.length;
   const minShareMinor = result.ready ? Math.min(...result.calculation.sharesMinor) : 0;
   const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
 
@@ -237,6 +255,30 @@ export function ExpenseFormRata({
           })}
         </div>
       </div>
+
+      <ChargeEditor
+        charges={draft.charges}
+        checkedMembers={checkedMembers}
+        onAdd={addEmptyCharge}
+        onLoadPreset={loadChargePresets}
+        onUpdate={updateCharge}
+        onRemove={removeCharge}
+      />
+      <TreatEditor
+        treats={draft.treats}
+        checkedMembers={checkedMembers}
+        currency={draft.currency}
+        onAdd={addTreat}
+        onUpdate={updateTreat}
+        onRemove={removeTreat}
+      />
+      <ResultPanel
+        members={checkedMembers}
+        charges={draft.charges}
+        treatCount={draft.treats.length}
+        currency={draft.currency}
+        result={result}
+      />
     </Screen>
   );
 }
