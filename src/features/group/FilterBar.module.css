@@ -1,0 +1,150 @@
+.toolbar {
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-sunken);
+}
+
+/* Mockup's .search/.filter height is under CLAUDE.md's hard touch-target
+   rule (--size-touch-min) — bumped up, same override already forced on
+   GroupHeader/Topbar icon buttons at F0-06 (see progress.md Catatan lepas). */
+.search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-field);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  color: var(--text);
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.filterButton {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-field);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+/* Mockup's dot is smaller (no matching token) — sized off --sp-2 instead of
+   a raw px, same substitution NetBand's status dot already made. */
+.dot {
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: var(--r-pill);
+  background: var(--brand);
+}
+
+.section {
+  margin-bottom: var(--sp-5);
+}
+
+.sectionHeading {
+  display: block;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+  margin-bottom: var(--sp-2);
+}
+
+.pillGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.pill {
+  flex: 0 0 auto;
+  appearance: none;
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-4);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pill:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.pillActive {
+  background: var(--brand-tint);
+  color: var(--brand);
+  border-color: var(--brand);
+  font-weight: var(--fw-semibold);
+}
+
+.dateRow {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.dateField {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.dateLabel {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.dateInput {
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-field);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.actions > * {
+  flex: 1;
+}

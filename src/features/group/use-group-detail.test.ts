@@ -138,4 +138,61 @@ describe("useGroupDetail", () => {
     expect(kinds).toContain("broken");
     expect(kinds).toContain("expense");
   });
+
+  it("carries title, notes, and participants for filtering alongside the row", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(
+      makeExpenseInput({ title: "Sate Padang", notes: "traktir Rina", splitData: { mode: "evenly", memberIds: ["m1", "m2"] } }),
+    );
+
+    const { result } = renderHook(() => useGroupDetail("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    const item = result.current.items[0];
+    expect(item?.title).toBe("Sate Padang");
+    expect(item?.notes).toBe("traktir Rina");
+    expect(item?.participantMemberIds).toEqual(["m1", "m2"]);
+    expect(result.current.members).toEqual([
+      { memberId: "m1", name: "Andi" },
+      { memberId: "m2", name: "Rina" },
+    ]);
+  });
+
+  it("falls back to the payer list for a broken row's participants, still readable off the record", async () => {
+    await seedGroup();
+    const adapter = createDexieAdapter(db);
+    await adapter.expenses.put({
+      expenseId: "e-broken",
+      groupSlug: "g1",
+      title: "Rusak",
+      category: "food",
+      date: 1_000,
+      notes: "",
+      currency: "IDR",
+      fxRate: 1,
+      amountTotalMinor: 10_000,
+      payers: [{ memberId: "m1", amountMinor: 4_000 }],
+      splitData: { mode: "evenly", memberIds: ["m1", "m2"] },
+      charges: [],
+      items: [],
+      treats: [],
+      attachments: [],
+      createdBy: "m1",
+      createdAt: 1_000,
+      updatedAt: 1_000,
+      seq: 0,
+    });
+
+    const { result } = renderHook(() => useGroupDetail("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    const broken = result.current.items.find((item) => item.row.kind === "broken");
+    // splitData reads fine here (only the calculation itself is broken), so
+    // participantMemberIds still comes from splitData.memberIds, same as any
+    // other row — the payers-only fallback only kicks in when splitData
+    // itself can't be read at all.
+    expect(broken?.participantMemberIds).toEqual(["m1", "m2"]);
+  });
 });

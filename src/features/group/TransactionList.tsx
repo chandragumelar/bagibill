@@ -50,10 +50,16 @@ export interface TransactionListProps {
   readonly currency: string;
   readonly nowMs: number;
   readonly onAddExpense: () => void;
+  /** True when `items` is empty because a filter cut it down, not because the group has nothing yet. */
+  readonly isFiltered?: boolean;
+  readonly onClearFilter?: () => void;
 }
 
-export function TransactionList({ items, currency, nowMs, onAddExpense }: TransactionListProps) {
+export function TransactionList({ items, currency, nowMs, onAddExpense, isFiltered, onClearFilter }: TransactionListProps) {
   if (items.length === 0) {
+    if (isFiltered === true && onClearFilter !== undefined) {
+      return <FilteredEmpty onClearFilter={onClearFilter} />;
+    }
     return <EmptyTransactions onAddExpense={onAddExpense} />;
   }
 
@@ -94,6 +100,29 @@ function EmptyTransactions({ onAddExpense }: EmptyTransactionsProps) {
       <h2 className={styles.emptyHeading}>{t("common.noExpensesYet")}</h2>
       <p className={styles.emptyBody}>{t("group.transaction.emptyBody")}</p>
       <Button onClick={onAddExpense}>{t("group.transaction.emptyCta")}</Button>
+    </div>
+  );
+}
+
+interface FilteredEmptyProps {
+  readonly onClearFilter: () => void;
+}
+
+// Distinct from EmptyTransactions on purpose (CLAUDE.md F3-06 instructions):
+// a filter hiding every row isn't the same situation as a group with no
+// expenses at all, and offers a different way out — clear the filter, not
+// add an expense that's very likely already there.
+function FilteredEmpty({ onClearFilter }: FilteredEmptyProps) {
+  return (
+    <div className={styles.empty}>
+      <div className={styles.emptyArt} aria-hidden="true">
+        🔍
+      </div>
+      <h2 className={styles.emptyHeading}>{t("group.transaction.filteredEmptyHeading")}</h2>
+      <p className={styles.emptyBody}>{t("group.transaction.filteredEmptyBody")}</p>
+      <Button onClick={onClearFilter} variant="secondary">
+        {t("group.filter.clearButton")}
+      </Button>
     </div>
   );
 }
