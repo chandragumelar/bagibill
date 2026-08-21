@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ChangeEvent, type ReactNode } from "react";
 import { t, formatMoney } from "@/lib/i18n";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
 import { Screen } from "@/app/layout/Screen/Screen";
@@ -17,14 +17,15 @@ import {
   type TreatDraft,
 } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
-import { WeightStepper } from "./WeightStepper";
+import { PercentageTrack, type PercentSpreadUpdate } from "./PercentageTrack";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
+import stepperStyles from "./WeightStepper.module.css";
 
 // Kept identical to the other forms' mode row — duplicated rather than
-// shared, see progress.md Catatan lepas.
+// shared, same reasoning as ExpenseFormPorsi (progress.md Catatan lepas).
 const SPLIT_MODE_KEYS = ["evenly", "byAmounts", "byPercentage", "byWeights", "byAdjustment", "byItems"] as const;
 type SplitModeKey = (typeof SPLIT_MODE_KEYS)[number];
 
@@ -59,7 +60,73 @@ function initialsFromName(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export interface ExpenseFormPorsiProps {
+const PERCENT_STEP = 5;
+const PERCENT_MIN = 0;
+const PERCENT_MAX = 100;
+// The mockup's own manual-entry field is digit-only (no decimals) — the two
+// decimal places mode Persen accepts only ever come from "ratakan sisa"
+// (PercentageTrack.computeSpreadRemainingPercent), never from typing.
+const PERCENT_TYPED_CAP = 999;
+
+interface PercentStepperProps {
+  readonly memberName: string;
+  readonly percent: number;
+  readonly onChange: (percent: number) => void;
+}
+
+// Mirrors WeightStepper's pill shell (same CSS module) for a whole-number
+// percent instead of a fractional weight — no decimal typing, spec.md 6.3's
+// manual field is digits only.
+function PercentStepper({ memberName, percent, onChange }: PercentStepperProps) {
+  function handleDecrease(): void {
+    onChange(Math.max(PERCENT_MIN, percent - PERCENT_STEP));
+  }
+
+  function handleIncrease(): void {
+    onChange(Math.min(PERCENT_MAX, percent + PERCENT_STEP));
+  }
+
+  function handleChange(event: ChangeEvent<HTMLInputElement>): void {
+    const digits = event.target.value.replace(/\D/g, "");
+    const parsed = digits === "" ? 0 : Math.min(PERCENT_TYPED_CAP, Number(digits));
+    onChange(parsed);
+  }
+
+  return (
+    <div className={stepperStyles.pill}>
+      <button
+        type="button"
+        className={stepperStyles.stepButton}
+        onClick={handleDecrease}
+        disabled={percent <= PERCENT_MIN}
+        aria-label={t("expense.weight.decrease", { name: memberName })}
+      >
+        −
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        className={`${stepperStyles.value} bb-numeral`}
+        value={percent === 0 ? "" : String(percent)}
+        placeholder="0"
+        onChange={handleChange}
+        aria-label={t("expense.percentage.inputLabel", { name: memberName })}
+      />
+      <span aria-hidden="true">%</span>
+      <button
+        type="button"
+        className={stepperStyles.stepButton}
+        onClick={handleIncrease}
+        disabled={percent >= PERCENT_MAX}
+        aria-label={t("expense.weight.increase", { name: memberName })}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+export interface ExpenseFormPersenProps {
   readonly slug: string;
   readonly header: ReactNode;
   readonly draft: ExpenseDraft;
@@ -67,7 +134,8 @@ export interface ExpenseFormPorsiProps {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
-  readonly setWeight: (memberId: string, weight: number) => void;
+  readonly setPercent: (memberId: string, percent: number) => void;
+  readonly setPercents: (updates: readonly PercentSpreadUpdate[]) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
   readonly addEmptyCharge: () => void;
@@ -79,9 +147,7 @@ export interface ExpenseFormPorsiProps {
   readonly removeTreat: (id: string) => void;
 }
 
-const PERCENT_MULTIPLIER = 100;
-
-export function ExpenseFormPorsi({
+export function ExpenseFormPersen({
   slug,
   header,
   draft,
@@ -89,7 +155,8 @@ export function ExpenseFormPorsi({
   setTitle,
   setAmountMinor,
   setMode,
-  setWeight,
+  setPercent,
+  setPercents,
   toggleMember,
   checkAllMembers,
   addEmptyCharge,
@@ -99,13 +166,12 @@ export function ExpenseFormPorsi({
   addTreat,
   updateTreat,
   removeTreat,
-}: ExpenseFormPorsiProps) {
+}: ExpenseFormPersenProps) {
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const checkedCount = draft.members.filter((member) => member.checked).length;
   const checkedMembers = draft.members.filter((member) => member.checked);
-  const totalWeight = checkedMembers.reduce((sum, member) => sum + member.weight, 0);
+  const checkedCount = checkedMembers.length;
   const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
 
   function shareFor(memberId: string): number | undefined {
@@ -133,10 +199,7 @@ export function ExpenseFormPorsi({
     }
   }
 
-  // Porsi shares aren't uniform like Rata's, so the panel's second number
-  // is the largest share rather than a "per person" figure that wouldn't
-  // mean the same thing for everyone (mockup: panelRightLabel "terbesar").
-  const rightLabel = result.ready ? t("expense.result.largest") : t("expense.result.status");
+  const rightLabel = result.ready ? t("expense.result.perPerson") : t("expense.result.status");
   const rightValue = result.ready
     ? formatMoney(Math.max(...result.calculation.sharesMinor), draft.currency)
     : t(NOT_READY_MESSAGE_KEY[result.reason]);
@@ -226,28 +289,10 @@ export function ExpenseFormPorsi({
           })}
         </div>
 
-        <div className={styles.explainerBox}>
-          <span className={styles.explainerTitle}>{t("expense.porsi.explainerTitle")}</span>{" "}
-          <span className={styles.explainerBody}>{t("expense.porsi.explainerBody")}</span>
-        </div>
-
-        {totalWeight > 0 ? (
-          <>
-            <div className={styles.proportionBar}>
-              {checkedMembers.map((member) => (
-                <div
-                  key={member.memberId}
-                  className={styles.proportionSegment}
-                  style={{ width: `${((member.weight / totalWeight) * PERCENT_MULTIPLIER).toFixed(3)}%`, background: `var(${member.color})` }}
-                />
-              ))}
-            </div>
-            <div className={styles.proportionMeta}>
-              <span>{t("expense.porsi.totalWeight", { count: totalWeight })}</span>
-              <span>{t("expense.porsi.boxHint")}</span>
-            </div>
-          </>
-        ) : null}
+        <PercentageTrack
+          members={checkedMembers.map((member) => ({ memberId: member.memberId, color: member.color, percent: member.percent }))}
+          onSpreadRemaining={setPercents}
+        />
 
         <div className={styles.participantList}>
           {draft.members.map((member) => {
@@ -272,10 +317,10 @@ export function ExpenseFormPorsi({
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
                 trailing={
                   <div className={styles.weightTrailing}>
-                    <WeightStepper
+                    <PercentStepper
                       memberName={member.name}
-                      weight={member.weight}
-                      onChange={(weight) => setWeight(member.memberId, weight)}
+                      percent={member.percent}
+                      onChange={(percent) => setPercent(member.memberId, percent)}
                     />
                     <span className={`${styles.amount} bb-numeral`}>
                       {shareMinor === undefined ? "—" : formatMoney(shareMinor, draft.currency)}

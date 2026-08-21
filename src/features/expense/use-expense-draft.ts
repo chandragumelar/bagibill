@@ -30,6 +30,10 @@ export interface UseExpenseDraftResult {
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
   readonly setWeight: (memberId: string, weight: number) => void;
+  readonly setMemberAmountMinor: (memberId: string, amountMinor: number) => void;
+  readonly setPercent: (memberId: string, percent: number) => void;
+  readonly setPercents: (updates: readonly { readonly memberId: string; readonly percent: number }[]) => void;
+  readonly setAdjustmentMinor: (memberId: string, adjustmentMinor: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
   readonly addEmptyCharge: () => void;
@@ -83,6 +87,46 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
     setDraft((current) => ({
       ...current,
       members: current.members.map((member) => (member.memberId === memberId ? { ...member, weight } : member)),
+    }));
+  }
+
+  function setMemberAmountMinor(memberId: string, amountMinor: number): void {
+    setDraft((current) => ({
+      ...current,
+      members: current.members.map((member) => (member.memberId === memberId ? { ...member, amountMinor } : member)),
+    }));
+  }
+
+  function setPercent(memberId: string, percent: number): void {
+    setDraft((current) => ({
+      ...current,
+      members: current.members.map((member) => (member.memberId === memberId ? { ...member, percent } : member)),
+    }));
+  }
+
+  // Applies every "ratakan sisa" update in one setDraft call — the updates
+  // are computed together (PercentageTrack.computeSpreadRemainingPercent),
+  // so applying them one member at a time would mean intermediate renders
+  // with only some of the spread reflected in draft.members.
+  function setPercents(updates: readonly { readonly memberId: string; readonly percent: number }[]): void {
+    setDraft((current) => {
+      const percentByMemberId = new Map(updates.map((update) => [update.memberId, update.percent]));
+      return {
+        ...current,
+        members: current.members.map((member) => {
+          const percent = percentByMemberId.get(member.memberId);
+          return percent === undefined ? member : { ...member, percent };
+        }),
+      };
+    });
+  }
+
+  function setAdjustmentMinor(memberId: string, adjustmentMinor: number): void {
+    setDraft((current) => ({
+      ...current,
+      members: current.members.map((member) =>
+        member.memberId === memberId ? { ...member, adjustmentMinor } : member,
+      ),
     }));
   }
 
@@ -188,6 +232,10 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
     setAmountMinor,
     setMode,
     setWeight,
+    setMemberAmountMinor,
+    setPercent,
+    setPercents,
+    setAdjustmentMinor,
     toggleMember,
     checkAllMembers,
     addEmptyCharge,

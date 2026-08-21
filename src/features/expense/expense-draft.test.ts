@@ -49,7 +49,7 @@ describe("toCalculationInput", () => {
   it("is not calculable when no member is checked", () => {
     const draft = draftWith({
       amountMinor: 9_000,
-      members: INIT.members.map((member) => ({ ...member, checked: false, weight: 1 })),
+      members: INIT.members.map((member) => ({ ...member, checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 })),
     });
     const result = toCalculationInput(draft);
     expect(result).toEqual({ ready: false, reason: "noParticipants" });
@@ -59,9 +59,9 @@ describe("toCalculationInput", () => {
     const draft = draftWith({
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: false, weight: 1 },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 1 },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
       payerMemberId: "m1",
     });
@@ -87,9 +87,9 @@ describe("toCalculationInput", () => {
     const draft = draftWith({
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
     });
     const result = toCalculationInput(draft);
@@ -107,9 +107,9 @@ describe("toCalculationInput — byWeights mode", () => {
       mode: "byWeights",
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: weights[0] },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: weights[1] },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: weights[2] },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: weights[0], amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: weights[1], amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: weights[2], amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
       ...overrides,
     });
@@ -131,9 +131,9 @@ describe("toCalculationInput — byWeights mode", () => {
   it("drops an unchecked member from memberOrder and weights entirely — they never appear in the result", () => {
     const draft = weightedDraft([1, 1, 1], {
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
     });
     const result = toCalculationInput(draft);
@@ -166,7 +166,7 @@ describe("toCreateExpenseInput", () => {
     expect(toCreateExpenseInput(draftWith({ amountMinor: 0 }), save)).toBeNull();
     const noParticipants = draftWith({
       amountMinor: 9_000,
-      members: INIT.members.map((member) => ({ ...member, checked: false, weight: 1 })),
+      members: INIT.members.map((member) => ({ ...member, checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 })),
     });
     expect(toCreateExpenseInput(noParticipants, save)).toBeNull();
   });
@@ -199,9 +199,9 @@ describe("toCreateExpenseInput", () => {
       amountMinor: 9_000,
       title: "Nasi goreng",
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 2 },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 2, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
     });
     const input = toCreateExpenseInput(draft, save);
@@ -219,9 +219,9 @@ describe("toCreateExpenseInput", () => {
       mode: "byWeights",
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 0 },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 0 },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 0 },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 0, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 0, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 0, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
     });
     expect(toCreateExpenseInput(draft, save)).toBeNull();
@@ -304,9 +304,9 @@ describe("toCalculationInput — charges", () => {
     const draft = draftWith({
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
       charges: [chargeDraft({ allocationMode: "single_payer", allocationMemberId: "m2" })],
     });
@@ -362,9 +362,9 @@ describe("toCalculationInput — treats", () => {
     const draft = draftWith({
       amountMinor: 9_000,
       members: [
-        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
-        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1 },
-        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1 },
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
       ],
       treats: [treatDraft({ sponsorMemberId: "m1", beneficiaryMemberId: "m2" })],
     });

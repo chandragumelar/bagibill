@@ -7,8 +7,8 @@ import type { ChargeDraft, ExpenseDraftMember } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
 
 const MEMBERS: readonly ExpenseDraftMember[] = [
-  { memberId: "m1", name: "Andi", color: "--m-1", checked: true, weight: 1 },
-  { memberId: "m2", name: "Rina", color: "--m-2", checked: true, weight: 1 },
+  { memberId: "m1", name: "Andi", color: "--m-1", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+  { memberId: "m2", name: "Rina", color: "--m-2", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
 ];
 
 // RTL's default text matcher normalizes DOM whitespace (including Intl's

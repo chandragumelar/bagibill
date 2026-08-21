@@ -1,5 +1,20 @@
-import { allocateExtraCharges, calculateExpense, splitByWeights, splitEvenly } from "@bagibill/split-engine";
-import type { ChargeAllocation, ChargeAmount, ExtraCharge, SplitInput, Treat } from "@bagibill/split-engine";
+import {
+  allocateExtraCharges,
+  calculateExpense,
+  splitByAdjustment,
+  splitByAmounts,
+  splitByPercentage,
+  splitByWeights,
+  splitEvenly,
+} from "@bagibill/split-engine";
+import type {
+  ChargeAllocation,
+  ChargeAmount,
+  ExtraCharge,
+  SplitInput,
+  SplitWarning,
+  Treat,
+} from "@bagibill/split-engine";
 import type { CategoryKey } from "@/lib/storage/templates";
 import type { CreateExpenseInput } from "@/lib/storage/expense-repository";
 import type { ChargeAllocationRecord, ChargeRecord, SplitDataRecord, TreatRecord } from "@/lib/storage/records";
@@ -10,7 +25,7 @@ type CalculateExpenseInput = Parameters<typeof calculateExpense>[0];
 // already splits evenly — switching mode never needs to seed anything.
 const DEFAULT_MEMBER_WEIGHT = 1;
 
-export type ExpenseSplitMode = "evenly" | "byWeights";
+export type ExpenseSplitMode = "evenly" | "byAmounts" | "byPercentage" | "byWeights" | "byAdjustment";
 
 export type ChargeAmountKind = "percent" | "fixed";
 export type ChargeDraftAllocationMode = "proportional" | "even" | "single_payer";
@@ -55,6 +70,16 @@ export interface ExpenseDraftMember {
   // bayar"). Collapsing them into one state would make that distinction
   // impossible to represent.
   readonly weight: number;
+  // amountMinor, percent, and adjustmentMinor are three separate fields, not
+  // one "value" field reinterpreted per mode — 50 means Rp50, 50 percent, or
+  // a Rp50 top-up depending on which one it is, and a single shared field
+  // would make switching modes silently reinterpret whatever the person had
+  // typed. Separate fields also survive a mode switch and back, the same way
+  // charges/treats already survive across F3-03 — nothing typed is ever
+  // discarded just because the screen is showing a different mode right now.
+  readonly amountMinor: number;
+  readonly percent: number;
+  readonly adjustmentMinor: number;
 }
 
 // Everything the add-expense screen's form holds, across both modes it
@@ -100,7 +125,14 @@ export function createInitialDraft(init: DraftInit): ExpenseDraft {
     category: init.category,
     currency: init.currency,
     mode: "evenly",
-    members: init.members.map((member) => ({ ...member, checked: true, weight: DEFAULT_MEMBER_WEIGHT })),
+    members: init.members.map((member) => ({
+      ...member,
+      checked: true,
+      weight: DEFAULT_MEMBER_WEIGHT,
+      amountMinor: 0,
+      percent: 0,
+      adjustmentMinor: 0,
+    })),
     payerMemberId: init.members[0]?.memberId ?? "",
     charges: [],
     treats: [],
@@ -112,6 +144,9 @@ export type DraftNotReadyReason =
   | "noParticipants"
   | "payerExcluded"
   | "allWeightsZero"
+  | "percentageOutOfTolerance"
+  | "amountsNotBalanced"
+  | "amountsNeededForCharges"
   | "treatSponsorEqualsBeneficiary"
   | "treatMemberUnchecked"
   | "treatPartialAmountMissing";
@@ -126,6 +161,9 @@ export const NOT_READY_MESSAGE_KEY: Record<DraftNotReadyReason, string> = {
   noParticipants: "expense.result.needParticipants",
   payerExcluded: "expense.result.payerExcluded",
   allWeightsZero: "expense.result.needWeights",
+  percentageOutOfTolerance: "expense.result.percentageOutOfTolerance",
+  amountsNotBalanced: "expense.result.amountsNotBalanced",
+  amountsNeededForCharges: "expense.result.amountsNeededForCharges",
   treatSponsorEqualsBeneficiary: "expense.result.treatSponsorEqualsBeneficiary",
   treatMemberUnchecked: "expense.result.treatMemberUnchecked",
   treatPartialAmountMissing: "expense.result.treatPartialAmountMissing",
@@ -151,10 +189,48 @@ function resolveParticipants(draft: ExpenseDraft): ResolvedParticipants | undefi
 }
 
 function buildSplitInput(mode: ExpenseSplitMode, checked: readonly ExpenseDraftMember[]): SplitInput {
+  if (mode === "byAmounts") {
+    return { mode: "byAmounts", amountsMinor: checked.map((member) => member.amountMinor) };
+  }
+  if (mode === "byPercentage") {
+    return { mode: "byPercentage", percentages: checked.map((member) => member.percent) };
+  }
   if (mode === "byWeights") {
     return { mode: "byWeights", weights: checked.map((member) => member.weight) };
   }
+  if (mode === "byAdjustment") {
+    return { mode: "byAdjustment", adjustmentsMinor: checked.map((member) => member.adjustmentMinor) };
+  }
   return { mode: "evenly", participantCount: checked.length };
+}
+
+// K-26: splitByPercentage's own tolerance is 1 basis point (0.01 percentage
+// points) around 100 — checked here, before the engine ever sees the
+// percentages, because splitByPercentage throws outside that tolerance
+// (unlike splitByAmounts, which only warns). A Persen draft mid-typing is
+// routinely far from 100 (spec.md 6.3 allows under/over while editing), so
+// the line where the panel goes from "still typing" to "computable" has to
+// sit exactly where the engine itself draws it, not an approximation of it.
+export const PERCENTAGE_TOTAL = 100;
+export const PERCENTAGE_TOLERANCE = 0.01;
+
+// Percent is a ratio, not money (no minor units, no currency rounding) — the
+// same category as weight, which the existing allWeightsZero check above
+// already reduces over without touching money arithmetic.
+export function sumPercent(checked: readonly ExpenseDraftMember[]): number {
+  return checked.reduce((sum, member) => sum + member.percent, 0);
+}
+
+export function isPercentageBalanced(percentSum: number): boolean {
+  return Math.abs(percentSum - PERCENTAGE_TOTAL) <= PERCENTAGE_TOLERANCE;
+}
+
+// Nominal's under/over-allocated state is never blocked while editing
+// (spec.md 6.2) — the engine only warns, it never throws for a mismatch.
+// Whether that mismatch blocks *saving* is decided from this same warning,
+// read from an already-computed calculation, never recomputed here.
+export function hasAllocationMismatchWarning(warnings: readonly SplitWarning[]): boolean {
+  return warnings.some((warning) => warning.code === "under_allocated" || warning.code === "over_allocated");
 }
 
 // A charge row mid-typing ("", "-", "12.") parses to nothing yet — treated
@@ -206,8 +282,18 @@ function computeBaseSharesMinor(
   totalMinor: number,
   checked: readonly ExpenseDraftMember[],
 ): readonly number[] {
+  if (mode === "byAmounts") {
+    return splitByAmounts({ totalMinor, amountsMinor: checked.map((member) => member.amountMinor) }).sharesMinor;
+  }
+  if (mode === "byPercentage") {
+    return splitByPercentage({ totalMinor, percentages: checked.map((member) => member.percent) }).sharesMinor;
+  }
   if (mode === "byWeights") {
     return splitByWeights({ totalMinor, weights: checked.map((member) => member.weight) }).sharesMinor;
+  }
+  if (mode === "byAdjustment") {
+    return splitByAdjustment({ totalMinor, adjustmentsMinor: checked.map((member) => member.adjustmentMinor) })
+      .sharesMinor;
   }
   return splitEvenly({ totalMinor, participantCount: checked.length }).sharesMinor;
 }
@@ -220,11 +306,40 @@ function computeBaseSharesMinor(
 // split-engine exports (splitEvenly/splitByWeights/allocateExtraCharges),
 // the same functions calculateExpense itself calls — never reaching into
 // the engine's internal modules.
+//
+// Nominal (byAmounts) is handled separately: its own shares don't
+// necessarily sum to draft.amountMinor while still being edited (spec.md
+// 6.2 allows under/over-allocation), so pegging the payer's payment to the
+// entered total would make calculateExpense's own payments-vs-shares check
+// fail (K-43) for every not-yet-balanced state — not just a genuine save
+// error, but the live preview itself, mid-typing. The payer's payment
+// tracks whatever is actually allocated instead, so a preview can always be
+// computed; isAmountsBalanced (the *save* gate) only ever passes once that
+// number already equals draft.amountMinor exactly, so nothing here changes
+// what actually gets saved.
 function computeGrandTotalMinor(draft: ExpenseDraft, checked: readonly ExpenseDraftMember[]): number {
-  if (draft.charges.length === 0) return draft.amountMinor;
-  const baseSharesMinor = computeBaseSharesMinor(draft.mode, draft.amountMinor, checked);
+  const baseSharesMinor =
+    draft.mode === "byAmounts"
+      ? checked.map((member) => member.amountMinor)
+      : computeBaseSharesMinor(draft.mode, draft.amountMinor, checked);
+  if (draft.charges.length === 0) {
+    return baseSharesMinor.reduce((sum, shareMinor) => sum + shareMinor, 0);
+  }
   const chargeResult = allocateExtraCharges({ baseSharesMinor, charges: buildCharges(draft.charges, checked) });
   return chargeResult.totalSharesMinor.reduce((sum, shareMinor) => sum + shareMinor, 0);
+}
+
+// allocateExtraCharges rejects a proportional charge when every base share
+// is zero (nothing to be proportional to) — reachable here because Nominal
+// deliberately allows an all-zero draft (the "kosong" mockup state) while
+// every other mode either can't be all-zero at this point or is already
+// blocked earlier (allWeightsZero, percentageOutOfTolerance).
+function hasProportionalChargeOnZeroAmounts(
+  charges: readonly ChargeDraft[],
+  checked: readonly ExpenseDraftMember[],
+): boolean {
+  const hasProportionalCharge = charges.some((charge) => charge.allocationMode === "proportional");
+  return hasProportionalCharge && checked.every((member) => member.amountMinor === 0);
 }
 
 // The three new not-ready reasons plan.md F3-03 asks for, checked in the
@@ -275,6 +390,12 @@ export function toCalculationInput(draft: ExpenseDraft): DraftCalculationInput {
   if (draft.mode === "byWeights" && checked.every((member) => member.weight === 0)) {
     return { ready: false, reason: "allWeightsZero" };
   }
+  if (draft.mode === "byPercentage" && !isPercentageBalanced(sumPercent(checked))) {
+    return { ready: false, reason: "percentageOutOfTolerance" };
+  }
+  if (draft.mode === "byAmounts" && hasProportionalChargeOnZeroAmounts(draft.charges, checked)) {
+    return { ready: false, reason: "amountsNeededForCharges" };
+  }
 
   const treatReason = findInvalidTreatReason(draft.treats, checked);
   if (treatReason !== undefined) return { ready: false, reason: treatReason };
@@ -301,10 +422,28 @@ export function toCalculationInput(draft: ExpenseDraft): DraftCalculationInput {
 }
 
 function buildSplitData(mode: ExpenseSplitMode, checked: readonly ExpenseDraftMember[]): SplitDataRecord {
+  if (mode === "byAmounts") {
+    return {
+      mode: "byAmounts",
+      entries: checked.map((member) => ({ memberId: member.memberId, amountMinor: member.amountMinor })),
+    };
+  }
+  if (mode === "byPercentage") {
+    return {
+      mode: "byPercentage",
+      entries: checked.map((member) => ({ memberId: member.memberId, percent: member.percent })),
+    };
+  }
   if (mode === "byWeights") {
     return {
       mode: "byWeights",
       entries: checked.map((member) => ({ memberId: member.memberId, weight: member.weight })),
+    };
+  }
+  if (mode === "byAdjustment") {
+    return {
+      mode: "byAdjustment",
+      entries: checked.map((member) => ({ memberId: member.memberId, adjustmentMinor: member.adjustmentMinor })),
     };
   }
   return { mode: "evenly", memberIds: checked.map((member) => member.memberId) };
@@ -344,6 +483,18 @@ function buildTreatRecords(treats: readonly TreatDraft[]): readonly TreatRecord[
   );
 }
 
+// K-43/K-64: a stored expense's payments must sum to exactly its shares, or
+// the repository's own calculation gate throws when it recomputes the
+// expense to validate it. With no charges, the single payer pays
+// draft.amountMinor as entered — so an amountsMinor sum that doesn't match
+// it would fail that gate. Checked here, proactively, via the same warning
+// the engine already computes (hasAllocationMismatchWarning), rather than
+// letting the save call surface it as a thrown error.
+function isAmountsBalanced(totalMinor: number, checked: readonly ExpenseDraftMember[]): boolean {
+  const { warnings } = splitByAmounts({ totalMinor, amountsMinor: checked.map((member) => member.amountMinor) });
+  return !hasAllocationMismatchWarning(warnings);
+}
+
 // Mirrors toCalculationInput's readiness check, but returns the shape
 // createExpense (F2-03 repository) accepts instead of calculateExpense's.
 // null means the same "not ready yet" the panel already shows — the save
@@ -357,6 +508,9 @@ export function toCreateExpenseInput(
   const resolved = resolveParticipants(draft);
   if (resolved === undefined) return null;
   if (draft.mode === "byWeights" && resolved.checked.every((member) => member.weight === 0)) return null;
+  if (draft.mode === "byPercentage" && !isPercentageBalanced(sumPercent(resolved.checked))) return null;
+  if (draft.mode === "byAmounts" && hasProportionalChargeOnZeroAmounts(draft.charges, resolved.checked)) return null;
+  if (draft.mode === "byAmounts" && !isAmountsBalanced(draft.amountMinor, resolved.checked)) return null;
   if (findInvalidTreatReason(draft.treats, resolved.checked) !== undefined) return null;
 
   return {

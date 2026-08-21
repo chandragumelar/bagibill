@@ -6,8 +6,8 @@ import { ChargeEditor } from "./ChargeEditor";
 import type { ChargeDraft, ExpenseDraftMember } from "./expense-draft";
 
 const MEMBERS: readonly ExpenseDraftMember[] = [
-  { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1 },
-  { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 1 },
+  { memberId: "m1", name: "Farhan", color: "--m-1", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+  { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
 ];
 
 function charge(overrides: Partial<ChargeDraft> = {}): ChargeDraft {
