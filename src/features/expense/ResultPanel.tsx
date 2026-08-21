@@ -1,53 +1,73 @@
-import type { SplitWarning, TreatTransfer } from "@bagibill/split-engine";
+import type { ChargeAllocation, ExpenseCalculation, SplitWarning } from "@bagibill/split-engine";
 import { t, formatMoney } from "@/lib/i18n";
+import { buildExpenseSummary } from "@/lib/expense-summary";
+import type { ExpenseChargeMeta, ExpenseMemberInfo, ExpenseSummary } from "@/lib/expense-summary";
 import { NOT_READY_MESSAGE_KEY } from "./expense-draft";
-import type { ChargeDraft, ChargeDraftAllocationMode, ExpenseDraftMember } from "./expense-draft";
+import type { ChargeDraft, ExpenseDraftMember } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
 import styles from "./ResultPanel.module.css";
 
-const ALLOCATION_LABEL_KEY: Record<ChargeDraftAllocationMode, string> = {
+const ALLOCATION_LABEL_KEY: Record<ChargeAllocation["mode"], string> = {
   proportional: "expense.charge.allocationProportional",
   even: "expense.charge.allocationEven",
   single_payer: "expense.charge.allocationSinglePayer",
+  items: "expense.charge.allocationItems",
 };
 
-function chargeName(charge: ChargeDraft, index: number): string {
-  const trimmed = charge.name.trim();
+// A charge row mid-typing ("", "-", "12.") parses to nothing yet — same
+// tolerant parse expense-draft.ts's buildChargeAmount uses, duplicated here
+// on purpose: expense-draft.ts isn't in this task's file scope, and the
+// shared expense-summary module must not import ChargeDraft (a feature type).
+function parseChargeRawValue(rawValue: string): number {
+  const trimmed = rawValue.trim();
+  if (trimmed === "" || trimmed === "-" || trimmed === ".") return 0;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function draftChargeToMeta(charge: ChargeDraft): ExpenseChargeMeta {
+  const value = parseChargeRawValue(charge.rawValue);
+  const amount =
+    charge.amountKind === "percent"
+      ? ({ kind: "percent", percent: value, basis: charge.percentBasis } as const)
+      : ({ kind: "fixed", amountMinor: value } as const);
+  return {
+    name: charge.name.trim(),
+    amount,
+    allocationMode: charge.allocationMode,
+    sponsorMemberId: charge.allocationMode === "single_payer" ? charge.allocationMemberId : undefined,
+  };
+}
+
+function displayChargeName(charge: { readonly name?: string }, index: number): string {
+  const trimmed = charge.name?.trim() ?? "";
   return trimmed === "" ? t("expense.charge.unnamed", { index: index + 1 }) : trimmed;
 }
 
-function chargeValueLabel(charge: ChargeDraft, currency: string): string {
-  if (charge.amountKind === "percent") return `${charge.rawValue || "0"}%`;
-  const fixedMinor = Number(charge.rawValue || "0");
-  return formatMoney(Number.isFinite(fixedMinor) ? fixedMinor : 0, currency);
-}
-
-function memberNameAt(members: readonly ExpenseDraftMember[], index: number): string {
-  return members.at(index)?.name ?? "";
+function chargeValueLabel(amount: ExpenseChargeMeta["amount"], currency: string): string {
+  return amount.kind === "percent" ? `${amount.percent}%` : formatMoney(amount.amountMinor, currency);
 }
 
 interface MemberShareListProps {
-  readonly members: readonly ExpenseDraftMember[];
-  readonly sharesMinor: readonly number[];
+  readonly members: readonly ExpenseSummary["members"][number][];
   readonly currency: string;
 }
 
 // The reason this exists: a treated-to-zero member must never disappear
-// from this list (CLAUDE.md hard rule). Iterating `members` unconditionally
-// and reading sharesMinor by position is what guarantees that — there's no
-// filter step anywhere that could drop a zero.
-function MemberShareList({ members, sharesMinor, currency }: MemberShareListProps) {
+// from this list (CLAUDE.md hard rule). summary.members already covers
+// every participant unconditionally — there's no filter step anywhere
+// upstream that could drop a zero.
+function MemberShareList({ members, currency }: MemberShareListProps) {
   return (
     <ul className={styles.memberList}>
-      {members.map((member, index) => {
-        const shareMinor = sharesMinor[index] ?? 0;
-        const isNegative = shareMinor < 0;
+      {members.map((member) => {
+        const isNegative = member.shareMinor < 0;
         return (
           <li key={member.memberId} className={styles.memberRow}>
             <span className={styles.memberName}>{member.name}</span>
             <span className={styles.memberAmountGroup}>
               <span className={`${styles.memberAmount} bb-numeral ${isNegative ? styles.memberAmountNegative : ""}`}>
-                {formatMoney(shareMinor, currency)}
+                {formatMoney(member.shareMinor, currency)}
               </span>
               {isNegative ? <span className={styles.negativeBadge}>{t("expense.result.negativeBadge")}</span> : null}
             </span>
@@ -59,63 +79,53 @@ function MemberShareList({ members, sharesMinor, currency }: MemberShareListProp
 }
 
 interface ChargeBreakdownListProps {
-  readonly charges: readonly ChargeDraft[];
-  readonly perCharge: readonly { readonly chargeTotalMinor: number }[];
-  readonly members: readonly ExpenseDraftMember[];
+  readonly charges: ExpenseSummary["charges"];
   readonly currency: string;
 }
 
-function ChargeBreakdownList({ charges, perCharge, members, currency }: ChargeBreakdownListProps) {
+function ChargeBreakdownList({ charges, currency }: ChargeBreakdownListProps) {
   return (
     <ul className={styles.chargeList}>
-      {charges.map((charge, index) => {
-        const totalMinor = perCharge.at(index)?.chargeTotalMinor ?? 0;
-        const sponsorName =
-          charge.allocationMode === "single_payer"
-            ? members.find((member) => member.memberId === charge.allocationMemberId)?.name
-            : undefined;
-        return (
-          <li key={charge.id} className={styles.chargeRow}>
-            <div className={styles.chargeRowMain}>
-              <div>
-                <div className={styles.chargeName}>{chargeName(charge, index)}</div>
-                <div className={styles.chargeRule}>
-                  {chargeValueLabel(charge, currency)} · {t(ALLOCATION_LABEL_KEY[charge.allocationMode])}
-                </div>
+      {charges.map((charge, index) => (
+        <li key={index} className={styles.chargeRow}>
+          <div className={styles.chargeRowMain}>
+            <div>
+              <div className={styles.chargeName}>{displayChargeName(charge, index)}</div>
+              <div className={styles.chargeRule}>
+                {chargeValueLabel(charge.amount, currency)} · {t(ALLOCATION_LABEL_KEY[charge.allocationMode])}
               </div>
-              <span className={`${styles.chargeAmount} bb-numeral`}>{formatMoney(totalMinor, currency)}</span>
             </div>
-            {sponsorName !== undefined ? (
-              <div className={styles.sponsorNote}>
-                {t("expense.charge.sponsorNote", { name: sponsorName, amount: formatMoney(totalMinor, currency) })}
-              </div>
-            ) : null}
-          </li>
-        );
-      })}
+            <span className={`${styles.chargeAmount} bb-numeral`}>{formatMoney(charge.totalMinor, currency)}</span>
+          </div>
+          {charge.sponsorName !== undefined ? (
+            <div className={styles.sponsorNote}>
+              {t("expense.charge.sponsorNote", { name: charge.sponsorName, amount: formatMoney(charge.totalMinor, currency) })}
+            </div>
+          ) : null}
+        </li>
+      ))}
     </ul>
   );
 }
 
 interface TreatSentenceListProps {
-  readonly transfers: readonly TreatTransfer[];
-  readonly members: readonly ExpenseDraftMember[];
+  readonly treats: ExpenseSummary["treats"];
   readonly currency: string;
 }
 
-// Sentences are built from the engine's treatTransfers, never from the
-// draft's treats array — treatTransfers already reflects K-39's sequential
-// processing (a treat chain's real net effect), which the draft alone
-// can't tell you.
-function TreatSentenceList({ transfers, members, currency }: TreatSentenceListProps) {
+// Sentences are built from the engine's treatTransfers (via
+// buildExpenseSummary), never from the draft's treats array — treatTransfers
+// already reflects K-39's sequential processing (a treat chain's real net
+// effect), which the draft alone can't tell you.
+function TreatSentenceList({ treats, currency }: TreatSentenceListProps) {
   return (
     <ul className={styles.treatList}>
-      {transfers.map((transfer, index) => (
+      {treats.map((treat, index) => (
         <li key={index} className={styles.treatRow}>
           {t("expense.treat.transferSentence", {
-            sponsor: memberNameAt(members, transfer.sponsorIndex),
-            beneficiary: memberNameAt(members, transfer.beneficiaryIndex),
-            amount: formatMoney(transfer.amountMinor, currency),
+            sponsor: treat.sponsorName,
+            beneficiary: treat.beneficiaryName,
+            amount: formatMoney(treat.amountMinor, currency),
           })}
         </li>
       ))}
@@ -166,6 +176,10 @@ export interface ResultPanelProps {
   readonly result: ExpenseDraftResult;
 }
 
+function buildMemberInfoMap(members: readonly ExpenseDraftMember[]): ReadonlyMap<string, ExpenseMemberInfo> {
+  return new Map(members.map((member) => [member.memberId, { memberId: member.memberId, name: member.name, color: member.color }]));
+}
+
 // Only renders once there's something beyond the plain split to show —
 // mirrors the mockup's "Biaya tambahan (Penuh only)" gating, and keeps
 // every screen that never touches charges/treats byte-for-byte unchanged.
@@ -178,19 +192,33 @@ export function ResultPanel({ members, charges, treatCount, currency, result }: 
       {!result.ready ? (
         <p className={styles.notReady}>{t(NOT_READY_MESSAGE_KEY[result.reason])}</p>
       ) : (
-        <>
-          <MemberShareList members={members} sharesMinor={result.calculation.sharesMinor} currency={currency} />
-          {charges.length > 0 ? (
-            <ChargeBreakdownList charges={charges} perCharge={result.calculation.perCharge} members={members} currency={currency} />
-          ) : null}
-          {result.calculation.treatTransfers.length > 0 ? (
-            <TreatSentenceList transfers={result.calculation.treatTransfers} members={members} currency={currency} />
-          ) : null}
-          {result.calculation.warnings.length > 0 ? (
-            <WarningList warnings={result.calculation.warnings} currency={currency} />
-          ) : null}
-        </>
+        <ReadyResultBody members={members} charges={charges} currency={currency} calculation={result.calculation} />
       )}
     </div>
+  );
+}
+
+interface ReadyResultBodyProps {
+  readonly members: readonly ExpenseDraftMember[];
+  readonly charges: readonly ChargeDraft[];
+  readonly currency: string;
+  readonly calculation: ExpenseCalculation;
+}
+
+function ReadyResultBody({ members, charges, currency, calculation }: ReadyResultBodyProps) {
+  const summary: ExpenseSummary = buildExpenseSummary({
+    memberOrder: members.map((member) => member.memberId),
+    memberInfo: buildMemberInfoMap(members),
+    chargeMeta: charges.map(draftChargeToMeta),
+    calculation,
+  });
+
+  return (
+    <>
+      <MemberShareList members={summary.members} currency={currency} />
+      {summary.charges.length > 0 ? <ChargeBreakdownList charges={summary.charges} currency={currency} /> : null}
+      {summary.treats.length > 0 ? <TreatSentenceList treats={summary.treats} currency={currency} /> : null}
+      {summary.warnings.length > 0 ? <WarningList warnings={summary.warnings} currency={currency} /> : null}
+    </>
   );
 }

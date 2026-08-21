@@ -1,0 +1,60 @@
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.daySeparator {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-4) var(--sp-2);
+}
+
+.dayLabel {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+}
+
+.daySubtotal {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.dayCard {
+  background: var(--surface);
+  margin: 0 var(--sp-4) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--sp-6);
+  gap: var(--sp-4);
+}
+
+.emptyArt {
+  font-size: var(--fs-large);
+}
+
+.emptyHeading {
+  margin: 0;
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+}
+
+.emptyBody {
+  margin: 0;
+  font-size: var(--fs-footnote);
+  color: var(--text-muted);
+  line-height: var(--line-relaxed);
+  max-width: var(--size-loadfail-message-max);
+}
