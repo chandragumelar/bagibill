@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ChangeEvent, type ReactNode } from "react";
 import { t, formatMoney } from "@/lib/i18n";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
 import { Screen } from "@/app/layout/Screen/Screen";
@@ -13,18 +13,20 @@ import {
   toCreateExpenseInput,
   type ChargeDraft,
   type ExpenseDraft,
+  type ExpenseDraftMember,
   type ExpenseSplitMode,
   type TreatDraft,
 } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
-import { WeightStepper } from "./WeightStepper";
+import { DeviationBar } from "./DeviationBar";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
+import stepperStyles from "./WeightStepper.module.css";
 
 // Kept identical to the other forms' mode row — duplicated rather than
-// shared, see progress.md Catatan lepas.
+// shared, same reasoning as ExpenseFormPorsi (progress.md Catatan lepas).
 const SPLIT_MODE_KEYS = ["evenly", "byAmounts", "byPercentage", "byWeights", "byAdjustment", "byItems"] as const;
 type SplitModeKey = (typeof SPLIT_MODE_KEYS)[number];
 
@@ -59,7 +61,88 @@ function initialsFromName(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export interface ExpenseFormPorsiProps {
+// Mockup's own step size for the adjustment stepper (Rp5.000 per tap) — the
+// only currency in gelombang 1 is zero-decimal IDR, same scope MoneyInput
+// itself is limited to (F0-05).
+const ADJUSTMENT_STEP_MINOR = 5_000;
+
+function sanitizeAdjustmentText(raw: string): string {
+  const isNegative = raw.trimStart().startsWith("-");
+  const digits = raw.replace(/[^0-9]/g, "");
+  return isNegative ? `-${digits}` : digits;
+}
+
+function parseAdjustmentText(text: string): number | undefined {
+  if (text === "" || text === "-") return undefined;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+interface AdjustmentStepperProps {
+  readonly memberName: string;
+  readonly adjustmentMinor: number;
+  readonly currency: string;
+  readonly onChange: (adjustmentMinor: number) => void;
+}
+
+// Signed minor-unit input, mirroring WeightStepper's pill shell (same CSS
+// module) — MoneyInput can't be reused here because it strips the minus
+// sign entirely (F0-05: built for positive amounts only).
+function AdjustmentStepper({ memberName, adjustmentMinor, currency, onChange }: AdjustmentStepperProps) {
+  const [text, setText] = useState(() => String(adjustmentMinor));
+  const [syncedAdjustmentMinor, setSyncedAdjustmentMinor] = useState(adjustmentMinor);
+  if (adjustmentMinor !== syncedAdjustmentMinor) {
+    setSyncedAdjustmentMinor(adjustmentMinor);
+    setText(String(adjustmentMinor));
+  }
+
+  function handleChange(event: ChangeEvent<HTMLInputElement>): void {
+    const nextText = sanitizeAdjustmentText(event.target.value);
+    setText(nextText);
+    const parsed = parseAdjustmentText(nextText);
+    if (parsed !== undefined) onChange(parsed);
+  }
+
+  function handleBlur(): void {
+    const parsed = parseAdjustmentText(text);
+    const finalAdjustmentMinor = parsed ?? adjustmentMinor;
+    if (finalAdjustmentMinor !== adjustmentMinor) onChange(finalAdjustmentMinor);
+    setText(String(finalAdjustmentMinor));
+  }
+
+  return (
+    <div className={stepperStyles.pill}>
+      <button
+        type="button"
+        className={stepperStyles.stepButton}
+        onClick={() => onChange(adjustmentMinor - ADJUSTMENT_STEP_MINOR)}
+        aria-label={t("expense.deviation.decrease", { name: memberName })}
+      >
+        −
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        className={`${stepperStyles.value} bb-numeral`}
+        value={text === "0" ? "" : text}
+        placeholder={formatMoney(0, currency)}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        aria-label={t("expense.deviation.inputLabel", { name: memberName })}
+      />
+      <button
+        type="button"
+        className={stepperStyles.stepButton}
+        onClick={() => onChange(adjustmentMinor + ADJUSTMENT_STEP_MINOR)}
+        aria-label={t("expense.deviation.increase", { name: memberName })}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+export interface ExpenseFormSelisihProps {
   readonly slug: string;
   readonly header: ReactNode;
   readonly draft: ExpenseDraft;
@@ -67,7 +150,7 @@ export interface ExpenseFormPorsiProps {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
-  readonly setWeight: (memberId: string, weight: number) => void;
+  readonly setAdjustmentMinor: (memberId: string, adjustmentMinor: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
   readonly addEmptyCharge: () => void;
@@ -79,9 +162,7 @@ export interface ExpenseFormPorsiProps {
   readonly removeTreat: (id: string) => void;
 }
 
-const PERCENT_MULTIPLIER = 100;
-
-export function ExpenseFormPorsi({
+export function ExpenseFormSelisih({
   slug,
   header,
   draft,
@@ -89,7 +170,7 @@ export function ExpenseFormPorsi({
   setTitle,
   setAmountMinor,
   setMode,
-  setWeight,
+  setAdjustmentMinor,
   toggleMember,
   checkAllMembers,
   addEmptyCharge,
@@ -99,20 +180,35 @@ export function ExpenseFormPorsi({
   addTreat,
   updateTreat,
   removeTreat,
-}: ExpenseFormPorsiProps) {
+}: ExpenseFormSelisihProps) {
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const checkedCount = draft.members.filter((member) => member.checked).length;
   const checkedMembers = draft.members.filter((member) => member.checked);
-  const totalWeight = checkedMembers.reduce((sum, member) => sum + member.weight, 0);
+  const checkedCount = checkedMembers.length;
   const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
+  // Visual scale for every row's bar, shared across the group — comparing
+  // magnitudes for a proportion, not deciding any money allocation.
+  const maxAbsAdjustmentMinor = Math.max(1, ...checkedMembers.map((member) => Math.abs(member.adjustmentMinor)));
 
   function shareFor(memberId: string): number | undefined {
     if (!result.ready) return undefined;
     const index = result.memberOrder.indexOf(memberId);
     return index === -1 ? undefined : result.calculation.sharesMinor[index];
   }
+
+  // The even-share reference ("bagian rata") shown once above the list —
+  // read off the engine's own result (shareMinor minus the known
+  // adjustment), never recomputed by re-deriving the split here.
+  function evenShareMinorFor(members: readonly ExpenseDraftMember[]): number | undefined {
+    const first = members[0];
+    if (first === undefined) return undefined;
+    const firstShareMinor = shareFor(first.memberId);
+    if (firstShareMinor === undefined) return undefined;
+    return firstShareMinor - first.adjustmentMinor;
+  }
+
+  const evenShareMinor = evenShareMinorFor(checkedMembers);
 
   async function handleSave(): Promise<void> {
     const input = toCreateExpenseInput(draft, {
@@ -133,12 +229,9 @@ export function ExpenseFormPorsi({
     }
   }
 
-  // Porsi shares aren't uniform like Rata's, so the panel's second number
-  // is the largest share rather than a "per person" figure that wouldn't
-  // mean the same thing for everyone (mockup: panelRightLabel "terbesar").
-  const rightLabel = result.ready ? t("expense.result.largest") : t("expense.result.status");
+  const rightLabel = result.ready ? t("expense.result.perPerson") : t("expense.result.status");
   const rightValue = result.ready
-    ? formatMoney(Math.max(...result.calculation.sharesMinor), draft.currency)
+    ? formatMoney(result.calculation.sharesMinor[0] ?? 0, draft.currency)
     : t(NOT_READY_MESSAGE_KEY[result.reason]);
 
   return (
@@ -226,27 +319,8 @@ export function ExpenseFormPorsi({
           })}
         </div>
 
-        <div className={styles.explainerBox}>
-          <span className={styles.explainerTitle}>{t("expense.porsi.explainerTitle")}</span>{" "}
-          <span className={styles.explainerBody}>{t("expense.porsi.explainerBody")}</span>
-        </div>
-
-        {totalWeight > 0 ? (
-          <>
-            <div className={styles.proportionBar}>
-              {checkedMembers.map((member) => (
-                <div
-                  key={member.memberId}
-                  className={styles.proportionSegment}
-                  style={{ width: `${((member.weight / totalWeight) * PERCENT_MULTIPLIER).toFixed(3)}%`, background: `var(${member.color})` }}
-                />
-              ))}
-            </div>
-            <div className={styles.proportionMeta}>
-              <span>{t("expense.porsi.totalWeight", { count: totalWeight })}</span>
-              <span>{t("expense.porsi.boxHint")}</span>
-            </div>
-          </>
+        {evenShareMinor !== undefined ? (
+          <p className={styles.explainerBody}>{t("expense.deviation.evenShare", { amount: formatMoney(evenShareMinor, draft.currency) })}</p>
         ) : null}
 
         <div className={styles.participantList}>
@@ -271,19 +345,23 @@ export function ExpenseFormPorsi({
                 key={member.memberId}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
                 trailing={
-                  <div className={styles.weightTrailing}>
-                    <WeightStepper
-                      memberName={member.name}
-                      weight={member.weight}
-                      onChange={(weight) => setWeight(member.memberId, weight)}
-                    />
-                    <span className={`${styles.amount} bb-numeral`}>
-                      {shareMinor === undefined ? "—" : formatMoney(shareMinor, draft.currency)}
-                    </span>
-                  </div>
+                  <AdjustmentStepper
+                    memberName={member.name}
+                    adjustmentMinor={member.adjustmentMinor}
+                    currency={draft.currency}
+                    onChange={(adjustmentMinor) => setAdjustmentMinor(member.memberId, adjustmentMinor)}
+                  />
                 }
               >
                 <span className={styles.memberName}>{member.name}</span>
+                {shareMinor !== undefined ? (
+                  <DeviationBar
+                    shareMinor={shareMinor}
+                    adjustmentMinor={member.adjustmentMinor}
+                    maxAbsAdjustmentMinor={maxAbsAdjustmentMinor}
+                    currency={draft.currency}
+                  />
+                ) : null}
               </ListRow>
             );
           })}

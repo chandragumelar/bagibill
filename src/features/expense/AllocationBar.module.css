@@ -1,0 +1,55 @@
+.wrap {
+  margin-bottom: var(--sp-4);
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  height: var(--sp-6);
+  border-radius: var(--r-field);
+  overflow: hidden;
+  background: var(--surface-sunken);
+  margin-bottom: var(--sp-2);
+}
+
+.segment {
+  min-width: var(--border-width-thick);
+  transition: width var(--dur-base) var(--ease-standard);
+}
+
+.hatch {
+  background-image: repeating-linear-gradient(45deg, var(--n-4) 0 var(--sp-1), transparent var(--sp-1) var(--sp-2));
+}
+
+.target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--border-width-thick);
+  background: var(--text);
+  opacity: 0.5;
+}
+
+.readbox {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-field);
+  font-size: var(--fs-footnote);
+}
+
+.readboxExact {
+  background: var(--state-exact-tint);
+  color: var(--state-exact-text);
+}
+
+.readboxUnder {
+  background: var(--state-under-tint);
+  color: var(--state-under-text);
+}
+
+.readboxOver {
+  background: var(--state-over-tint);
+  color: var(--state-over-text);
+}

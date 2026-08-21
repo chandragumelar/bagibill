@@ -6,9 +6,9 @@ import { TreatEditor } from "./TreatEditor";
 import type { ExpenseDraftMember, TreatDraft } from "./expense-draft";
 
 const MEMBERS: readonly ExpenseDraftMember[] = [
-  { memberId: "m1", name: "Andi", color: "--m-1", checked: true, weight: 1 },
-  { memberId: "m2", name: "Rina", color: "--m-2", checked: true, weight: 1 },
-  { memberId: "m3", name: "Budi", color: "--m-3", checked: false, weight: 1 },
+  { memberId: "m1", name: "Andi", color: "--m-1", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+  { memberId: "m2", name: "Rina", color: "--m-2", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+  { memberId: "m3", name: "Budi", color: "--m-3", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
 ];
 
 const CHECKED_MEMBERS = MEMBERS.filter((member) => member.checked);

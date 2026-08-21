@@ -22,19 +22,16 @@ import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 
-// Six modes share one screen (mockup-inventory 1.1). Rata is the only one
-// wired up — F3-02..F3-04 enable the rest — but rendering all six disabled
-// is what keeps this screen's shape matching the mockup now instead of
-// getting rebuilt three tasks from now (plan.md F3-01).
+// Six modes share one screen (mockup-inventory 1.1). Per item is the only
+// one without a form yet (fase 2's assign UI, K-02/K-03) — the other five
+// are all wired up as of F3-04.
 const SPLIT_MODE_KEYS = ["evenly", "byAmounts", "byPercentage", "byWeights", "byAdjustment", "byItems"] as const;
 type SplitModeKey = (typeof SPLIT_MODE_KEYS)[number];
 
-// Only these two modes have a screen wired up yet (F3-01, F3-02) — the
-// other four stay disabled pills until F3-03/F3-04 build their forms. A
-// type guard (not a Set + cast) so a click handler can call setMode with a
+// A type guard (not a Set + cast) so a click handler can call setMode with a
 // narrowed ExpenseSplitMode instead of asserting one.
 function isInteractiveMode(mode: SplitModeKey): mode is ExpenseSplitMode {
-  return mode === "evenly" || mode === "byWeights";
+  return mode !== "byItems";
 }
 
 const MODE_LABEL_KEY: Record<SplitModeKey, string> = {

@@ -10,6 +10,7 @@ import { expenseRepository } from "@/lib/storage/repositories";
 import type { CategoryKey } from "@/lib/storage/templates";
 import {
   NOT_READY_MESSAGE_KEY,
+  hasAllocationMismatchWarning,
   toCreateExpenseInput,
   type ChargeDraft,
   type ExpenseDraft,
@@ -17,14 +18,14 @@ import {
   type TreatDraft,
 } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
-import { WeightStepper } from "./WeightStepper";
+import { AllocationBar } from "./AllocationBar";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 
 // Kept identical to the other forms' mode row — duplicated rather than
-// shared, see progress.md Catatan lepas.
+// shared, same reasoning as ExpenseFormPorsi (progress.md Catatan lepas).
 const SPLIT_MODE_KEYS = ["evenly", "byAmounts", "byPercentage", "byWeights", "byAdjustment", "byItems"] as const;
 type SplitModeKey = (typeof SPLIT_MODE_KEYS)[number];
 
@@ -59,7 +60,7 @@ function initialsFromName(name: string): string {
   return (first + last).toUpperCase();
 }
 
-export interface ExpenseFormPorsiProps {
+export interface ExpenseFormNominalProps {
   readonly slug: string;
   readonly header: ReactNode;
   readonly draft: ExpenseDraft;
@@ -67,7 +68,7 @@ export interface ExpenseFormPorsiProps {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
-  readonly setWeight: (memberId: string, weight: number) => void;
+  readonly setMemberAmountMinor: (memberId: string, amountMinor: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
   readonly addEmptyCharge: () => void;
@@ -79,9 +80,13 @@ export interface ExpenseFormPorsiProps {
   readonly removeTreat: (id: string) => void;
 }
 
-const PERCENT_MULTIPLIER = 100;
+function resultRightValue(result: ExpenseDraftResult, canSave: boolean, currency: string): string {
+  if (!result.ready) return t(NOT_READY_MESSAGE_KEY[result.reason]);
+  if (canSave) return formatMoney(0, currency);
+  return t(NOT_READY_MESSAGE_KEY.amountsNotBalanced);
+}
 
-export function ExpenseFormPorsi({
+export function ExpenseFormNominal({
   slug,
   header,
   draft,
@@ -89,7 +94,7 @@ export function ExpenseFormPorsi({
   setTitle,
   setAmountMinor,
   setMode,
-  setWeight,
+  setMemberAmountMinor,
   toggleMember,
   checkAllMembers,
   addEmptyCharge,
@@ -99,20 +104,19 @@ export function ExpenseFormPorsi({
   addTreat,
   updateTreat,
   removeTreat,
-}: ExpenseFormPorsiProps) {
+}: ExpenseFormNominalProps) {
   const [saveError, setSaveError] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const checkedCount = draft.members.filter((member) => member.checked).length;
   const checkedMembers = draft.members.filter((member) => member.checked);
-  const totalWeight = checkedMembers.reduce((sum, member) => sum + member.weight, 0);
+  const checkedCount = checkedMembers.length;
   const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
 
-  function shareFor(memberId: string): number | undefined {
-    if (!result.ready) return undefined;
-    const index = result.memberOrder.indexOf(memberId);
-    return index === -1 ? undefined : result.calculation.sharesMinor[index];
-  }
+  // Nominal always computes (splitByAmounts only warns on a mismatch, it
+  // never throws), so result.ready is never false here just because the
+  // amounts don't add up yet — the mismatch is read from the calculation's
+  // own warnings instead, the same signal AllocationBar reads.
+  const canSave = result.ready && !hasAllocationMismatchWarning(result.calculation.warnings);
 
   async function handleSave(): Promise<void> {
     const input = toCreateExpenseInput(draft, {
@@ -133,13 +137,8 @@ export function ExpenseFormPorsi({
     }
   }
 
-  // Porsi shares aren't uniform like Rata's, so the panel's second number
-  // is the largest share rather than a "per person" figure that wouldn't
-  // mean the same thing for everyone (mockup: panelRightLabel "terbesar").
-  const rightLabel = result.ready ? t("expense.result.largest") : t("expense.result.status");
-  const rightValue = result.ready
-    ? formatMoney(Math.max(...result.calculation.sharesMinor), draft.currency)
-    : t(NOT_READY_MESSAGE_KEY[result.reason]);
+  const rightLabel = result.ready ? t("expense.result.amountsExact") : t("expense.result.status");
+  const rightValue = resultRightValue(result, canSave, draft.currency);
 
   return (
     <Screen
@@ -157,15 +156,13 @@ export function ExpenseFormPorsi({
             <div className={styles.resultRight}>
               <div className={styles.resultKicker}>{rightLabel}</div>
               <div
-                className={`${styles.resultRightValue} bb-numeral ${
-                  result.ready ? styles.resultRightReady : styles.resultRightPending
-                }`}
+                className={`${styles.resultRightValue} bb-numeral ${canSave ? styles.resultRightReady : styles.resultRightPending}`}
               >
                 {rightValue}
               </div>
             </div>
           </div>
-          <Button onClick={() => void handleSave()} disabled={!result.ready || saving}>
+          <Button onClick={() => void handleSave()} disabled={!canSave || saving}>
             {t("expense.save.button")}
           </Button>
         </BottomBar>
@@ -226,32 +223,26 @@ export function ExpenseFormPorsi({
           })}
         </div>
 
-        <div className={styles.explainerBox}>
-          <span className={styles.explainerTitle}>{t("expense.porsi.explainerTitle")}</span>{" "}
-          <span className={styles.explainerBody}>{t("expense.porsi.explainerBody")}</span>
-        </div>
-
-        {totalWeight > 0 ? (
-          <>
-            <div className={styles.proportionBar}>
-              {checkedMembers.map((member) => (
-                <div
-                  key={member.memberId}
-                  className={styles.proportionSegment}
-                  style={{ width: `${((member.weight / totalWeight) * PERCENT_MULTIPLIER).toFixed(3)}%`, background: `var(${member.color})` }}
-                />
-              ))}
-            </div>
-            <div className={styles.proportionMeta}>
-              <span>{t("expense.porsi.totalWeight", { count: totalWeight })}</span>
-              <span>{t("expense.porsi.boxHint")}</span>
-            </div>
-          </>
+        {result.ready ? (
+          <AllocationBar
+            members={checkedMembers.map((member, index) => ({
+              memberId: member.memberId,
+              color: member.color,
+              shareMinor: result.calculation.sharesMinor[index] ?? 0,
+            }))}
+            totalMinor={draft.amountMinor}
+            currency={draft.currency}
+            warnings={result.calculation.warnings}
+          />
         ) : null}
 
         <div className={styles.participantList}>
           {draft.members.map((member) => {
-            const shareMinor = shareFor(member.memberId);
+            // A checked row's trailing holds a real MoneyInput — ListRow
+            // renders as a <button> when given onClick (K-82), and a real
+            // input inside a button is both invalid HTML and a bug (typing
+            // in it would bubble a click that un-checks the member). So only
+            // an unchecked row (plain text trailing) gets the re-include tap.
             if (!member.checked) {
               return (
                 <ListRow
@@ -271,16 +262,12 @@ export function ExpenseFormPorsi({
                 key={member.memberId}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
                 trailing={
-                  <div className={styles.weightTrailing}>
-                    <WeightStepper
-                      memberName={member.name}
-                      weight={member.weight}
-                      onChange={(weight) => setWeight(member.memberId, weight)}
-                    />
-                    <span className={`${styles.amount} bb-numeral`}>
-                      {shareMinor === undefined ? "—" : formatMoney(shareMinor, draft.currency)}
-                    </span>
-                  </div>
+                  <MoneyInput
+                    label={t("expense.amount.memberLabel", { name: member.name })}
+                    prefix={draft.currency}
+                    amountMinor={member.amountMinor}
+                    onChange={(amountMinor) => setMemberAmountMinor(member.memberId, amountMinor)}
+                  />
                 }
               >
                 <span className={styles.memberName}>{member.name}</span>

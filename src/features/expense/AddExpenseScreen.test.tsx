@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { calculateExpense } from "@bagibill/split-engine";
 import { db } from "@/lib/storage/schema";
 import { createDexieAdapter } from "@/lib/storage/adapter";
@@ -67,8 +67,28 @@ function renderScreen() {
   return render(<AppRouter routes={[{ path: "/g/:slug/add", Component: AddExpenseScreen }]} fallbackPath="/app" />);
 }
 
+// Several mode-pill labels collide with unrelated field labels elsewhere on
+// the same screen ("Amount"/"Percent" also name the amount field and a
+// charge's value-kind toggle) — queries are scoped to the mode pill group
+// itself so they can't accidentally hit the wrong element.
+function modePill(key: string): HTMLElement {
+  return within(screen.getByRole("group", { name: t("expense.mode.groupLabel") })).getByText(t(key));
+}
+
 function switchToPorsi(): void {
-  fireEvent.click(screen.getByText(t("expense.mode.byWeights")));
+  fireEvent.click(modePill("expense.mode.byWeights"));
+}
+
+function switchToNominal(): void {
+  fireEvent.click(modePill("expense.mode.byAmounts"));
+}
+
+function switchToPersen(): void {
+  fireEvent.click(modePill("expense.mode.byPercentage"));
+}
+
+function switchToSelisih(): void {
+  fireEvent.click(modePill("expense.mode.adjustment"));
 }
 
 function typeAmount(rawDigits: string): void {
@@ -274,5 +294,204 @@ describe("AddExpenseScreen", () => {
     }
 
     expect(screen.getAllByText(renderedMoney(3_000, "IDR")).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("all five interactive modes can be selected and the form switches; Per Item stays disabled", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+
+    for (const key of [
+      "expense.mode.byAmounts",
+      "expense.mode.byPercentage",
+      "expense.mode.byWeights",
+      "expense.mode.adjustment",
+      "expense.mode.evenly",
+    ]) {
+      fireEvent.click(modePill(key));
+      expect(modePill(key)).toHaveAttribute("aria-pressed", "true");
+    }
+
+    expect(modePill("expense.mode.byItems")).toBeDisabled();
+  });
+
+  it("amount, member selection, charges, and treats survive switching across every mode", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    fireEvent.click(screen.getByText(t("expense.charge.loadPreset")));
+    fireEvent.click(screen.getByText(t("expense.treat.add")));
+    // "Sarah" also names <select> options in the treat editor by this point
+    // — the participant row's name renders first in document order.
+    fireEvent.click(screen.getAllByText("Sarah")[0] as HTMLElement);
+
+    for (const switchTo of [
+      switchToNominal,
+      switchToPersen,
+      switchToPorsi,
+      switchToSelisih,
+      () => fireEvent.click(modePill("expense.mode.evenly")),
+    ]) {
+      switchTo();
+      expect(screen.getAllByText(renderedMoney(10_000, "IDR")).length).toBeGreaterThan(0);
+      expect(screen.getByText(t("expense.participants.excluded"))).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Service charge")).toBeInTheDocument();
+      expect(screen.getAllByLabelText(t("expense.treat.remove"))).toHaveLength(1);
+    }
+  });
+
+  it("saves a byAmounts split expense with the entries the repository expects", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    switchToNominal();
+
+    fireEvent.change(screen.getByLabelText(t("expense.amount.memberLabel", { name: "Farhan Maulana" })), {
+      target: { value: "6000" },
+    });
+    fireEvent.change(screen.getByLabelText(t("expense.amount.memberLabel", { name: "Sarah" })), {
+      target: { value: "4000" },
+    });
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    const stored = expenses[0];
+    if (stored === undefined) throw new Error("expected one stored expense");
+    expect(stored.splitData).toEqual({
+      mode: "byAmounts",
+      entries: [
+        { memberId: "m1", amountMinor: 6_000 },
+        { memberId: "m2", amountMinor: 4_000 },
+      ],
+    });
+
+    const recalculated = calculateExpense(toEngineCalculationInput(stored));
+    expect(recalculated.sharesMinor).toEqual([6_000, 4_000]);
+  });
+
+  it("saves a byPercentage split expense with the entries the repository expects", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    switchToPersen();
+
+    fireEvent.change(screen.getByLabelText(t("expense.percentage.inputLabel", { name: "Farhan Maulana" })), {
+      target: { value: "60" },
+    });
+    fireEvent.change(screen.getByLabelText(t("expense.percentage.inputLabel", { name: "Sarah" })), {
+      target: { value: "40" },
+    });
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    const stored = expenses[0];
+    if (stored === undefined) throw new Error("expected one stored expense");
+    expect(stored.splitData).toEqual({
+      mode: "byPercentage",
+      entries: [
+        { memberId: "m1", percent: 60 },
+        { memberId: "m2", percent: 40 },
+      ],
+    });
+
+    const recalculated = calculateExpense(toEngineCalculationInput(stored));
+    expect(recalculated.sharesMinor).toEqual([6_000, 4_000]);
+  });
+
+  it("saves a byAdjustment split expense with the entries the repository expects", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    switchToSelisih();
+
+    fireEvent.change(screen.getByLabelText(t("expense.deviation.inputLabel", { name: "Farhan Maulana" })), {
+      target: { value: "2000" },
+    });
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    const stored = expenses[0];
+    if (stored === undefined) throw new Error("expected one stored expense");
+    expect(stored.splitData).toEqual({
+      mode: "byAdjustment",
+      entries: [
+        { memberId: "m1", adjustmentMinor: 2_000 },
+        { memberId: "m2", adjustmentMinor: 0 },
+      ],
+    });
+
+    // total 10,000 minus 2,000 adjustment = 8,000 split evenly (4,000 each),
+    // then Farhan's own +2,000 is added back on top (F1-04).
+    const recalculated = calculateExpense(toEngineCalculationInput(stored));
+    expect(recalculated.sharesMinor).toEqual([6_000, 4_000]);
+  });
+
+  it("disables save on an unbalanced Nominal split, with a message naming the mismatch", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    switchToNominal();
+
+    fireEvent.change(screen.getByLabelText(t("expense.amount.memberLabel", { name: "Farhan Maulana" })), {
+      target: { value: "6000" },
+    });
+    // Sarah stays at 0 — under-allocated by 4,000, not exactly the total.
+
+    expect(screen.getByText(t("expense.save.button"))).toBeDisabled();
+    expect(screen.getAllByText(t("expense.result.amountsNotBalanced")).length).toBeGreaterThan(0);
+  });
+
+  it("disables save on an out-of-tolerance Persen split, with a message naming the mismatch", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    switchToPersen();
+
+    fireEvent.change(screen.getByLabelText(t("expense.percentage.inputLabel", { name: "Farhan Maulana" })), {
+      target: { value: "30" },
+    });
+    // Sarah stays at 0 — total is 30%, nowhere near the 1 basis point tolerance around 100%.
+
+    expect(screen.getByText(t("expense.save.button"))).toBeDisabled();
+    expect(screen.getAllByText(t("expense.result.percentageOutOfTolerance")).length).toBeGreaterThan(0);
+  });
+
+  it("a Persen split within the 1 basis point tolerance (99.99%) can still be saved", async () => {
+    await seedGroupThree();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("9000");
+    switchToPersen();
+
+    fireEvent.click(screen.getByText(t("expense.percentage.spreadRemaining")));
+    // Ratakan sisa on three equally-zero members gives 33.34/33.33/33.33 —
+    // sums to exactly 100, already within tolerance, and stays that way.
+    expect(screen.getByText(t("expense.save.button"))).not.toBeDisabled();
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    expect(expenses).toHaveLength(1);
   });
 });

@@ -9,7 +9,10 @@ import { GROUP_TEMPLATES, type CategoryKey } from "@/lib/storage/templates";
 import type { DraftInit } from "./expense-draft";
 import { useExpenseDraft } from "./use-expense-draft";
 import { ExpenseFormRata } from "./ExpenseFormRata";
+import { ExpenseFormNominal } from "./ExpenseFormNominal";
+import { ExpenseFormPersen } from "./ExpenseFormPersen";
 import { ExpenseFormPorsi } from "./ExpenseFormPorsi";
+import { ExpenseFormSelisih } from "./ExpenseFormSelisih";
 
 function firstCategoryForTemplate(templateKey: string): CategoryKey {
   const template = Object.values(GROUP_TEMPLATES).find((candidate) => candidate.key === templateKey);
@@ -32,16 +35,23 @@ interface ExpenseFormRouterProps {
 }
 
 // One draft, chosen by draft.mode which mode-specific form renders it — the
-// hook lives here, not inside either form, so switching modes never
-// remounts the draft and never resets title/amount/membership (plan.md F3-02).
+// hook lives here, not inside any form, so switching modes never remounts
+// the draft and never resets title/amount/membership (plan.md F3-02/F3-04).
 function ExpenseFormRouter({ slug, init, header }: ExpenseFormRouterProps) {
   const draftState = useExpenseDraft(init);
   const formProps = { slug, header, ...draftState };
-  return draftState.draft.mode === "byWeights" ? (
-    <ExpenseFormPorsi {...formProps} />
-  ) : (
-    <ExpenseFormRata {...formProps} />
-  );
+  switch (draftState.draft.mode) {
+    case "byAmounts":
+      return <ExpenseFormNominal {...formProps} />;
+    case "byPercentage":
+      return <ExpenseFormPersen {...formProps} />;
+    case "byWeights":
+      return <ExpenseFormPorsi {...formProps} />;
+    case "byAdjustment":
+      return <ExpenseFormSelisih {...formProps} />;
+    case "evenly":
+      return <ExpenseFormRata {...formProps} />;
+  }
 }
 
 // Reads group + member data are local IndexedDB, not network — per F0-07,
