@@ -33,7 +33,16 @@ function expenseRow(overrides: Partial<ExpenseTransactionRow> = {}): ExpenseTran
 }
 
 function item(overrides: Partial<TransactionListItem> = {}): TransactionListItem {
-  return { key: "e1", date: TODAY_MS, totalMinor: 60_000, row: expenseRow(), ...overrides };
+  return {
+    key: "e1",
+    date: TODAY_MS,
+    totalMinor: 60_000,
+    title: "Sate Padang",
+    notes: "",
+    participantMemberIds: [],
+    row: expenseRow(),
+    ...overrides,
+  };
 }
 
 describe("TransactionList", () => {

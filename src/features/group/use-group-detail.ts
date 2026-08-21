@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import type { ExpenseMemberInfo } from "@/lib/expense-summary";
 import { summarizeExpenseRecord } from "@/lib/expense-summary";
+import { resolveMemberOrder } from "@/lib/storage/expense-mapping";
 import { expenseRepository, groupRepository, memberRepository } from "@/lib/storage/repositories";
 import type { ExpenseRecord, GroupRecord, MemberRecord } from "@/lib/storage/records";
+import type { FilterableTransaction } from "./transaction-filter";
 import type { RowEffect, TransactionRowData } from "./TransactionRow";
 
-export interface TransactionListItem {
+export interface TransactionListItem extends FilterableTransaction {
   readonly key: string;
-  readonly date: number;
   /** The expense's own total, used for the day separator's subtotal. Zero for a broken row — its total can't be trusted. */
   readonly totalMinor: number;
   readonly row: TransactionRowData;
+}
+
+export interface FilterMemberOption {
+  readonly memberId: string;
+  readonly name: string;
 }
 
 export type GroupDetailState =
@@ -22,6 +28,7 @@ export type GroupDetailState =
       readonly group: GroupRecord;
       readonly currency: string;
       readonly items: readonly TransactionListItem[];
+      readonly members: readonly FilterMemberOption[];
     };
 
 // Every member ever in the group, active or not — a deactivated member's
@@ -98,6 +105,20 @@ function buildExpenseRow(
   }
 }
 
+// Best-effort, used only for filtering (never for money): splitData's own
+// participant list first, since that's who the expense actually involves —
+// every payer is already required to be among them or calculateExpense
+// itself would refuse the record. Falls back to payers alone when splitData
+// is too malformed even to read, which is exactly the "still readable off
+// the record" a broken row (F3-05) is left with.
+function resolveParticipantMemberIds(expense: ExpenseRecord): readonly string[] {
+  try {
+    return resolveMemberOrder(expense.splitData);
+  } catch {
+    return expense.payers.map((payer) => payer.memberId);
+  }
+}
+
 function buildItems(
   expenses: readonly ExpenseRecord[],
   group: GroupRecord,
@@ -108,8 +129,15 @@ function buildItems(
     key: expense.expenseId,
     date: expense.date,
     totalMinor: expense.amountTotalMinor,
+    title: expense.title,
+    notes: expense.notes,
+    participantMemberIds: resolveParticipantMemberIds(expense),
     row: buildExpenseRow(expense, group, memberInfo, currentMemberId),
   }));
+}
+
+function buildMemberOptions(members: readonly MemberRecord[]): readonly FilterMemberOption[] {
+  return members.map((member) => ({ memberId: member.memberId, name: member.name }));
 }
 
 // Loads group + members + expenses from local storage (IndexedDB via the
@@ -157,6 +185,7 @@ export function useGroupDetail(slug: string): GroupDetailState {
             group,
             currency: group.baseCurrency,
             items: buildItems(expenses, group, memberInfo, currentMemberId),
+            members: buildMemberOptions(members),
           },
         });
       } catch {

@@ -9,11 +9,16 @@ import { Topbar, TopbarButton } from "@/app/layout/Topbar/Topbar";
 import { navigate, useRouteParams } from "@/routes/router";
 import { Button } from "@/shared/ui/Button/Button";
 import { LoadFailure } from "@/shared/system";
-import { useGroupDetail, type GroupDetailState } from "./use-group-detail";
+import { FilterBar } from "./FilterBar";
+import { useGroupDetail, type FilterMemberOption, type GroupDetailState, type TransactionListItem } from "./use-group-detail";
+import { useTransactionFilter, type UseTransactionFilterResult } from "./use-transaction-filter";
 import { TransactionList } from "./TransactionList";
 import styles from "./GroupDetailScreen.module.css";
 
 type TabId = "transactions" | "balance" | "summary";
+
+const EMPTY_ITEMS: readonly TransactionListItem[] = [];
+const EMPTY_MEMBERS: readonly FilterMemberOption[] = [];
 
 function tabs(): Tab[] {
   return [
@@ -59,11 +64,13 @@ interface GroupDetailBodyProps {
   readonly slug: string;
   readonly state: Exclude<GroupDetailState, { status: "not-found" }>;
   readonly activeTab: TabId;
+  readonly transactionFilter: UseTransactionFilterResult<TransactionListItem>;
+  readonly members: readonly FilterMemberOption[];
 }
 
 // Data lokal (IndexedDB) tidak pernah dapat spinner (F0-07) — keadaan
 // "loading" cuma berarti belum ada apapun buat dirender, bukan skeleton.
-function GroupDetailBody({ slug, state, activeTab }: GroupDetailBodyProps) {
+function GroupDetailBody({ slug, state, activeTab, transactionFilter, members }: GroupDetailBodyProps) {
   if (state.status === "loading") return null;
   if (state.status === "error") {
     return (
@@ -77,12 +84,25 @@ function GroupDetailBody({ slug, state, activeTab }: GroupDetailBodyProps) {
   }
   if (activeTab === "balance") return <BalanceComingSoon />;
   return (
-    <TransactionList
-      items={state.items}
-      currency={state.currency}
-      nowMs={systemClock.now()}
-      onAddExpense={() => navigate(`/g/${slug}/add`)}
-    />
+    <>
+      <FilterBar
+        filter={transactionFilter.filter}
+        isActive={transactionFilter.isActive}
+        members={members}
+        onSearchTextChange={transactionFilter.setSearchText}
+        onMemberIdsChange={transactionFilter.setMemberIds}
+        onDateRangeChange={transactionFilter.setDateRange}
+        onClear={transactionFilter.clear}
+      />
+      <TransactionList
+        items={transactionFilter.filteredItems}
+        currency={state.currency}
+        nowMs={systemClock.now()}
+        onAddExpense={() => navigate(`/g/${slug}/add`)}
+        isFiltered={transactionFilter.isActive}
+        onClearFilter={transactionFilter.clear}
+      />
+    </>
   );
 }
 
@@ -90,6 +110,9 @@ export function GroupDetailScreen() {
   const { slug = "" } = useRouteParams();
   const [activeTab, setActiveTab] = useState<TabId>("transactions");
   const state = useGroupDetail(slug);
+  const items = state.status === "ready" ? state.items : EMPTY_ITEMS;
+  const members = state.status === "ready" ? state.members : EMPTY_MEMBERS;
+  const transactionFilter = useTransactionFilter(items);
 
   if (state.status === "not-found") return <NotFoundScreen />;
 
@@ -115,7 +138,7 @@ export function GroupDetailScreen() {
         ) : undefined
       }
     >
-      <GroupDetailBody slug={slug} state={state} activeTab={activeTab} />
+      <GroupDetailBody slug={slug} state={state} activeTab={activeTab} transactionFilter={transactionFilter} members={members} />
     </Screen>
   );
 }
