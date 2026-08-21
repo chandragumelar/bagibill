@@ -1,0 +1,112 @@
+.title {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  line-height: var(--line-tight);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.titleMuted {
+  color: var(--text-secondary);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+  flex-wrap: wrap;
+  row-gap: var(--sp-1);
+}
+
+.payer {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mark {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.fxBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--sp-1);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-semibold);
+  background: var(--n-2);
+  color: var(--text-secondary);
+}
+
+.effect {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.effectAmount {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.effectLabel {
+  font-size: var(--fs-caption2);
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+}
+
+.effectAmount.negative {
+  color: var(--neg-text);
+}
+
+.effectAmount.positive {
+  color: var(--pos-text);
+}
+
+.effectAmount.muted {
+  color: var(--text-muted);
+  font-weight: var(--fw-medium);
+}
+
+.settlementIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-pill);
+  border: var(--border-width-thick) dashed var(--pos);
+  color: var(--pos-text);
+  font-weight: var(--fw-bold);
+}
+
+.settlementTitle {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--pos-text);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.settlementFlow {
+  font-size: var(--fs-subhead);
+  color: var(--text);
+  font-weight: var(--fw-medium);
+  margin-top: var(--sp-1);
+}
+
+.broken {
+  padding: var(--sp-3);
+  font-size: var(--fs-footnote);
+  color: var(--text-muted);
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+}

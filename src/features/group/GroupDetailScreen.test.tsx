@@ -1,0 +1,109 @@
+import "fake-indexeddb/auto";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { db } from "@/lib/storage/schema";
+import { createDexieAdapter } from "@/lib/storage/adapter";
+import { expenseRepository } from "@/lib/storage/repositories";
+import { t } from "@/lib/i18n";
+import { AppRouter } from "@/routes/router";
+import { GroupDetailScreen } from "./GroupDetailScreen";
+
+beforeAll(async () => {
+  await db.open();
+});
+
+afterEach(async () => {
+  vi.restoreAllMocks();
+  window.history.pushState(null, "", "/");
+  await Promise.all([db.groups.clear(), db.members.clear(), db.expenses.clear()]);
+});
+
+async function seedGroup(): Promise<void> {
+  const adapter = createDexieAdapter(db);
+  await adapter.groups.put({
+    slug: "g1",
+    name: "Trip Bali",
+    baseCurrency: "IDR",
+    template: "trip",
+    createdAt: 1_000,
+    settings: { simplifyDebts: true, locked: false, archived: false },
+    seq: 0,
+  });
+  await adapter.members.put({ memberId: "m1", groupSlug: "g1", name: "Andi", color: "--m-1", joinedAt: 1_000, seq: 0 });
+  await adapter.members.put({ memberId: "m2", groupSlug: "g1", name: "Rina", color: "--m-2", joinedAt: 2_000, seq: 0 });
+}
+
+function renderScreen(slug: string): void {
+  window.history.pushState(null, "", `/g/${slug}`);
+  render(<AppRouter routes={[{ path: "/g/:slug", Component: GroupDetailScreen }]} fallbackPath="/app" />);
+}
+
+describe("GroupDetailScreen", () => {
+  it("shows the three tabs, Transaksi active by default", async () => {
+    await seedGroup();
+    renderScreen("g1");
+
+    expect(await screen.findByText("Trip Bali")).toBeInTheDocument();
+    const transactionsTab = screen.getByText(t("group.tab.transactions"));
+    expect(transactionsTab).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText(t("group.tab.balance"))).toBeInTheDocument();
+    expect(screen.getByText(t("group.tab.summary"))).toBeInTheDocument();
+    expect(screen.getByText(t("common.noExpensesYet"))).toBeInTheDocument();
+  });
+
+  it("shows an honest empty state for tab Saldo, nothing that looks broken", async () => {
+    await seedGroup();
+    renderScreen("g1");
+    await screen.findByText("Trip Bali");
+
+    screen.getByText(t("group.tab.balance")).click();
+
+    expect(await screen.findByText(t("group.balance.comingSoonHeading"))).toBeInTheDocument();
+    expect(screen.queryByText(t("common.noExpensesYet"))).not.toBeInTheDocument();
+  });
+
+  it("renders a not-found screen for a slug with no matching group", async () => {
+    renderScreen("no-such-group");
+    expect(await screen.findByText(t("group.notFound.heading"))).toBeInTheDocument();
+    expect(screen.getByText(t("group.notFound.body"))).toBeInTheDocument();
+  });
+
+  it("renders a full-screen load failure and can retry", async () => {
+    await seedGroup();
+    const spy = vi.spyOn(expenseRepository, "listExpensesByGroup").mockRejectedValueOnce(new Error("boom"));
+    renderScreen("g1");
+
+    expect(await screen.findByText(t("group.error.loadHeading"))).toBeInTheDocument();
+    spy.mockRestore();
+
+    screen.getByText(t("system.retry")).click();
+
+    await waitFor(() => {
+      expect(screen.getByText("Trip Bali")).toBeInTheDocument();
+    });
+  });
+
+  it("lists a saved expense once loading finishes", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense({
+      groupSlug: "g1",
+      title: "Sate Padang",
+      category: "food",
+      date: 1_000,
+      notes: "",
+      currency: "IDR",
+      fxRate: 1,
+      amountTotalMinor: 10_000,
+      payers: [{ memberId: "m1", amountMinor: 10_000 }],
+      splitData: { mode: "evenly", memberIds: ["m1", "m2"] },
+      charges: [],
+      items: [],
+      treats: [],
+      attachments: [],
+      createdBy: "m1",
+    });
+    renderScreen("g1");
+
+    expect(await screen.findByText("Sate Padang")).toBeInTheDocument();
+  });
+});
