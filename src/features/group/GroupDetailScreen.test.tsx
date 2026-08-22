@@ -58,8 +58,41 @@ describe("GroupDetailScreen", () => {
 
     screen.getByText(t("group.tab.balance")).click();
 
-    expect(await screen.findByText(t("group.balance.comingSoonHeading"))).toBeInTheDocument();
+    expect(await screen.findByText(t("group.balance.emptyHeading"))).toBeInTheDocument();
     expect(screen.queryByText(t("common.noExpensesYet"))).not.toBeInTheDocument();
+  });
+
+  it("connects the header's posisi-kamu card to the Saldo tab: tapping it flashes your row", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense({
+      groupSlug: "g1",
+      title: "Sate Padang",
+      category: "food",
+      date: 1_000,
+      notes: "",
+      currency: "IDR",
+      fxRate: 1,
+      amountTotalMinor: 10_000,
+      payers: [{ memberId: "m2", amountMinor: 10_000 }],
+      splitData: { mode: "evenly", memberIds: ["m1", "m2"] },
+      charges: [],
+      items: [],
+      treats: [],
+      attachments: [],
+      createdBy: "m1",
+    });
+    renderScreen("g1");
+    await screen.findByText("Trip Bali");
+
+    screen.getByText(t("group.tab.balance")).click();
+    await screen.findByText(t("group.balance.peopleHeading"));
+
+    const positionCard = screen.getByText(t("group.position.label")).closest("button");
+    expect(positionCard).not.toBeNull();
+    if (positionCard === null) throw new Error("expected the position card to be a button");
+    fireEvent.click(positionCard);
+
+    expect(document.querySelector('[class*="highlighted"]')).toBeInTheDocument();
   });
 
   it("renders a not-found screen for a slug with no matching group", async () => {
