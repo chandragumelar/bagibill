@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { t } from "@/lib/i18n";
+import { formatMoney, t } from "@/lib/i18n";
 import { systemClock } from "@/lib/storage/clock";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
-import { GroupHeader } from "@/app/layout/GroupHeader/GroupHeader";
+import { GroupHeader, type GroupHeaderPosition } from "@/app/layout/GroupHeader/GroupHeader";
 import { Screen } from "@/app/layout/Screen/Screen";
 import { TabBar, type Tab } from "@/app/layout/TabBar/TabBar";
 import { Topbar, TopbarButton } from "@/app/layout/Topbar/Topbar";
 import { navigate, useRouteParams } from "@/routes/router";
 import { Button } from "@/shared/ui/Button/Button";
 import { LoadFailure } from "@/shared/system";
+import { BalanceTab, useGroupBalance, type GroupBalanceState } from "@/features/settle";
 import { FilterBar } from "./FilterBar";
 import { useGroupDetail, type FilterMemberOption, type GroupDetailState, type TransactionListItem } from "./use-group-detail";
 import { useTransactionFilter, type UseTransactionFilterResult } from "./use-transaction-filter";
@@ -49,28 +50,19 @@ function NotFoundScreen() {
   );
 }
 
-// Tab Saldo belum berisi (F3-07) — keadaan kosong yang jujur menyebut
-// fiturnya belum ada, bukan spinner selamanya dan bukan angka karangan.
-function BalanceComingSoon() {
-  return (
-    <div className={styles.comingSoon}>
-      <p className={styles.comingSoonHeading}>{t("group.balance.comingSoonHeading")}</p>
-      <p className={styles.comingSoonBody}>{t("route.placeholder")}</p>
-    </div>
-  );
-}
-
 interface GroupDetailBodyProps {
   readonly slug: string;
   readonly state: Exclude<GroupDetailState, { status: "not-found" }>;
   readonly activeTab: TabId;
   readonly transactionFilter: UseTransactionFilterResult<TransactionListItem>;
   readonly members: readonly FilterMemberOption[];
+  readonly balance: GroupBalanceState;
+  readonly highlightSignal: number;
 }
 
 // Data lokal (IndexedDB) tidak pernah dapat spinner (F0-07) — keadaan
 // "loading" cuma berarti belum ada apapun buat dirender, bukan skeleton.
-function GroupDetailBody({ slug, state, activeTab, transactionFilter, members }: GroupDetailBodyProps) {
+function GroupDetailBody({ slug, state, activeTab, transactionFilter, members, balance, highlightSignal }: GroupDetailBodyProps) {
   if (state.status === "loading") return null;
   if (state.status === "error") {
     return (
@@ -82,7 +74,9 @@ function GroupDetailBody({ slug, state, activeTab, transactionFilter, members }:
       />
     );
   }
-  if (activeTab === "balance") return <BalanceComingSoon />;
+  if (activeTab === "balance") {
+    return <BalanceTab balance={balance} highlightSignal={highlightSignal} onAddExpense={() => navigate(`/g/${slug}/add`)} />;
+  }
   return (
     <>
       <FilterBar
@@ -106,10 +100,47 @@ function GroupDetailBody({ slug, state, activeTab, transactionFilter, members }:
   );
 }
 
+function positionSign(netMinor: number): GroupHeaderPosition["sign"] {
+  if (netMinor > 0) return "pos";
+  if (netMinor < 0) return "neg";
+  return "zero";
+}
+
+function positionSub(netMinor: number, directInboundCount: number, directOutboundCount: number): string {
+  if (netMinor === 0) return t("common.allSettled");
+  if (netMinor > 0) return t("group.position.creditSub", { count: directInboundCount });
+  return t("group.position.debtSub", { count: directOutboundCount });
+}
+
+// The header's "posisi kamu" card is the one and only place this number is
+// summarized (README's design decision) — the balance tab never repeats it,
+// it only points back here. Tapping the card while that tab is open flashes
+// the matching row instead of opening a second summary.
+function buildHeaderPosition(
+  balance: GroupBalanceState,
+  currency: string,
+  isBalanceTab: boolean,
+  onTapWhileOnBalanceTab: () => void,
+): GroupHeaderPosition {
+  if (balance.status !== "ready") {
+    return { amount: formatMoney(0, currency), sign: "zero", sub: t("group.position.empty"), highlighted: isBalanceTab };
+  }
+  const { netMinor, directInboundCount, directOutboundCount } = balance.position;
+  return {
+    amount: formatMoney(netMinor, currency),
+    sign: positionSign(netMinor),
+    sub: positionSub(netMinor, directInboundCount, directOutboundCount),
+    highlighted: isBalanceTab,
+    onClick: isBalanceTab ? onTapWhileOnBalanceTab : undefined,
+  };
+}
+
 export function GroupDetailScreen() {
   const { slug = "" } = useRouteParams();
   const [activeTab, setActiveTab] = useState<TabId>("transactions");
+  const [highlightSignal, setHighlightSignal] = useState(0);
   const state = useGroupDetail(slug);
+  const balance = useGroupBalance(slug);
   const items = state.status === "ready" ? state.items : EMPTY_ITEMS;
   const members = state.status === "ready" ? state.members : EMPTY_MEMBERS;
   const transactionFilter = useTransactionFilter(items);
@@ -117,16 +148,15 @@ export function GroupDetailScreen() {
   if (state.status === "not-found") return <NotFoundScreen />;
 
   const title = state.status === "ready" ? state.group.name : t("group.detail.titleFallback", { slug });
+  const positionCurrency = state.status === "ready" ? state.currency : "IDR";
+  const position = buildHeaderPosition(balance, positionCurrency, activeTab === "balance", () =>
+    setHighlightSignal((token) => token + 1),
+  );
 
   return (
     <Screen
       header={
-        <GroupHeader
-          title={title}
-          onBack={() => navigate("/app")}
-          onMenu={() => navigate(`/g/${slug}/members`)}
-          position={{ amount: "Rp 0", sign: "zero", sub: t("group.position.empty"), highlighted: activeTab === "balance" }}
-        >
+        <GroupHeader title={title} onBack={() => navigate("/app")} onMenu={() => navigate(`/g/${slug}/members`)} position={position}>
           <TabBar tabs={tabs()} activeId={activeTab} onSelect={(id) => setActiveTab(id as TabId)} />
         </GroupHeader>
       }
@@ -138,7 +168,15 @@ export function GroupDetailScreen() {
         ) : undefined
       }
     >
-      <GroupDetailBody slug={slug} state={state} activeTab={activeTab} transactionFilter={transactionFilter} members={members} />
+      <GroupDetailBody
+        slug={slug}
+        state={state}
+        activeTab={activeTab}
+        transactionFilter={transactionFilter}
+        members={members}
+        balance={balance}
+        highlightSignal={highlightSignal}
+      />
     </Screen>
   );
 }

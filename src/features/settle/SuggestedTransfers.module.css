@@ -1,0 +1,74 @@
+.list {
+  list-style: none;
+  padding: 0 var(--sp-4);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.flow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.personName {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--n-5);
+}
+
+.body {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+.amount {
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+
+.routedBadge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-semibold);
+  color: var(--route-text);
+  background: var(--route-tint);
+  border-radius: var(--r-pill);
+  padding: var(--sp-1) var(--sp-2);
+}

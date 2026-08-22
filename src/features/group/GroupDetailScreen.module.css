@@ -16,26 +16,3 @@
   line-height: var(--line-relaxed);
   max-width: var(--size-loadfail-message-max);
 }
-
-.comingSoon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: var(--sp-7) var(--sp-6);
-  gap: var(--sp-2);
-}
-
-.comingSoonHeading {
-  margin: 0;
-  font-size: var(--fs-subhead);
-  font-weight: var(--fw-semibold);
-  color: var(--text);
-}
-
-.comingSoonBody {
-  margin: 0;
-  font-size: var(--fs-footnote);
-  color: var(--text-muted);
-}

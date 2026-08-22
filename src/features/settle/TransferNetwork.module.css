@@ -1,0 +1,70 @@
+.card {
+  margin: 0 var(--sp-4) var(--sp-2);
+  background: var(--graph-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: var(--sp-2);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.edge {
+  transition: opacity var(--dur-base) var(--ease);
+}
+
+.nodeRing {
+  stroke: var(--surface);
+  stroke-width: var(--border-width-thick);
+}
+
+.nodeRingMe {
+  stroke: var(--brand);
+  stroke-width: var(--border-width-thick);
+}
+
+.nodeInitials {
+  fill: var(--on-member);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-footnote);
+  text-anchor: middle;
+  font-family: var(--bb-font);
+}
+
+.nodeLabel {
+  fill: var(--text);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-caption2);
+  text-anchor: middle;
+  font-family: var(--bb-font);
+}
+
+.caption {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-1) 0;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  line-height: var(--line-body);
+}
+
+.tooLarge {
+  padding: var(--sp-4) var(--sp-2);
+  font-size: var(--fs-footnote);
+  color: var(--text-secondary);
+  line-height: var(--line-relaxed);
+  text-align: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: var(--size-visually-hidden);
+  height: var(--size-visually-hidden);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
