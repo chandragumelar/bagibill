@@ -12,8 +12,7 @@
 }
 
 .row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: center;
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
@@ -24,12 +23,40 @@
   transition: border-color var(--dur-tap) var(--ease), box-shadow var(--dur-base) var(--ease);
 }
 
-.selectable {
+.identityGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.identityButton {
   appearance: none;
-  width: 100%;
+  border: none;
+  background: none;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  min-height: var(--size-touch-min);
+  padding: 0;
+}
+
+.amountButton {
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: var(--r-field);
+  padding: var(--sp-2) var(--sp-1);
+  margin: 0 calc(var(--sp-1) * -1);
+  min-height: var(--size-touch-min);
+}
+
+.amountButton:hover,
+.amountButton:focus-visible {
+  background: var(--surface-sunken);
 }
 
 .me {

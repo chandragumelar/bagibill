@@ -4,6 +4,7 @@ import type { ExpenseLedger, Transfer } from "@bagibill/split-engine";
 import { resolveMemberOrder, toCalculationInput } from "@/lib/storage/expense-mapping";
 import { expenseRepository, groupRepository, memberRepository, settlementRepository } from "@/lib/storage/repositories";
 import type { ExpenseRecord, GroupRecord, MemberRecord, SettlementRecord } from "@/lib/storage/records";
+import type { LedgerOrigin } from "./settlement-trace";
 
 export interface BalanceMemberRow {
   readonly memberId: string;
@@ -44,6 +45,10 @@ export type GroupBalanceState =
       readonly settlementCount: number;
       readonly groupSlug: string;
       readonly groupName: string;
+      /** Same array (order and length) fed into computeGroupBalances as `expenses` — TraceSheet zips this against `origins` index-for-index to trace a member's balance back to real transactions (settlement-trace.ts). */
+      readonly ledgers: readonly ExpenseLedger[];
+      /** Parallel to `ledgers`: origins[i] describes what produced ledgers[i]. Kept in lockstep by buildReadyState below — never reordered independently. */
+      readonly origins: readonly LedgerOrigin[];
       /** Re-fetches group + members + expenses + settlements from storage — call after creating or undoing a settlement so the tab reflects it without a full page reload. */
       readonly reload: () => void;
     };
@@ -124,25 +129,42 @@ function buildSettlementLedger(settlement: SettlementRecord, canonicalIds: reado
   return { sharesMinor, paymentsMinor };
 }
 
+interface SettlementLedgerBuild {
+  readonly ledgers: readonly ExpenseLedger[];
+  readonly origins: readonly LedgerOrigin[];
+}
+
 function buildSettlementLedgers(
   settlements: readonly SettlementRecord[],
   canonicalIds: readonly string[],
-): readonly ExpenseLedger[] {
+): SettlementLedgerBuild {
   const ledgers: ExpenseLedger[] = [];
+  const origins: LedgerOrigin[] = [];
   for (const settlement of settlements) {
     const ledger = buildSettlementLedger(settlement, canonicalIds);
-    if (ledger !== undefined) ledgers.push(ledger);
+    if (ledger === undefined) continue;
+    ledgers.push(ledger);
+    origins.push({
+      kind: "settlement",
+      settlementId: settlement.settlementId,
+      date: settlement.date,
+      fromMemberId: settlement.fromMemberId,
+      toMemberId: settlement.toMemberId,
+      note: settlement.note,
+    });
   }
-  return ledgers;
+  return { ledgers, origins };
 }
 
 interface LedgerBuild {
   readonly ledgers: readonly ExpenseLedger[];
+  readonly origins: readonly LedgerOrigin[];
   readonly uncountedExpenseCount: number;
 }
 
 function buildLedgers(expenses: readonly ExpenseRecord[], canonicalIds: readonly string[]): LedgerBuild {
   const ledgers: ExpenseLedger[] = [];
+  const origins: LedgerOrigin[] = [];
   let uncountedExpenseCount = 0;
   for (const expense of expenses) {
     const ledger = buildLedger(expense, canonicalIds);
@@ -150,9 +172,10 @@ function buildLedgers(expenses: readonly ExpenseRecord[], canonicalIds: readonly
       uncountedExpenseCount++;
     } else {
       ledgers.push(ledger);
+      origins.push({ kind: "expense", expenseId: expense.expenseId, title: expense.title, date: expense.date });
     }
   }
-  return { ledgers, uncountedExpenseCount };
+  return { ledgers, origins, uncountedExpenseCount };
 }
 
 interface Calculation {
@@ -230,9 +253,15 @@ function buildReadyState(
 
   const canonicalIds = canonicalOrder.map((member) => member.memberId);
   const currentMemberId = resolveCurrentMemberId(members);
-  const { ledgers: expenseLedgers, uncountedExpenseCount } = buildLedgers(expenses, canonicalIds);
-  const settlementLedgers = buildSettlementLedgers(settlements, canonicalIds);
-  const calc = computeCalculation(canonicalIds.length, [...expenseLedgers, ...settlementLedgers]);
+  const { ledgers: expenseLedgers, origins: expenseOrigins, uncountedExpenseCount } = buildLedgers(expenses, canonicalIds);
+  const { ledgers: settlementLedgers, origins: settlementOrigins } = buildSettlementLedgers(settlements, canonicalIds);
+  // Concatenation order here is the contract settlement-trace.ts's
+  // traceMemberBalance relies on: ledgers[i] and origins[i] must describe
+  // the same transaction, so these two lines are never allowed to drift
+  // apart (K-decision, progress.md).
+  const ledgers = [...expenseLedgers, ...settlementLedgers];
+  const origins = [...expenseOrigins, ...settlementOrigins];
+  const calc = computeCalculation(canonicalIds.length, ledgers);
   const rows = buildRows(canonicalOrder, calc.netMinor, currentMemberId);
   const position = buildPosition(canonicalOrder, rows, calc.pairwiseTransfers, currentMemberId);
 
@@ -249,6 +278,8 @@ function buildReadyState(
     settlementCount: settlements.length,
     groupSlug: group.slug,
     groupName: group.name,
+    ledgers,
+    origins,
     reload,
   };
 }

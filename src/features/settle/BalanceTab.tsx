@@ -10,6 +10,7 @@ import { RemindSheet } from "./RemindSheet";
 import { SettleSheet } from "./SettleSheet";
 import { SettlementHistory } from "./SettlementHistory";
 import { SuggestedTransfers } from "./SuggestedTransfers";
+import { TraceSheet } from "./TraceSheet";
 import { TransferNetwork } from "./TransferNetwork";
 import { useSettleActions } from "./use-settle-actions";
 import type { GroupBalanceState, SettlementMode } from "./use-group-balance";
@@ -212,6 +213,7 @@ function ReadyBalance({
         currency={balance.currency}
         highlightedMemberId={highlightedMemberId}
         onSelect={actions.onSelectMember}
+        onTraceMember={actions.onTraceMember}
       />
       <div className={styles.sectionLabel}>{t("group.balance.transfersHeading")}</div>
       <SuggestedTransfers
@@ -226,6 +228,7 @@ function ReadyBalance({
           const debtorTransfer = transfers.find((transfer) => balance.rows[transfer.fromIndex]?.memberId === memberId);
           actions.onRemindMember(memberId, debtorTransfer?.amountMinor ?? 0);
         }}
+        onTrace={actions.onTraceTransfer}
       />
       <SettlementHistory entries={actions.historyEntries} currency={balance.currency} onUndo={actions.undoHistoryEntry} />
 
@@ -250,6 +253,16 @@ function ReadyBalance({
         }}
       />
       <RemindSheet open={actions.remindTarget !== undefined} onClose={actions.closeRemind} target={actions.remindTarget} share={webShare()} />
+      <TraceSheet
+        open={actions.traceTarget !== undefined}
+        onClose={actions.closeTrace}
+        target={actions.traceTarget}
+        rows={balance.rows}
+        ledgers={balance.ledgers}
+        origins={balance.origins}
+        directTransfers={balance.directTransfers}
+        currency={balance.currency}
+      />
 
       {lastToastItem ? (
         <Toast
