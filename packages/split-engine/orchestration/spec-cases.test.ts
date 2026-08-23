@@ -4,6 +4,17 @@ import { calculateGroupBalances } from "./calculate-group-balances";
 import type { ExpenseCalculation } from "./expense.types";
 import type { GroupCalculation } from "./calculate-group-balances";
 
+// Every case below feeds calculateExpense payments that already match its
+// shares, so netMinor is always a real array here — this just narrows the
+// nullable type (K-122) with a clear failure message if that ever stops
+// being true, instead of a bare non-null assertion.
+function sumBalancedNet(netMinor: ExpenseCalculation["netMinor"]): number {
+  if (netMinor === null) {
+    throw new Error("expected a balanced calculation (netMinor should not be null) for this spec case");
+  }
+  return netMinor.reduce((sum, net) => sum + net, 0);
+}
+
 // spec.md 24 bullets NOT represented as rows below, because they aren't a
 // calculation concern — split-engine has no state, no clock, no network:
 // - Member dihapus saat ada transaksi berjalan: storage/UI state (F2/F3).
@@ -82,6 +93,31 @@ interface AcceptedExpenseCase {
 
 const ACCEPTED_EXPENSE_CASES: readonly AcceptedExpenseCase[] = [
   {
+    name: "pengeluaran byItems setengah terklaim tersimpan tanpa lempar, netMinor null",
+    specRef: "K-31/K-122: item tak diklaim adalah keadaan sah, bukan data rusak — cuma belum imbang",
+    run: () =>
+      calculateExpense({
+        totalMinor: 100,
+        split: {
+          mode: "byItems",
+          participantCount: 2,
+          items: [
+            { unitPriceMinor: 60, quantity: 1, claims: [{ participantIndex: 0, weight: 1 }] },
+            { unitPriceMinor: 40, quantity: 1, claims: [] },
+          ],
+        },
+        paymentsMinor: [100, 0],
+      }),
+    assert: (result) => {
+      expect(result.sharesMinor).toEqual([60, 0]);
+      expect(result.netMinor).toBeNull();
+      expect(result.warnings).toEqual([
+        { code: "unclaimed_items", itemIndices: [1] },
+        { code: "unbalanced_payments", differenceMinor: -40 },
+      ]);
+    },
+  },
+  {
     name: "diskon lewat charges sebagai nominal negatif diterima",
     specRef: "spec.md 24: total nol atau negatif ditolak, kecuali untuk entri diskon",
     run: () =>
@@ -93,8 +129,7 @@ const ACCEPTED_EXPENSE_CASES: readonly AcceptedExpenseCase[] = [
       }),
     assert: (result) => {
       expect(result.sharesMinor).toEqual([40, 40]);
-      const sumNetMinor = result.netMinor.reduce((sum, net) => sum + net, 0);
-      expect(sumNetMinor).toBe(0);
+      expect(sumBalancedNet(result.netMinor)).toBe(0);
     },
   },
 ];
@@ -204,8 +239,7 @@ describe("spec.md 24 — integrasi empat lapisan", () => {
     // Total after fees: subtotal (130) plus the two charges (13 - 20 = -7).
     expect(sumSharesMinor).toBe(123);
 
-    const sumNetMinor = result.netMinor.reduce((sum, net) => sum + net, 0);
-    expect(sumNetMinor).toBe(0);
+    expect(sumBalancedNet(result.netMinor)).toBe(0);
 
     expect(result.perItem?.length).toBe(2);
     expect(result.perCharge.length).toBe(2);

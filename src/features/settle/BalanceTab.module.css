@@ -21,6 +21,19 @@
   line-height: var(--line-body);
 }
 
+/* Same "in progress, not a problem" tone as the netband sync pill — a
+   pending claim is normal, on-its-way data, never the alert-colored
+   .warning above. */
+.pendingClaim {
+  margin: var(--sp-3) var(--sp-4) 0;
+  padding: var(--sp-3);
+  border-radius: var(--r-field);
+  background: var(--sync-bg);
+  color: var(--sync-fg);
+  font-size: var(--fs-caption);
+  line-height: var(--line-body);
+}
+
 .segWrap {
   padding: var(--sp-4) var(--sp-4) var(--sp-1);
 }

@@ -57,6 +57,19 @@ export interface ExpenseRepository {
 // because storing a derived number alongside the inputs it came from is a
 // second source of truth (K-64). A thrown error rejects the save; a
 // warning is a valid state to display, not a reason to refuse it.
+//
+// K-64 (revised, K-122): this gate only ever checked "can calculateExpense
+// run at all" — memberId/index/weight sanity. It never actually enforced
+// "payments equal shares" on its own; that used to be bundled in because
+// calculateExpense itself threw for a mismatch. Since K-122 split that into
+// its own warning (compute-balances.ts's K-43 assertion still throws, just
+// no longer reached on a mismatch), this gate no longer blocks an unbalanced
+// save for ANY split mode — an item nobody's claimed yet (byItems) or,
+// technically, any other mode's payer total not matching its shares. For
+// non-byItems modes the add-expense screen's disabled save button (F3-04) is
+// now the only thing preventing that from being saved; making an unbalanced
+// non-byItems save visible after the fact is use-group-balance.ts's job
+// (excluded from the balance, counted, and shown as a warning there).
 function assertCalculable(expense: ExpenseRecord): void {
   try {
     calculateExpense(toCalculationInput(expense));

@@ -133,6 +133,17 @@ function TreatSentenceList({ treats, currency }: TreatSentenceListProps) {
   );
 }
 
+interface UnclaimedNoteProps {
+  readonly amountMinor: number;
+  readonly currency: string;
+}
+
+// K-122: an unclaimed item is normal, in-progress data (K-31), not a
+// failure — a plain note, never the alert-styled WarningList below.
+function UnclaimedNote({ amountMinor, currency }: UnclaimedNoteProps) {
+  return <p className={styles.unclaimedNote}>{t("expense.result.unclaimedRemaining", { amount: formatMoney(amountMinor, currency) })}</p>;
+}
+
 function warningMessage(warning: SplitWarning, currency: string): string {
   switch (warning.code) {
     case "under_allocated":
@@ -147,6 +158,8 @@ function warningMessage(warning: SplitWarning, currency: string): string {
       return t("expense.warning.claimWeightMismatch");
     case "large_group_simplify":
       return t("expense.warning.largeGroupSimplify");
+    case "unbalanced_payments":
+      return t("expense.warning.unbalancedPayments");
   }
 }
 
@@ -216,6 +229,9 @@ function ReadyResultBody({ members, charges, currency, calculation }: ReadyResul
   return (
     <>
       <MemberShareList members={summary.members} currency={currency} />
+      {summary.unclaimedTotalMinor !== undefined && summary.unclaimedTotalMinor > 0 ? (
+        <UnclaimedNote amountMinor={summary.unclaimedTotalMinor} currency={currency} />
+      ) : null}
       {summary.charges.length > 0 ? <ChargeBreakdownList charges={summary.charges} currency={currency} /> : null}
       {summary.treats.length > 0 ? <TreatSentenceList treats={summary.treats} currency={currency} /> : null}
       {summary.warnings.length > 0 ? <WarningList warnings={summary.warnings} currency={currency} /> : null}

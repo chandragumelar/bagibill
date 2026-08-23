@@ -41,6 +41,9 @@ export type GroupBalanceState =
       readonly initialMode: SettlementMode;
       readonly position: CurrentMemberPosition;
       readonly expenseCount: number;
+      /** byItems expenses excluded only because some items aren't claimed yet — expected, in-progress state (K-122), shown with a calm note, not the alert below. */
+      readonly pendingClaimExpenseCount: number;
+      /** Excluded for any other reason — a corrupt record, or a saved-unbalanced expense outside byItems. This one needs a person to look at it. */
       readonly uncountedExpenseCount: number;
       readonly settlementCount: number;
       readonly groupSlug: string;
@@ -78,14 +81,32 @@ function requireIndexed(values: readonly number[], index: number, label: string)
   return value;
 }
 
+// K-122: an expense that's simply not balanced yet (some items still
+// unclaimed) is different from a genuinely corrupt one — the tab tells
+// these apart so it can say "waiting on people" instead of "something's
+// wrong" (buildLedgers/GroupBalanceState below carry the two counts
+// separately).
+type LedgerBuildOutcome =
+  | { readonly kind: "ok"; readonly ledger: ExpenseLedger }
+  | { readonly kind: "pendingClaim" }
+  | { readonly kind: "broken" };
+
 // Remaps one expense's own local participant order onto the group's
 // canonical order, zero-filling members who weren't part of this expense —
 // computeGroupBalances requires every ledger to be exactly participantCount
 // long (K-42), not scoped down to who was actually in that expense.
-function buildLedger(expense: ExpenseRecord, canonicalIds: readonly string[]): ExpenseLedger | undefined {
+function buildLedger(expense: ExpenseRecord, canonicalIds: readonly string[]): LedgerBuildOutcome {
   try {
     const input = toCalculationInput(expense);
     const calculation = calculateExpense(input);
+    if (calculation.netMinor === null) {
+      // unclaimed_items is byItems-specific (K-31) — its presence is what
+      // separates "still being claimed" from any other reason totals don't
+      // match (e.g. a non-byItems expense saved unbalanced, K-64 no longer
+      // blocks that either — see expense-repository.ts).
+      const isPendingClaim = calculation.warnings.some((warning) => warning.code === "unclaimed_items");
+      return isPendingClaim ? { kind: "pendingClaim" } : { kind: "broken" };
+    }
     const localOrder = resolveMemberOrder(expense.splitData);
     const localIndexByMemberId = new Map(localOrder.map((memberId, index) => [memberId, index]));
     const sharesMinor = canonicalIds.map((memberId) => {
@@ -96,12 +117,12 @@ function buildLedger(expense: ExpenseRecord, canonicalIds: readonly string[]): E
       const localIndex = localIndexByMemberId.get(memberId);
       return localIndex === undefined ? 0 : requireIndexed(input.paymentsMinor, localIndex, "paymentsMinor");
     });
-    return { sharesMinor, paymentsMinor };
+    return { kind: "ok", ledger: { sharesMinor, paymentsMinor } };
   } catch {
     // A corrupt record must not take the whole tab down — it's excluded and
     // counted (buildLedgers below), never silently dropped, so the balance
     // stays honest about what it isn't showing.
-    return undefined;
+    return { kind: "broken" };
   }
 }
 
@@ -159,23 +180,29 @@ function buildSettlementLedgers(
 interface LedgerBuild {
   readonly ledgers: readonly ExpenseLedger[];
   readonly origins: readonly LedgerOrigin[];
+  /** byItems expenses excluded only because some items aren't claimed yet — normal, in-progress, not broken (K-122). */
+  readonly pendingClaimExpenseCount: number;
+  /** Excluded for any other reason: a genuinely corrupt record, or a non-byItems expense saved unbalanced. Needs a human, not a wait. */
   readonly uncountedExpenseCount: number;
 }
 
 function buildLedgers(expenses: readonly ExpenseRecord[], canonicalIds: readonly string[]): LedgerBuild {
   const ledgers: ExpenseLedger[] = [];
   const origins: LedgerOrigin[] = [];
+  let pendingClaimExpenseCount = 0;
   let uncountedExpenseCount = 0;
   for (const expense of expenses) {
-    const ledger = buildLedger(expense, canonicalIds);
-    if (ledger === undefined) {
+    const outcome = buildLedger(expense, canonicalIds);
+    if (outcome.kind === "pendingClaim") {
+      pendingClaimExpenseCount++;
+    } else if (outcome.kind === "broken") {
       uncountedExpenseCount++;
     } else {
-      ledgers.push(ledger);
+      ledgers.push(outcome.ledger);
       origins.push({ kind: "expense", expenseId: expense.expenseId, title: expense.title, date: expense.date });
     }
   }
-  return { ledgers, origins, uncountedExpenseCount };
+  return { ledgers, origins, pendingClaimExpenseCount, uncountedExpenseCount };
 }
 
 interface Calculation {
@@ -253,7 +280,12 @@ function buildReadyState(
 
   const canonicalIds = canonicalOrder.map((member) => member.memberId);
   const currentMemberId = resolveCurrentMemberId(members);
-  const { ledgers: expenseLedgers, origins: expenseOrigins, uncountedExpenseCount } = buildLedgers(expenses, canonicalIds);
+  const {
+    ledgers: expenseLedgers,
+    origins: expenseOrigins,
+    pendingClaimExpenseCount,
+    uncountedExpenseCount,
+  } = buildLedgers(expenses, canonicalIds);
   const { ledgers: settlementLedgers, origins: settlementOrigins } = buildSettlementLedgers(settlements, canonicalIds);
   // Concatenation order here is the contract settlement-trace.ts's
   // traceMemberBalance relies on: ledgers[i] and origins[i] must describe
@@ -274,6 +306,7 @@ function buildReadyState(
     initialMode: group.settings.simplifyDebts ? "simplified" : "direct",
     position,
     expenseCount: expenses.length,
+    pendingClaimExpenseCount,
     uncountedExpenseCount,
     settlementCount: settlements.length,
     groupSlug: group.slug,

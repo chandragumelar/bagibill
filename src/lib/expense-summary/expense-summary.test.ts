@@ -182,10 +182,44 @@ describe("summarizeExpenseRecord", () => {
     expect(summary.charges[0]?.name).toBeUndefined();
   });
 
-  it("throws when a saved record fails the calculation gate, instead of silently producing wrong numbers", () => {
+  // K-122: calculateExpense no longer throws for a payments/shares mismatch —
+  // this used to be titled "throws when a saved record fails the
+  // calculation gate, instead of silently producing wrong numbers", using
+  // exactly this mismatched-payer scenario as the example.
+  it("no longer throws for an unbalanced record — netMinor comes back null for every member instead", () => {
     const record = makeExpenseRecord({
       payers: [{ memberId: "m1", amountMinor: 4_000 }],
     });
-    expect(() => summarizeExpenseRecord(record, MEMBER_INFO)).toThrow();
+    const summary = summarizeExpenseRecord(record, MEMBER_INFO);
+    expect(summary.members.map((member) => member.netMinor)).toEqual([null, null]);
+    // shareMinor is still correct — only the balance-dependent netMinor is unknown.
+    expect(summary.members.map((member) => member.shareMinor)).toEqual([5_000, 5_000]);
+  });
+
+  it("still throws for a genuinely structural failure — a payer memberId outside the split", () => {
+    const record = makeExpenseRecord({
+      payers: [{ memberId: "ghost", amountMinor: 10_000 }],
+    });
+    expect(() => summarizeExpenseRecord(record, MEMBER_INFO)).toThrow(/ghost/);
+  });
+
+  it("shows the unclaimed remainder and keeps already-claimed shares correct for a half-claimed byItems expense", () => {
+    const record = makeExpenseRecord({
+      amountTotalMinor: 10_000,
+      payers: [{ memberId: "m1", amountMinor: 10_000 }],
+      splitData: { mode: "byItems", memberIds: ["m1", "m2"] },
+      items: [
+        { itemId: "i1", name: "Nasi Goreng", unitPriceMinor: 6_000, quantity: 1, claims: [{ memberId: "m1", weight: 1 }] },
+        { itemId: "i2", name: "Es Teh", unitPriceMinor: 4_000, quantity: 1, claims: [] },
+      ],
+    });
+    const summary = summarizeExpenseRecord(record, MEMBER_INFO);
+
+    expect(summary.unclaimedTotalMinor).toBe(4_000);
+    const andi = summary.members.find((member) => member.memberId === "m1");
+    expect(andi?.shareMinor).toBe(6_000);
+    expect(andi?.netMinor).toBeNull();
+    const rina = summary.members.find((member) => member.memberId === "m2");
+    expect(rina?.shareMinor).toBe(0);
   });
 });

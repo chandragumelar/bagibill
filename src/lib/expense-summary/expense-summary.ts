@@ -29,7 +29,8 @@ export interface ExpenseMemberShare {
   readonly name: string;
   readonly color: string;
   readonly shareMinor: number;
-  readonly netMinor: number;
+  /** null when this expense isn't balanced yet (K-122) — e.g. an item nobody has claimed. Not the same as 0, which means genuinely settled. */
+  readonly netMinor: number | null;
 }
 
 export interface ExpenseChargeSummary {
@@ -54,6 +55,8 @@ export interface ExpenseSummary {
   readonly members: readonly ExpenseMemberShare[];
   readonly charges: readonly ExpenseChargeSummary[];
   readonly treats: readonly ExpenseTreatSentence[];
+  /** byItems only (K-122), straight from calculateExpense — how much of the bill nobody has claimed yet. */
+  readonly unclaimedTotalMinor?: number;
   readonly warnings: ExpenseCalculation["warnings"];
 }
 
@@ -80,6 +83,12 @@ function requireIndexed(values: readonly number[], index: number, label: string)
   return value;
 }
 
+// null netMinor (K-122: not balanced yet) is passed through as null, never
+// substituted with 0 — 0 means genuinely settled, and this expense isn't.
+function memberNetMinor(netMinor: ExpenseCalculation["netMinor"], index: number): number | null {
+  return netMinor === null ? null : requireIndexed(netMinor, index, "netMinor");
+}
+
 function buildMembers(
   memberOrder: readonly string[],
   memberInfo: ReadonlyMap<string, ExpenseMemberInfo>,
@@ -92,7 +101,7 @@ function buildMembers(
       name: info.name,
       color: info.color,
       shareMinor: requireIndexed(calculation.sharesMinor, index, "sharesMinor"),
-      netMinor: requireIndexed(calculation.netMinor, index, "netMinor"),
+      netMinor: memberNetMinor(calculation.netMinor, index),
     };
   });
 }
@@ -146,6 +155,7 @@ export function buildExpenseSummary(input: BuildExpenseSummaryInput): ExpenseSum
     members,
     charges: buildCharges(chargeMeta, memberInfo, calculation),
     treats: buildTreats(memberOrder, memberInfo, calculation),
+    unclaimedTotalMinor: calculation.unclaimedTotalMinor,
     warnings: calculation.warnings,
   };
 }

@@ -13,9 +13,12 @@ export type SplitInput =
 
 export interface ExpenseCalculation {
   readonly sharesMinor: readonly number[];
-  readonly netMinor: readonly number[];
+  /** null when total shares don't yet equal total payments (K-122) — a real, storable state, not an error. Carries an `unbalanced_payments` warning instead. */
+  readonly netMinor: readonly number[] | null;
   readonly perCharge: readonly ChargeBreakdown[];
   readonly treatTransfers: readonly TreatTransfer[];
   readonly perItem?: readonly ItemBreakdown[];
+  /** byItems only (K-122) — the total of items nobody has claimed yet, straight from splitByItems's own count, never recomputed. */
+  readonly unclaimedTotalMinor?: number;
   readonly warnings: readonly SplitWarning[];
 }

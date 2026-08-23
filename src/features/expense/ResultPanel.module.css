@@ -121,6 +121,12 @@
   padding: var(--sp-1) 0;
 }
 
+.unclaimedNote {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  margin: 0 0 var(--sp-4);
+}
+
 .warningRow {
   font-size: var(--fs-caption);
   color: var(--warn-text);

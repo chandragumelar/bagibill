@@ -104,8 +104,8 @@ describe("useGroupDetail", () => {
     // createExpense itself gates every save through calculateExpense
     // (K-64), so a genuinely broken record can only get into storage by
     // writing straight to the adapter — simulating corruption that slipped
-    // past that gate (a payments/shares mismatch from a bug, a manual DB
-    // edit, or old data from before the gate existed).
+    // past that gate (a reference to a memberId outside the split, a
+    // manual DB edit, or old data from before the gate existed).
     const adapter = createDexieAdapter(db);
     await adapter.expenses.put({
       expenseId: "e-broken",
@@ -117,7 +117,10 @@ describe("useGroupDetail", () => {
       currency: "IDR",
       fxRate: 1,
       amountTotalMinor: 10_000,
-      payers: [{ memberId: "m1", amountMinor: 4_000 }],
+      // K-122: a payments/shares mismatch no longer throws (it's valid,
+      // unbalanced data now) — a ghost payer memberId is used here instead
+      // to simulate a genuinely broken record, same as before.
+      payers: [{ memberId: "ghost", amountMinor: 10_000 }],
       splitData: { mode: "evenly", memberIds: ["m1", "m2"] },
       charges: [],
       items: [],
@@ -172,7 +175,10 @@ describe("useGroupDetail", () => {
       currency: "IDR",
       fxRate: 1,
       amountTotalMinor: 10_000,
-      payers: [{ memberId: "m1", amountMinor: 4_000 }],
+      // K-122: a payments/shares mismatch no longer throws (it's valid,
+      // unbalanced data now) — a ghost payer memberId is used here instead
+      // to simulate a genuinely broken record, same as before.
+      payers: [{ memberId: "ghost", amountMinor: 10_000 }],
       splitData: { mode: "evenly", memberIds: ["m1", "m2"] },
       charges: [],
       items: [],

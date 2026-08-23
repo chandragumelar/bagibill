@@ -92,6 +92,13 @@ function UncountedWarning({ count }: { readonly count: number }) {
   );
 }
 
+// K-122: an item nobody's claimed yet is normal, in-progress data (K-31) —
+// this note stays calm on purpose, no icon, no role="alert", distinct from
+// UncountedWarning above which means "a human needs to look at this."
+function PendingClaimNotice({ count }: { readonly count: number }) {
+  return <div className={styles.pendingClaim}>{t("group.balance.pendingClaimNotice", { count })}</div>;
+}
+
 interface ModeToggleProps {
   readonly mode: SettlementMode;
   readonly onChange: (mode: SettlementMode) => void;
@@ -182,7 +189,14 @@ function ReadyBalance({
   readonly onModeChange: (mode: SettlementMode) => void;
 }) {
   const actions = useSettleActions(balance);
-  const allSettled = balance.uncountedExpenseCount === 0 && balance.rows.length > 0 && balance.rows.every((row) => row.netMinor === 0);
+  // Both exclusion counts have to be zero — a pending-claim expense means
+  // real money that hasn't found its owner yet, so "semua sudah beres"
+  // (K-122) must never show while one is still waiting.
+  const allSettled =
+    balance.uncountedExpenseCount === 0 &&
+    balance.pendingClaimExpenseCount === 0 &&
+    balance.rows.length > 0 &&
+    balance.rows.every((row) => row.netMinor === 0);
   const lastToastItem = actions.toast.items[actions.toast.items.length - 1];
 
   if (allSettled) {
@@ -198,6 +212,7 @@ function ReadyBalance({
 
   return (
     <>
+      {balance.pendingClaimExpenseCount > 0 ? <PendingClaimNotice count={balance.pendingClaimExpenseCount} /> : null}
       {balance.uncountedExpenseCount > 0 ? <UncountedWarning count={balance.uncountedExpenseCount} /> : null}
       <ModeToggle mode={mode} onChange={onModeChange} transferCount={transfers.length} />
       <TransferNetwork

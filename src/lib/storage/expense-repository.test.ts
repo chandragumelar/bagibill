@@ -124,11 +124,34 @@ describe("calculation gate", () => {
     ).rejects.toThrow(/ghost/);
   });
 
-  it("rejects an expense whose total payments do not match the total bill", async () => {
+  // Changed by K-122: calculateExpense no longer throws for a payments/shares
+  // mismatch (only a structural failure still throws) — an expense whose
+  // payer total doesn't match its shares is now valid, storable data with a
+  // warning attached, not a rejected save. The old expectation here was
+  // "rejects an expense whose total payments do not match the total bill".
+  it("saves an expense whose total payments don't match the total bill, instead of rejecting it", async () => {
     const { repository } = makeRepository();
-    await expect(
-      repository.createExpense(makeCreateInput({ payers: [{ memberId: "m1", amountMinor: 5_000 }] })),
-    ).rejects.toThrow();
+    const created = await repository.createExpense(makeCreateInput({ payers: [{ memberId: "m1", amountMinor: 5_000 }] }));
+    const stored = await repository.getExpense(created.expenseId);
+    expect(stored?.payers).toEqual([{ memberId: "m1", amountMinor: 5_000 }]);
+  });
+
+  it("saves a byItems expense with some items still unclaimed, and reads it back intact", async () => {
+    const { repository } = makeRepository();
+    const created = await repository.createExpense(
+      makeCreateInput({
+        amountTotalMinor: 10_000,
+        payers: [{ memberId: "m1", amountMinor: 10_000 }],
+        splitData: { mode: "byItems", memberIds: ["m1", "m2"] },
+        items: [
+          { itemId: "i1", name: "Nasi Goreng", unitPriceMinor: 6_000, quantity: 1, claims: [{ memberId: "m1", weight: 1 }] },
+          { itemId: "i2", name: "Es Teh", unitPriceMinor: 4_000, quantity: 1, claims: [] },
+        ],
+      }),
+    );
+    const stored = await repository.getExpense(created.expenseId);
+    expect(stored?.items).toHaveLength(2);
+    expect(stored?.items[1]?.claims).toEqual([]);
   });
 
   it("saves an expense that only produces a warning, not an error", async () => {
