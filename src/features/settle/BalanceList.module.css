@@ -24,6 +24,14 @@
   transition: border-color var(--dur-tap) var(--ease), box-shadow var(--dur-base) var(--ease);
 }
 
+.selectable {
+  appearance: none;
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .me {
   border-color: var(--brand);
   background: color-mix(in srgb, var(--brand) var(--position-here-mix), var(--surface));

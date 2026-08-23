@@ -5,6 +5,7 @@ import { cryptoIdGenerator } from "./id";
 import { createGroupRepository, type GroupRepository } from "./group-repository";
 import { createMemberRepository, type MemberRepository } from "./member-repository";
 import { createExpenseRepository, type ExpenseRepository } from "./expense-repository";
+import { createSettlementRepository, type SettlementRepository } from "./settlement-repository";
 
 // Single composition root: one adapter/clock/id-generator wired once, three
 // repositories exported ready to use. The injection built into F2-02/F2-03
@@ -16,3 +17,4 @@ const adapter = createDexieAdapter(db);
 export const groupRepository: GroupRepository = createGroupRepository(adapter, systemClock, cryptoIdGenerator);
 export const memberRepository: MemberRepository = createMemberRepository(adapter, systemClock, cryptoIdGenerator);
 export const expenseRepository: ExpenseRepository = createExpenseRepository(adapter, systemClock, cryptoIdGenerator);
+export const settlementRepository: SettlementRepository = createSettlementRepository(adapter, systemClock, cryptoIdGenerator);

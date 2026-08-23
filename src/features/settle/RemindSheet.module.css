@@ -1,0 +1,25 @@
+.message {
+  font-size: var(--fs-footnote);
+  line-height: var(--line-relaxed);
+  color: var(--text);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: var(--sp-4);
+  margin: var(--sp-3) 0 var(--sp-4);
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.disclaimer {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  line-height: var(--line-relaxed);
+  margin: 0;
+}

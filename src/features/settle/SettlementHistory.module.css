@@ -1,0 +1,119 @@
+.wrap {
+  margin-top: var(--sp-4);
+  padding: 0 var(--sp-4);
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--sp-2);
+}
+
+.count {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: var(--fw-regular);
+}
+
+.empty {
+  font-size: var(--fs-footnote);
+  color: var(--text-muted);
+  padding: var(--sp-3) 0;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.check {
+  width: var(--size-avatar-sm);
+  height: var(--size-avatar-sm);
+  border-radius: var(--r-pill);
+  background: var(--pos-tint);
+  color: var(--pos-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-bold);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.flow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.personName {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  color: var(--n-5);
+  flex: 0 0 auto;
+}
+
+.meta {
+  display: block;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amountCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-1);
+  flex: 0 0 auto;
+}
+
+.amount {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.undoButton {
+  appearance: none;
+  border: none;
+  background: none;
+  font-family: inherit;
+  color: var(--brand);
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  padding: var(--border-width-thick);
+}

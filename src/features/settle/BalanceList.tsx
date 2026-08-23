@@ -8,6 +8,8 @@ export interface BalanceListProps {
   readonly currency: string;
   /** Set briefly when the header's "posisi kamu" card is tapped — flashes that row without reordering the list. */
   readonly highlightedMemberId?: string;
+  /** Opens PaymentNoteSheet for the tapped member (mockup's openMember). Omitted rows stay non-interactive, e.g. in isolated component tests. */
+  readonly onSelect?: (memberId: string) => void;
 }
 
 // Shared with TransferNetwork/SuggestedTransfers — one copy in the settle
@@ -64,6 +66,7 @@ interface BalanceRowProps {
   readonly row: BalanceMemberRow;
   readonly currency: string;
   readonly highlighted: boolean;
+  readonly onSelect?: (memberId: string) => void;
 }
 
 function toneClassFor(netMinor: number): string {
@@ -72,12 +75,12 @@ function toneClassFor(netMinor: number): string {
   return styles.zero ?? "";
 }
 
-function BalanceRow({ row, currency, highlighted }: BalanceRowProps) {
+function BalanceRow({ row, currency, highlighted, onSelect }: BalanceRowProps) {
   const className = [styles.row, toneClassFor(row.netMinor), row.isCurrentMember ? styles.me : "", highlighted ? styles.highlighted : ""]
     .filter(Boolean)
     .join(" ");
-  return (
-    <div className={className}>
+  const content = (
+    <>
       <Avatar initials={initialsFromName(row.name)} color={`var(${row.color})`} active={!row.isInactive} name={row.name} />
       <span className={styles.identity}>
         <span className={styles.name}>
@@ -90,17 +93,32 @@ function BalanceRow({ row, currency, highlighted }: BalanceRowProps) {
         <DirectionTag netMinor={row.netMinor} />
         <span className={`${styles.amount} bb-numeral`}>{signedAmount(row.netMinor, currency)}</span>
       </span>
-    </div>
+    </>
+  );
+
+  if (onSelect === undefined) {
+    return <div className={className}>{content}</div>;
+  }
+  return (
+    <button type="button" className={`${className} ${styles.selectable}`} onClick={() => onSelect(row.memberId)}>
+      {content}
+    </button>
   );
 }
 
-export function BalanceList({ rows, currency, highlightedMemberId }: BalanceListProps) {
+export function BalanceList({ rows, currency, highlightedMemberId, onSelect }: BalanceListProps) {
   const visible = visibleRows(rows);
   return (
     <div className={styles.wrap}>
       <div className={styles.list}>
         {visible.map((row) => (
-          <BalanceRow key={row.memberId} row={row} currency={currency} highlighted={row.memberId === highlightedMemberId} />
+          <BalanceRow
+            key={row.memberId}
+            row={row}
+            currency={currency}
+            highlighted={row.memberId === highlightedMemberId}
+            onSelect={onSelect}
+          />
         ))}
       </div>
       <div className={styles.invariant}>{t("group.balance.invariantNote", { total: formatMoney(0, currency) })}</div>

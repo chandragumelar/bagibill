@@ -1,0 +1,35 @@
+.noteCard {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  margin: var(--sp-3) 0;
+}
+
+.noteInfo {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.noteLabel {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.noteValue {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  margin-top: var(--sp-1);
+  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+}
+
+.disclaimer {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  line-height: var(--line-relaxed);
+  margin: var(--sp-2) 0 var(--sp-4);
+}
