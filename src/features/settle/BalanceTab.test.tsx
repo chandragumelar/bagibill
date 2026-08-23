@@ -32,6 +32,7 @@ function readyState(overrides: Partial<Extract<GroupBalanceState, { status: "rea
     initialMode: "simplified",
     position: { memberId: "m1", netMinor: 30_000, directInboundCount: 1, directOutboundCount: 0 },
     expenseCount: 3,
+    pendingClaimExpenseCount: 0,
     uncountedExpenseCount: 0,
     settlementCount: 0,
     groupSlug: "g1",
@@ -117,6 +118,43 @@ describe("BalanceTab", () => {
 
     expect(screen.queryByText(t("group.balance.doneHeading"))).not.toBeInTheDocument();
     expect(screen.getByText(t("group.balance.uncountedWarning", { count: 1 }))).toBeInTheDocument();
+  });
+
+  it("shows the pending-claim notice when a byItems expense is still waiting on claims", () => {
+    render(
+      <BalanceTab balance={readyState({ pendingClaimExpenseCount: 1 })} highlightSignal={0} onAddExpense={vi.fn()} />,
+    );
+    expect(screen.getByText(t("group.balance.pendingClaimNotice", { count: 1 }))).toBeInTheDocument();
+  });
+
+  it("does not show the pending-claim notice when nothing is waiting on claims", () => {
+    render(<BalanceTab balance={readyState()} highlightSignal={0} onAddExpense={vi.fn()} />);
+    expect(screen.queryByText(t("group.balance.pendingClaimNotice", { count: 1 }))).not.toBeInTheDocument();
+  });
+
+  // K-122: this is the sharpest way to get "semua sudah beres" wrong — every
+  // visible row nets to zero, so it LOOKS settled, but real money (the
+  // pending expense) hasn't been counted at all yet.
+  it("never claims everyone is settled while a pending-claim expense hasn't joined the balance, even if every row nets to zero", () => {
+    render(
+      <BalanceTab
+        balance={readyState({
+          rows: [
+            { memberId: "m1", name: "Nadia", color: "--m-1", netMinor: 0, isCurrentMember: true, isInactive: false },
+            { memberId: "m2", name: "Farhan", color: "--m-2", netMinor: 0, isCurrentMember: false, isInactive: false },
+          ],
+          simplifiedTransfers: [],
+          directTransfers: [],
+          pendingClaimExpenseCount: 1,
+          position: { memberId: "m1", netMinor: 0, directInboundCount: 0, directOutboundCount: 0 },
+        })}
+        highlightSignal={0}
+        onAddExpense={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(t("group.balance.doneHeading"))).not.toBeInTheDocument();
+    expect(screen.getByText(t("group.balance.pendingClaimNotice", { count: 1 }))).toBeInTheDocument();
   });
 
   it("flashes the current member's row when the highlight signal changes", () => {

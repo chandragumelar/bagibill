@@ -57,7 +57,15 @@ function initialsFromName(name: string): string {
   return `${first}${last}`.toUpperCase();
 }
 
-function buildEffect(memberOrder: readonly string[], currentMemberId: string, netMinorByMemberId: ReadonlyMap<string, number>): RowEffect {
+// K-122: a member's netMinor for one expense is null while that expense
+// isn't balanced yet (e.g. an item nobody has claimed) — falls back to
+// "even" here, same as a missing entry, since a single transaction row has
+// no room to explain "not yet known" separately from "settled".
+function buildEffect(
+  memberOrder: readonly string[],
+  currentMemberId: string,
+  netMinorByMemberId: ReadonlyMap<string, number | null>,
+): RowEffect {
   if (!memberOrder.includes(currentMemberId)) {
     return { kind: "out" };
   }

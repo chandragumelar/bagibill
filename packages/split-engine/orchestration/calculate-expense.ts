@@ -32,21 +32,73 @@ export function calculateExpense(input: {
   const splitOutcome = runSplit(totalMinor, split);
   const chargeResult = runCharges(splitOutcome.sharesMinor, charges, splitOutcome.itemSharesMinor);
   const treatResult = runTreats(chargeResult.totalSharesMinor, treats, splitOutcome.itemSharesMinor);
-  const balance = computeExpenseBalance({ sharesMinor: treatResult.sharesMinor, paymentsMinor });
+  const balanceOutcome = resolveBalance(treatResult.sharesMinor, paymentsMinor);
 
   // Warnings are concatenated as-is, not deduplicated — each layer has its
   // own reason to raise one, and merging them would hide which layer a
   // warning came from.
-  const warnings = [...splitOutcome.warnings, ...chargeResult.warnings, ...treatResult.warnings];
+  const warnings = [...splitOutcome.warnings, ...chargeResult.warnings, ...treatResult.warnings, ...balanceOutcome.warnings];
 
   return {
     sharesMinor: treatResult.sharesMinor,
-    netMinor: balance.netMinor,
+    netMinor: balanceOutcome.netMinor,
     perCharge: chargeResult.perCharge,
     treatTransfers: treatResult.transfers,
     perItem: splitOutcome.perItem,
+    unclaimedTotalMinor: splitOutcome.unclaimedTotalMinor,
     warnings,
   };
+}
+
+interface BalanceOutcome {
+  readonly netMinor: readonly number[] | null;
+  readonly warnings: readonly SplitWarning[];
+}
+
+// K-122: mirrors compute-balances.ts's own structural guards (non-empty,
+// matching lengths, integer/non-negative elements) so those still throw
+// exactly as before — only the total-mismatch check itself moves out of
+// computeExpenseBalance and into a warning here. computeExpenseBalance
+// (K-43) is untouched and still throws for anyone who calls it directly.
+function assertBalanceInputsWellFormed(sharesMinor: readonly number[], paymentsMinor: readonly number[]): void {
+  if (sharesMinor.length === 0 || paymentsMinor.length === 0) {
+    throw calculateExpenseError("sharesMinor and paymentsMinor must not be empty");
+  }
+  if (sharesMinor.length !== paymentsMinor.length) {
+    throw calculateExpenseError(
+      `sharesMinor length ${sharesMinor.length} does not match paymentsMinor length ${paymentsMinor.length}`,
+    );
+  }
+  sharesMinor.forEach((shareMinor, index) => {
+    if (!Number.isInteger(shareMinor)) {
+      throw calculateExpenseError(`sharesMinor[${index}] ${shareMinor} must be an integer`);
+    }
+  });
+  paymentsMinor.forEach((paymentMinor, index) => {
+    if (!Number.isInteger(paymentMinor)) {
+      throw calculateExpenseError(`paymentsMinor[${index}] ${paymentMinor} must be an integer`);
+    }
+    if (paymentMinor < 0) {
+      throw calculateExpenseError(`paymentsMinor[${index}] ${paymentMinor} must not be negative`);
+    }
+  });
+}
+
+// "Can this be computed" (structural sanity) and "is it balanced" (shares
+// sum to payments) are two different questions (K-122) — an expense mid-claim,
+// where some items nobody has claimed yet, is valid and storable (K-31), not
+// corrupt. Only the totals-mismatch case downgrades from a thrown error to a
+// warning; every structural check above still throws unconditionally.
+function resolveBalance(sharesMinor: readonly number[], paymentsMinor: readonly number[]): BalanceOutcome {
+  assertBalanceInputsWellFormed(sharesMinor, paymentsMinor);
+  const totalSharesMinor = sumMinor(sharesMinor);
+  const totalPaymentsMinor = sumMinor(paymentsMinor);
+  if (totalSharesMinor !== totalPaymentsMinor) {
+    const differenceMinor = totalSharesMinor - totalPaymentsMinor;
+    return { netMinor: null, warnings: [{ code: "unbalanced_payments", differenceMinor }] };
+  }
+  const balance = computeExpenseBalance({ sharesMinor, paymentsMinor });
+  return { netMinor: balance.netMinor, warnings: [] };
 }
 
 interface SplitOutcome {
@@ -54,6 +106,7 @@ interface SplitOutcome {
   readonly warnings: readonly SplitWarning[];
   readonly perItem?: readonly ItemBreakdown[];
   readonly itemSharesMinor?: readonly (readonly number[])[];
+  readonly unclaimedTotalMinor?: number;
 }
 
 function runSplit(totalMinor: number, split: SplitInput): SplitOutcome {
@@ -86,6 +139,7 @@ function runSplit(totalMinor: number, split: SplitInput): SplitOutcome {
         warnings: result.warnings,
         perItem: result.perItem,
         itemSharesMinor: result.perItem.map((item) => item.sharesMinor),
+        unclaimedTotalMinor: result.unclaimedTotalMinor,
       };
     }
   }

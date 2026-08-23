@@ -110,6 +110,34 @@ async function seedBrokenExpense(): Promise<void> {
   });
 }
 
+async function seedPendingClaimExpense(): Promise<void> {
+  const adapter = createDexieAdapter(db);
+  await adapter.expenses.put({
+    expenseId: "e-pending",
+    groupSlug: "g1",
+    title: "Makan Malam Tim",
+    category: "food",
+    date: 1_000,
+    notes: "",
+    currency: "IDR",
+    fxRate: 1,
+    amountTotalMinor: 10_000,
+    payers: [{ memberId: "m1", amountMinor: 10_000 }],
+    splitData: { mode: "byItems", memberIds: ["m1", "m2"] },
+    charges: [],
+    items: [
+      { itemId: "i1", name: "Nasi Goreng", unitPriceMinor: 6_000, quantity: 1, claims: [{ memberId: "m1", weight: 1 }] },
+      { itemId: "i2", name: "Es Teh", unitPriceMinor: 4_000, quantity: 1, claims: [] },
+    ],
+    treats: [],
+    attachments: [],
+    createdBy: "m1",
+    createdAt: 1_000,
+    updatedAt: 1_000,
+    seq: 0,
+  });
+}
+
 describe("useGroupBalance", () => {
   it("reports loading before the first result arrives", () => {
     const { result } = renderHook(() => useGroupBalance("g1"));
@@ -171,6 +199,49 @@ describe("useGroupBalance", () => {
 
     expect(result.current.uncountedExpenseCount).toBe(1);
     expect(result.current.rows.every((row) => row.netMinor === 0)).toBe(true);
+  });
+
+  it("counts a byItems expense with an unclaimed item as pending claim, separate from a genuinely broken one", async () => {
+    await seedGroup();
+    await seedPendingClaimExpense();
+    await seedBrokenExpense();
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    expect(result.current.pendingClaimExpenseCount).toBe(1);
+    expect(result.current.uncountedExpenseCount).toBe(1);
+    expect(result.current.expenseCount).toBe(2);
+    // Neither excluded expense contributes anything — the group balance
+    // still sums to exactly zero, not a number that happens to be close.
+    expect(result.current.rows.reduce((sum, row) => sum + row.netMinor, 0)).toBe(0);
+  });
+
+  it("moves a byItems expense out of pending-claim and into the balance once its last item is claimed", async () => {
+    await seedGroup();
+    await seedPendingClaimExpense();
+
+    const { result, rerender } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+    expect(result.current.pendingClaimExpenseCount).toBe(1);
+    expect(result.current.rows.reduce((sum, row) => sum + row.netMinor, 0)).toBe(0);
+
+    const stored = await expenseRepository.getExpense("e-pending");
+    if (stored === undefined) throw new Error("expected the seeded expense to exist");
+    const claimedItems = stored.items.map((item) => (item.itemId === "i2" ? { ...item, claims: [{ memberId: "m2", weight: 1 }] } : item));
+    await expenseRepository.updateExpense("e-pending", { items: claimedItems });
+
+    result.current.reload();
+    rerender();
+    await waitFor(() => {
+      if (result.current.status !== "ready") throw new Error("expected ready");
+      expect(result.current.pendingClaimExpenseCount).toBe(0);
+    });
+    if (result.current.status !== "ready") throw new Error("expected ready");
+    expect(rowFor(result.current.rows, "m1")).toBe(4_000);
+    expect(rowFor(result.current.rows, "m2")).toBe(-4_000);
   });
 
   it("reads the initial mode from group.settings.simplifyDebts", async () => {
