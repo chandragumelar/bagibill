@@ -19,6 +19,8 @@ export interface SuggestedTransfersProps {
   readonly onSendInfo: (memberId: string) => void;
   /** Opens RemindSheet for the person who owes the current member. */
   readonly onRemind: (memberId: string) => void;
+  /** Opens TraceSheet explaining this transfer (F3-07 bagian 3) — mirrors the mockup's "ketuk baris transfer buat telusuri". Omitted rows stay non-interactive, e.g. in isolated component tests. */
+  readonly onTrace?: (transfer: Transfer) => void;
 }
 
 interface PersonProps {
@@ -93,16 +95,19 @@ interface TransferRowProps {
   readonly onSettle: (transfer: Transfer) => void;
   readonly onSendInfo: (memberId: string) => void;
   readonly onRemind: (memberId: string) => void;
+  readonly onTrace?: (transfer: Transfer) => void;
 }
 
-function TransferRow({ transfer, rows, currency, routed, onSettle, onSendInfo, onRemind }: TransferRowProps) {
-  const fromRow = rows[transfer.fromIndex];
-  const toRow = rows[transfer.toIndex];
-  if (fromRow === undefined || toRow === undefined) return null;
+interface TransferFlowProps {
+  readonly transfer: Transfer;
+  readonly fromRow: BalanceMemberRow;
+  readonly toRow: BalanceMemberRow;
+  readonly currency: string;
+}
 
+function TransferFlow({ transfer, fromRow, toRow, currency }: TransferFlowProps) {
   return (
-    <li className={styles.row}>
-      {routed ? <span className={styles.routedBadge}>{t("group.balance.routedBadge")}</span> : null}
+    <>
       <div className={styles.flow}>
         <Person row={fromRow} />
         <span className={styles.arrow} aria-hidden="true">
@@ -110,10 +115,39 @@ function TransferRow({ transfer, rows, currency, routed, onSettle, onSendInfo, o
         </span>
         <Person row={toRow} />
       </div>
-      <div className={styles.body}>
-        <span className={`${styles.amount} bb-numeral`}>{formatMoney(transfer.amountMinor, currency)}</span>
-        <TransferActions transfer={transfer} fromRow={fromRow} toRow={toRow} onSettle={onSettle} onSendInfo={onSendInfo} onRemind={onRemind} />
-      </div>
+      <span className={`${styles.amount} bb-numeral`}>{formatMoney(transfer.amountMinor, currency)}</span>
+    </>
+  );
+}
+
+// The tappable area is everything except the action buttons — a real
+// <button> can't nest TransferActions' own buttons inside it, so tracing and
+// the actions are siblings here, not parent/child (mirrors the mockup's
+// "ketuk baris transfer buat telusuri; ketuk aksi buat aksinya sendiri").
+function TransferRow({ transfer, rows, currency, routed, onSettle, onSendInfo, onRemind, onTrace }: TransferRowProps) {
+  const fromRow = rows[transfer.fromIndex];
+  const toRow = rows[transfer.toIndex];
+  if (fromRow === undefined || toRow === undefined) return null;
+
+  const sentence = t("group.balance.transferSentence", {
+    from: fromRow.name,
+    to: toRow.name,
+    amount: formatMoney(transfer.amountMinor, currency),
+  });
+
+  return (
+    <li className={styles.row}>
+      {routed ? <span className={styles.routedBadge}>{t("group.balance.routedBadge")}</span> : null}
+      {onTrace === undefined ? (
+        <div className={styles.body}>
+          <TransferFlow transfer={transfer} fromRow={fromRow} toRow={toRow} currency={currency} />
+        </div>
+      ) : (
+        <button type="button" className={styles.traceButton} onClick={() => onTrace(transfer)} aria-label={sentence}>
+          <TransferFlow transfer={transfer} fromRow={fromRow} toRow={toRow} currency={currency} />
+        </button>
+      )}
+      <TransferActions transfer={transfer} fromRow={fromRow} toRow={toRow} onSettle={onSettle} onSendInfo={onSendInfo} onRemind={onRemind} />
     </li>
   );
 }
@@ -121,7 +155,7 @@ function TransferRow({ transfer, rows, currency, routed, onSettle, onSendInfo, o
 // Ringkas can suggest a transfer between two people who never owed each
 // other directly (K-46's routing) — this list shows it as-is; explaining
 // why is the trace sheet, part 3.
-export function SuggestedTransfers({ rows, transfers, directTransfers, mode, currency, onSettle, onSendInfo, onRemind }: SuggestedTransfersProps) {
+export function SuggestedTransfers({ rows, transfers, directTransfers, mode, currency, onSettle, onSendInfo, onRemind, onTrace }: SuggestedTransfersProps) {
   if (transfers.length === 0) return null;
 
   return (
@@ -136,6 +170,7 @@ export function SuggestedTransfers({ rows, transfers, directTransfers, mode, cur
           onSettle={onSettle}
           onSendInfo={onSendInfo}
           onRemind={onRemind}
+          onTrace={onTrace}
         />
       ))}
     </ul>

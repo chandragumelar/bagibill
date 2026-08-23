@@ -294,4 +294,31 @@ describe("useGroupBalance with settlements", () => {
     expect(result.current.expenseCount).toBe(1);
     expect(result.current.settlementCount).toBe(1);
   });
+
+  it("keeps origins parallel to ledgers, in the same order fed into the engine", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(makeExpenseInput({ title: "Makan malam" }));
+    await settlementRepository.createSettlement(makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 2_000 }));
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    expect(result.current.ledgers).toHaveLength(2);
+    expect(result.current.origins).toHaveLength(2);
+    expect(result.current.origins[0]).toMatchObject({ kind: "expense", title: "Makan malam" });
+  });
+
+  it("records a settlement's origin as kind settlement, never disguised as an expense", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(makeExpenseInput());
+    await settlementRepository.createSettlement(makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 2_000 }));
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    const settlementOrigin = result.current.origins.find((origin) => origin.kind === "settlement");
+    expect(settlementOrigin).toMatchObject({ kind: "settlement", fromMemberId: "m2", toMemberId: "m1" });
+  });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { t } from "@/lib/i18n";
+import { formatMoney, t } from "@/lib/i18n";
 import type { BalanceMemberRow } from "./use-group-balance";
 import { BalanceList } from "./BalanceList";
 
@@ -62,15 +62,38 @@ describe("BalanceList", () => {
     expect(orderAfter).toEqual(["Andi", "Rina"]);
   });
 
-  it("calls onSelect with the tapped member's id when provided", () => {
+  it("calls onSelect with the tapped member's id when the name/avatar is tapped", () => {
     const onSelect = vi.fn();
     render(<BalanceList rows={[row({ memberId: "m1", name: "Sarah" })]} currency="IDR" onSelect={onSelect} />);
     fireEvent.click(screen.getByRole("button", { name: /Sarah/ }));
     expect(onSelect).toHaveBeenCalledWith("m1");
   });
 
-  it("stays non-interactive when onSelect is not provided", () => {
+  it("stays non-interactive when neither onSelect nor onTraceMember is provided", () => {
     render(<BalanceList rows={[row({ memberId: "m1", name: "Sarah" })]} currency="IDR" />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("calls onTraceMember with the tapped member's id when the amount is tapped, separately from onSelect", () => {
+    const onSelect = vi.fn();
+    const onTraceMember = vi.fn();
+    render(
+      <BalanceList
+        rows={[row({ memberId: "m1", name: "Sarah", netMinor: 50_000 })]}
+        currency="IDR"
+        onSelect={onSelect}
+        onTraceMember={onTraceMember}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: t("group.balance.traceAmountAria", { name: "Sarah", amount: `+${formatMoney(50_000, "IDR")}` }) }));
+
+    expect(onTraceMember).toHaveBeenCalledWith("m1");
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("stays non-interactive on the amount when onTraceMember is not provided", () => {
+    render(<BalanceList rows={[row({ memberId: "m1", name: "Sarah", netMinor: 50_000 })]} currency="IDR" onSelect={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: /Telusuri|Trace/ })).not.toBeInTheDocument();
   });
 });

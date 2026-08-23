@@ -49,9 +49,30 @@
 
 .body {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.traceButton {
+  appearance: none;
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: var(--sp-1);
+  margin: calc(var(--sp-1) * -1);
+  border-radius: var(--r-field);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: var(--size-touch-min);
+}
+
+.traceButton:hover,
+.traceButton:focus-visible {
+  background: var(--surface-sunken);
 }
 
 .amount {

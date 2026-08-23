@@ -10,6 +10,15 @@ export interface BalanceListProps {
   readonly highlightedMemberId?: string;
   /** Opens PaymentNoteSheet for the tapped member (mockup's openMember). Omitted rows stay non-interactive, e.g. in isolated component tests. */
   readonly onSelect?: (memberId: string) => void;
+  /**
+   * Opens TraceSheet for the tapped member's own balance number (F3-07
+   * bagian 3). A deliberate second tap target on the same row, not a
+   * replacement for onSelect — the mockup's own dev-note only wires balance
+   * rows to "catatan & tagih", so name/avatar keeps that behavior and the
+   * amount itself becomes the door into "kenapa angkanya segini" (K-decision,
+   * progress.md). Someone who wants to know why taps the number, not the name.
+   */
+  readonly onTraceMember?: (memberId: string) => void;
 }
 
 // Shared with TransferNetwork/SuggestedTransfers — one copy in the settle
@@ -67,6 +76,7 @@ interface BalanceRowProps {
   readonly currency: string;
   readonly highlighted: boolean;
   readonly onSelect?: (memberId: string) => void;
+  readonly onTraceMember?: (memberId: string) => void;
 }
 
 function toneClassFor(netMinor: number): string {
@@ -75,10 +85,14 @@ function toneClassFor(netMinor: number): string {
   return styles.zero ?? "";
 }
 
-function BalanceRow({ row, currency, highlighted, onSelect }: BalanceRowProps) {
-  const className = [styles.row, toneClassFor(row.netMinor), row.isCurrentMember ? styles.me : "", highlighted ? styles.highlighted : ""]
-    .filter(Boolean)
-    .join(" ");
+interface IdentityProps {
+  readonly row: BalanceMemberRow;
+  readonly onSelect?: (memberId: string) => void;
+}
+
+// First tap target: avatar + name, opens PaymentNoteSheet — matches the
+// mockup's dev-note ("ketuk simpul/baris saldo buat catatan & tagih").
+function Identity({ row, onSelect }: IdentityProps) {
   const content = (
     <>
       <Avatar initials={initialsFromName(row.name)} color={`var(${row.color})`} active={!row.isInactive} name={row.name} />
@@ -89,24 +103,57 @@ function BalanceRow({ row, currency, highlighted, onSelect }: BalanceRowProps) {
           {row.isInactive ? <span className={styles.inactiveBadge}>{t("group.balance.inactiveBadge")}</span> : null}
         </span>
       </span>
-      <span className={styles.amountWrap}>
-        <DirectionTag netMinor={row.netMinor} />
-        <span className={`${styles.amount} bb-numeral`}>{signedAmount(row.netMinor, currency)}</span>
-      </span>
     </>
   );
-
-  if (onSelect === undefined) {
-    return <div className={className}>{content}</div>;
-  }
+  if (onSelect === undefined) return <span className={styles.identityGroup}>{content}</span>;
   return (
-    <button type="button" className={`${className} ${styles.selectable}`} onClick={() => onSelect(row.memberId)}>
+    <button type="button" className={`${styles.identityGroup} ${styles.identityButton}`} onClick={() => onSelect(row.memberId)}>
       {content}
     </button>
   );
 }
 
-export function BalanceList({ rows, currency, highlightedMemberId, onSelect }: BalanceListProps) {
+interface AmountProps {
+  readonly row: BalanceMemberRow;
+  readonly currency: string;
+  readonly onTraceMember?: (memberId: string) => void;
+}
+
+// Second tap target: the number itself, opens TraceSheet — deliberately
+// separate from Identity above (K-decision, progress.md).
+function Amount({ row, currency, onTraceMember }: AmountProps) {
+  const content = (
+    <>
+      <DirectionTag netMinor={row.netMinor} />
+      <span className={`${styles.amount} bb-numeral`}>{signedAmount(row.netMinor, currency)}</span>
+    </>
+  );
+  if (onTraceMember === undefined) return <span className={styles.amountWrap}>{content}</span>;
+  return (
+    <button
+      type="button"
+      className={`${styles.amountWrap} ${styles.amountButton}`}
+      onClick={() => onTraceMember(row.memberId)}
+      aria-label={t("group.balance.traceAmountAria", { name: row.name, amount: signedAmount(row.netMinor, currency) })}
+    >
+      {content}
+    </button>
+  );
+}
+
+function BalanceRow({ row, currency, highlighted, onSelect, onTraceMember }: BalanceRowProps) {
+  const className = [styles.row, toneClassFor(row.netMinor), row.isCurrentMember ? styles.me : "", highlighted ? styles.highlighted : ""]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <div className={className}>
+      <Identity row={row} onSelect={onSelect} />
+      <Amount row={row} currency={currency} onTraceMember={onTraceMember} />
+    </div>
+  );
+}
+
+export function BalanceList({ rows, currency, highlightedMemberId, onSelect, onTraceMember }: BalanceListProps) {
   const visible = visibleRows(rows);
   return (
     <div className={styles.wrap}>
@@ -118,6 +165,7 @@ export function BalanceList({ rows, currency, highlightedMemberId, onSelect }: B
             currency={currency}
             highlighted={row.memberId === highlightedMemberId}
             onSelect={onSelect}
+            onTraceMember={onTraceMember}
           />
         ))}
       </div>

@@ -162,4 +162,48 @@ describe("SuggestedTransfers", () => {
     fireEvent.click(screen.getByRole("button", { name: t("settle.action.markSettled") }));
     expect(onSettle).toHaveBeenCalledWith(transfers[0]);
   });
+
+  it("calls onTrace with the tapped transfer, separately from the action buttons", () => {
+    const transfers: readonly Transfer[] = [{ fromIndex: 1, toIndex: 0, amountMinor: 30_000 }];
+    const onTrace = vi.fn();
+    const onSettle = vi.fn();
+    render(
+      <SuggestedTransfers
+        rows={ROWS}
+        transfers={transfers}
+        directTransfers={transfers}
+        mode="direct"
+        currency="IDR"
+        onSettle={onSettle}
+        onSendInfo={noop()}
+        onRemind={noop()}
+        onTrace={onTrace}
+      />,
+    );
+
+    const sentence = t("group.balance.transferSentence", { from: "Farhan", to: "Nadia", amount: formatMoney(30_000, "IDR") });
+    fireEvent.click(screen.getByRole("button", { name: sentence }));
+
+    expect(onTrace).toHaveBeenCalledWith(transfers[0]);
+    expect(onSettle).not.toHaveBeenCalled();
+  });
+
+  it("stays non-interactive on the transfer row itself when onTrace is not provided", () => {
+    const transfers: readonly Transfer[] = [{ fromIndex: 1, toIndex: 0, amountMinor: 30_000 }];
+    render(
+      <SuggestedTransfers
+        rows={ROWS}
+        transfers={transfers}
+        directTransfers={transfers}
+        mode="direct"
+        currency="IDR"
+        onSettle={noop()}
+        onSendInfo={noop()}
+        onRemind={noop()}
+      />,
+    );
+
+    const sentence = t("group.balance.transferSentence", { from: "Farhan", to: "Nadia", amount: formatMoney(30_000, "IDR") });
+    expect(screen.queryByRole("button", { name: sentence })).not.toBeInTheDocument();
+  });
 });

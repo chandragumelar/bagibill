@@ -1,0 +1,155 @@
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0 var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--sp-4);
+}
+
+.headFlow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.headArrow {
+  color: var(--n-5);
+}
+
+.headAmount {
+  font-size: var(--fs-title2);
+  font-weight: var(--fw-bold);
+}
+
+.emptyBody {
+  font-size: var(--fs-footnote);
+  color: var(--text-muted);
+  padding: var(--sp-2) 0;
+}
+
+.note {
+  font-size: var(--fs-footnote);
+  color: var(--text-secondary);
+  line-height: var(--line-relaxed);
+  margin-bottom: var(--sp-3);
+}
+
+.partialNote {
+  font-size: var(--fs-footnote);
+  color: var(--text-secondary);
+  line-height: var(--line-relaxed);
+  background: var(--surface-sunken);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-field);
+  padding: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+.contributionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.contributionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.contributionInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.contributionName {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contributionDate {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.contributionAmount {
+  flex: 0 0 auto;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+  padding: var(--sp-3) 0 0;
+}
+
+.sumAmount {
+  color: var(--text);
+  font-size: var(--fs-footnote);
+}
+
+.chainList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.chain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--route-tint);
+  border-radius: var(--r-field);
+}
+
+.chainRoute {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.chainStep {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.chainArrow {
+  color: var(--route-text);
+}
+
+.chainName {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--route-text);
+}
+
+.chainAmount {
+  flex: 0 0 auto;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  color: var(--route-text);
+}

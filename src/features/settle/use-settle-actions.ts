@@ -7,6 +7,7 @@ import type { SaveSettlementInput, SettleSheetTarget } from "./SettleSheet";
 import type { PaymentNoteSheetTarget } from "./PaymentNoteSheet";
 import type { RemindSheetTarget } from "./RemindSheet";
 import type { SettlementHistoryEntry } from "./SettlementHistory";
+import type { TraceSheetTarget } from "./TraceSheet";
 import type { BalanceMemberRow, GroupBalanceState } from "./use-group-balance";
 
 type ReadyBalance = Extract<GroupBalanceState, { status: "ready" }>;
@@ -43,13 +44,17 @@ export interface UseSettleActionsResult {
   readonly settleTarget: SettleSheetTarget | undefined;
   readonly noteTarget: PaymentNoteSheetTarget | undefined;
   readonly remindTarget: RemindSheetTarget | undefined;
+  readonly traceTarget: TraceSheetTarget | undefined;
   readonly closeSettle: () => void;
   readonly closeNote: () => void;
   readonly closeRemind: () => void;
+  readonly closeTrace: () => void;
   readonly onSettleTransfer: (transfer: Transfer) => void;
   readonly onSendInfo: (memberId: string) => void;
   readonly onRemindMember: (memberId: string, amountMinor: number) => void;
   readonly onSelectMember: (memberId: string) => void;
+  readonly onTraceMember: (memberId: string) => void;
+  readonly onTraceTransfer: (transfer: Transfer) => void;
   readonly saveSettlement: (input: SaveSettlementInput) => Promise<void>;
   readonly undoHistoryEntry: (settlementId: string) => void;
   readonly toast: ReturnType<typeof useUndoQueue<string>>;
@@ -65,6 +70,7 @@ export function useSettleActions(balance: ReadyBalance): UseSettleActionsResult 
   const [settleTarget, setSettleTarget] = useState<SettleSheetTarget | undefined>(undefined);
   const [noteTarget, setNoteTarget] = useState<PaymentNoteSheetTarget | undefined>(undefined);
   const [remindTarget, setRemindTarget] = useState<RemindSheetTarget | undefined>(undefined);
+  const [traceTarget, setTraceTarget] = useState<TraceSheetTarget | undefined>(undefined);
 
   function onSettleTransfer(transfer: Transfer): void {
     const fromRow = balance.rows[transfer.fromIndex];
@@ -106,6 +112,14 @@ export function useSettleActions(balance: ReadyBalance): UseSettleActionsResult 
     setNoteTarget({ memberId: row.memberId, name: row.name, netMinor: row.netMinor, paymentNote: row.paymentNote, canRemind });
   }
 
+  function onTraceMember(memberId: string): void {
+    setTraceTarget({ kind: "member", memberId });
+  }
+
+  function onTraceTransfer(transfer: Transfer): void {
+    setTraceTarget({ kind: "transfer", transfer });
+  }
+
   async function saveSettlement(input: SaveSettlementInput): Promise<void> {
     const created = await settlementsHook.createSettlement(input);
     balance.reload();
@@ -127,13 +141,17 @@ export function useSettleActions(balance: ReadyBalance): UseSettleActionsResult 
     settleTarget,
     noteTarget,
     remindTarget,
+    traceTarget,
     closeSettle: () => setSettleTarget(undefined),
     closeNote: () => setNoteTarget(undefined),
     closeRemind: () => setRemindTarget(undefined),
+    closeTrace: () => setTraceTarget(undefined),
     onSettleTransfer,
     onSendInfo,
     onRemindMember,
     onSelectMember,
+    onTraceMember,
+    onTraceTransfer,
     saveSettlement,
     undoHistoryEntry,
     toast,

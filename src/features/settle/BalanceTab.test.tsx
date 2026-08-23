@@ -36,6 +36,8 @@ function readyState(overrides: Partial<Extract<GroupBalanceState, { status: "rea
     settlementCount: 0,
     groupSlug: "g1",
     groupName: "Trip Bali",
+    ledgers: [],
+    origins: [],
     reload: () => {},
     ...overrides,
   };
