@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { calculateExpense, calculateGroupBalances } from "@bagibill/split-engine";
 import type { ExpenseLedger, Transfer } from "@bagibill/split-engine";
 import { resolveMemberOrder, toCalculationInput } from "@/lib/storage/expense-mapping";
-import { expenseRepository, groupRepository, memberRepository } from "@/lib/storage/repositories";
-import type { ExpenseRecord, GroupRecord, MemberRecord } from "@/lib/storage/records";
+import { expenseRepository, groupRepository, memberRepository, settlementRepository } from "@/lib/storage/repositories";
+import type { ExpenseRecord, GroupRecord, MemberRecord, SettlementRecord } from "@/lib/storage/records";
 
 export interface BalanceMemberRow {
   readonly memberId: string;
@@ -12,6 +12,7 @@ export interface BalanceMemberRow {
   readonly netMinor: number;
   readonly isCurrentMember: boolean;
   readonly isInactive: boolean;
+  readonly paymentNote?: string;
 }
 
 export interface CurrentMemberPosition {
@@ -40,6 +41,11 @@ export type GroupBalanceState =
       readonly position: CurrentMemberPosition;
       readonly expenseCount: number;
       readonly uncountedExpenseCount: number;
+      readonly settlementCount: number;
+      readonly groupSlug: string;
+      readonly groupName: string;
+      /** Re-fetches group + members + expenses + settlements from storage — call after creating or undoing a settlement so the tab reflects it without a full page reload. */
+      readonly reload: () => void;
     };
 
 // Every member ever in the group, oldest join first, tie-broken by id so the
@@ -94,6 +100,42 @@ function buildLedger(expense: ExpenseRecord, canonicalIds: readonly string[]): E
   }
 }
 
+// A settlement is folded into the same balance calculation as every
+// expense, as one more synthetic ExpenseLedger, instead of subtracting it
+// from netMinor by hand after computeCalculation runs. A second arithmetic
+// path outside the engine is a second place K-43's "shares sum to the
+// total" invariant would have to be re-proven, and the two would eventually
+// drift. Here the payer's paymentsMinor and the payee's sharesMinor are
+// both set to the same amount (everyone else's stay 0), so the ledger's own
+// sum-to-total check passes for free and the net effect fed to the engine
+// is exactly "payer's balance goes up, payee's goes down" — precedent noted
+// in progress.md's Keputusan for this PR.
+function buildSettlementLedger(settlement: SettlementRecord, canonicalIds: readonly string[]): ExpenseLedger | undefined {
+  const fromIndex = canonicalIds.indexOf(settlement.fromMemberId);
+  const toIndex = canonicalIds.indexOf(settlement.toMemberId);
+  // Unreachable in practice: member-repository.deleteMember refuses to
+  // delete a member who appears in any SettlementRecord, so both ids always
+  // resolve. Kept as a guard rather than a thrown error so a future change
+  // to that guarantee degrades to "this settlement is excluded", not a
+  // crashed balance tab.
+  if (fromIndex === -1 || toIndex === -1) return undefined;
+  const paymentsMinor = canonicalIds.map((_, index) => (index === fromIndex ? settlement.amountMinor : 0));
+  const sharesMinor = canonicalIds.map((_, index) => (index === toIndex ? settlement.amountMinor : 0));
+  return { sharesMinor, paymentsMinor };
+}
+
+function buildSettlementLedgers(
+  settlements: readonly SettlementRecord[],
+  canonicalIds: readonly string[],
+): readonly ExpenseLedger[] {
+  const ledgers: ExpenseLedger[] = [];
+  for (const settlement of settlements) {
+    const ledger = buildSettlementLedger(settlement, canonicalIds);
+    if (ledger !== undefined) ledgers.push(ledger);
+  }
+  return ledgers;
+}
+
 interface LedgerBuild {
   readonly ledgers: readonly ExpenseLedger[];
   readonly uncountedExpenseCount: number;
@@ -146,6 +188,7 @@ function buildRows(
     netMinor: requireIndexed(netMinor, index, "netMinor"),
     isCurrentMember: member.memberId === currentMemberId,
     isInactive: member.deactivatedAt !== undefined,
+    paymentNote: member.paymentNote,
   }));
 }
 
@@ -177,16 +220,19 @@ function buildReadyState(
   group: GroupRecord,
   members: readonly MemberRecord[],
   expenses: readonly ExpenseRecord[],
+  settlements: readonly SettlementRecord[],
+  reload: () => void,
 ): GroupBalanceState {
   const canonicalOrder = buildCanonicalOrder(members);
-  if (canonicalOrder.length === 0 || expenses.length === 0) {
+  if (canonicalOrder.length === 0 || (expenses.length === 0 && settlements.length === 0)) {
     return { status: "empty" };
   }
 
   const canonicalIds = canonicalOrder.map((member) => member.memberId);
   const currentMemberId = resolveCurrentMemberId(members);
-  const { ledgers, uncountedExpenseCount } = buildLedgers(expenses, canonicalIds);
-  const calc = computeCalculation(canonicalIds.length, ledgers);
+  const { ledgers: expenseLedgers, uncountedExpenseCount } = buildLedgers(expenses, canonicalIds);
+  const settlementLedgers = buildSettlementLedgers(settlements, canonicalIds);
+  const calc = computeCalculation(canonicalIds.length, [...expenseLedgers, ...settlementLedgers]);
   const rows = buildRows(canonicalOrder, calc.netMinor, currentMemberId);
   const position = buildPosition(canonicalOrder, rows, calc.pairwiseTransfers, currentMemberId);
 
@@ -200,6 +246,10 @@ function buildReadyState(
     position,
     expenseCount: expenses.length,
     uncountedExpenseCount,
+    settlementCount: settlements.length,
+    groupSlug: group.slug,
+    groupName: group.name,
+    reload,
   };
 }
 
@@ -208,14 +258,15 @@ interface LoadedState {
   readonly state: GroupBalanceState;
 }
 
-// Loads group + members (including inactive) + expenses straight from
-// storage, same as use-group-detail.ts's independent load — features/settle
-// and features/group each own their own read rather than sharing state
-// across a feature boundary. Local reads don't get a spinner (F0-07); the
-// "loading" status is just "nothing to render yet".
+// Loads group + members (including inactive) + expenses + settlements
+// straight from storage, same as use-group-detail.ts's independent load —
+// features/settle and features/group each own their own read rather than
+// sharing state across a feature boundary. Local reads don't get a spinner
+// (F0-07); the "loading" status is just "nothing to render yet".
 export function useGroupBalance(slug: string): GroupBalanceState {
   const [loaded, setLoaded] = useState<LoadedState>({ slug, state: { status: "loading" } });
   const [reloadToken, setReloadToken] = useState(0);
+  const reload = () => setReloadToken((token) => token + 1);
 
   useEffect(() => {
     let cancelled = false;
@@ -228,15 +279,16 @@ export function useGroupBalance(slug: string): GroupBalanceState {
           setLoaded({ slug, state: { status: "empty" } });
           return;
         }
-        const [members, expenses] = await Promise.all([
+        const [members, expenses, settlements] = await Promise.all([
           memberRepository.listMembers(slug, { includeInactive: true }),
           expenseRepository.listExpensesByGroup(slug),
+          settlementRepository.listSettlementsByGroup(slug),
         ]);
         if (cancelled) return;
-        setLoaded({ slug, state: buildReadyState(group, members, expenses) });
+        setLoaded({ slug, state: buildReadyState(group, members, expenses, settlements, reload) });
       } catch {
         if (cancelled) return;
-        setLoaded({ slug, state: { status: "error", retry: () => setReloadToken((token) => token + 1) } });
+        setLoaded({ slug, state: { status: "error", retry: reload } });
       }
     }
 

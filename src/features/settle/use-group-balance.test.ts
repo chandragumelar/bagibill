@@ -3,8 +3,9 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { db } from "@/lib/storage/schema";
 import { createDexieAdapter } from "@/lib/storage/adapter";
-import { expenseRepository } from "@/lib/storage/repositories";
+import { expenseRepository, settlementRepository } from "@/lib/storage/repositories";
 import type { CreateExpenseInput } from "@/lib/storage/expense-repository";
+import type { CreateSettlementInput } from "@/lib/storage/settlement-repository";
 import type { GroupSettings } from "@/lib/storage/records";
 import { useGroupBalance } from "./use-group-balance";
 
@@ -14,7 +15,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  await Promise.all([db.groups.clear(), db.members.clear(), db.expenses.clear()]);
+  await Promise.all([db.groups.clear(), db.members.clear(), db.expenses.clear(), db.settlements.clear()]);
 });
 
 async function seedGroup(settings: Partial<GroupSettings> = {}): Promise<void> {
@@ -64,6 +65,24 @@ function makeExpenseInput(overrides: Partial<CreateExpenseInput> = {}): CreateEx
     createdBy: "m1",
     ...overrides,
   };
+}
+
+function makeSettlementInput(overrides: Partial<CreateSettlementInput> = {}): CreateSettlementInput {
+  return {
+    groupSlug: "g1",
+    fromMemberId: "m1",
+    toMemberId: "m2",
+    amountMinor: 5_000,
+    currency: "IDR",
+    date: 1_000,
+    ...overrides,
+  };
+}
+
+function rowFor(rows: readonly { readonly memberId: string; readonly netMinor: number }[], memberId: string): number {
+  const row = rows.find((candidate) => candidate.memberId === memberId);
+  if (row === undefined) throw new Error(`row not found for ${memberId}`);
+  return row.netMinor;
 }
 
 async function seedBrokenExpense(): Promise<void> {
@@ -185,5 +204,94 @@ describe("useGroupBalance", () => {
     result.current.retry();
 
     await waitFor(() => expect(result.current.status).toBe("ready"));
+  });
+});
+
+describe("useGroupBalance with settlements", () => {
+  it("brings both members' balances to zero after a full payoff", async () => {
+    await seedGroup();
+    // m1 pays 10_000, split evenly -> m1 net +5_000, m2 net -5_000.
+    await expenseRepository.createExpense(makeExpenseInput());
+    await settlementRepository.createSettlement(makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 5_000 }));
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    expect(rowFor(result.current.rows, "m1")).toBe(0);
+    expect(rowFor(result.current.rows, "m2")).toBe(0);
+  });
+
+  it("leaves the remainder owed after a partial payoff", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(makeExpenseInput());
+    await settlementRepository.createSettlement(makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 2_000 }));
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    expect(rowFor(result.current.rows, "m1")).toBe(3_000);
+    expect(rowFor(result.current.rows, "m2")).toBe(-3_000);
+  });
+
+  it("keeps the group's balances summing to zero once a settlement exists", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(makeExpenseInput());
+    await settlementRepository.createSettlement(makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 2_000 }));
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    expect(result.current.rows.reduce((sum, row) => sum + row.netMinor, 0)).toBe(0);
+  });
+
+  it("restores the prior balance after a settlement is undone (soft-deleted)", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(makeExpenseInput());
+    const settlement = await settlementRepository.createSettlement(
+      makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 5_000 }),
+    );
+
+    const { result, rerender } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+    expect(rowFor(result.current.rows, "m1")).toBe(0);
+
+    await settlementRepository.softDeleteSettlement(settlement.settlementId);
+    result.current.reload();
+    rerender();
+
+    await waitFor(() => {
+      if (result.current.status !== "ready") throw new Error("expected ready");
+      expect(rowFor(result.current.rows, "m1")).toBe(5_000);
+    });
+  });
+
+  it("flips the balance direction when a payoff overshoots the actual debt — nothing forbids this at the storage layer", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(makeExpenseInput());
+    await settlementRepository.createSettlement(makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 9_000 }));
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    expect(rowFor(result.current.rows, "m1")).toBe(-4_000);
+    expect(rowFor(result.current.rows, "m2")).toBe(4_000);
+  });
+
+  it("counts settlements separately from expenses", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(makeExpenseInput());
+    await settlementRepository.createSettlement(makeSettlementInput({ fromMemberId: "m2", toMemberId: "m1", amountMinor: 2_000 }));
+
+    const { result } = renderHook(() => useGroupBalance("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    expect(result.current.expenseCount).toBe(1);
+    expect(result.current.settlementCount).toBe(1);
   });
 });

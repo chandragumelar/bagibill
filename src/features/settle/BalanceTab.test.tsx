@@ -1,8 +1,23 @@
-import { describe, expect, it, vi } from "vitest";
+import "fake-indexeddb/auto";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { t } from "@/lib/i18n";
+import { db } from "@/lib/storage/schema";
 import type { GroupBalanceState } from "./use-group-balance";
 import { BalanceTab } from "./BalanceTab";
+
+// ReadyBalance renders SuggestedTransfers/BalanceList/SettlementHistory
+// behind useSettleActions, which loads settlements from real storage
+// (F3-07 bagian 2) — same reasoning as GroupDetailScreen.test.tsx's own
+// fake-indexeddb setup. Fixtures below use a groupSlug ("g1") with no
+// seeded settlements, so every load here resolves to an empty list.
+beforeAll(async () => {
+  await db.open();
+});
+
+afterEach(async () => {
+  await db.settlements.clear();
+});
 
 function readyState(overrides: Partial<Extract<GroupBalanceState, { status: "ready" }>> = {}): GroupBalanceState {
   return {
@@ -18,6 +33,10 @@ function readyState(overrides: Partial<Extract<GroupBalanceState, { status: "rea
     position: { memberId: "m1", netMinor: 30_000, directInboundCount: 1, directOutboundCount: 0 },
     expenseCount: 3,
     uncountedExpenseCount: 0,
+    settlementCount: 0,
+    groupSlug: "g1",
+    groupName: "Trip Bali",
+    reload: () => {},
     ...overrides,
   };
 }

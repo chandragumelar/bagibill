@@ -50,7 +50,7 @@
 .body {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: var(--sp-2);
 }
 
@@ -58,6 +58,31 @@
   font-size: var(--fs-title3);
   font-weight: var(--fw-bold);
   white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.action {
+  appearance: none;
+  border: 1px solid var(--btn2-border);
+  background: var(--btn2-bg);
+  color: var(--btn2-fg);
+  border-radius: var(--r-btn);
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.actionPrimary {
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border-color: transparent;
 }
 
 .routedBadge {

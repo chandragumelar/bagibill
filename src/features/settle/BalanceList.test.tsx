@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { t } from "@/lib/i18n";
 import type { BalanceMemberRow } from "./use-group-balance";
 import { BalanceList } from "./BalanceList";
@@ -60,5 +60,17 @@ describe("BalanceList", () => {
 
     expect(orderBefore).toEqual(["Andi", "Rina"]);
     expect(orderAfter).toEqual(["Andi", "Rina"]);
+  });
+
+  it("calls onSelect with the tapped member's id when provided", () => {
+    const onSelect = vi.fn();
+    render(<BalanceList rows={[row({ memberId: "m1", name: "Sarah" })]} currency="IDR" onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole("button", { name: /Sarah/ }));
+    expect(onSelect).toHaveBeenCalledWith("m1");
+  });
+
+  it("stays non-interactive when onSelect is not provided", () => {
+    render(<BalanceList rows={[row({ memberId: "m1", name: "Sarah" })]} currency="IDR" />);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

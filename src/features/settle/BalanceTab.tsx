@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
 import { t } from "@/lib/i18n";
-import { Button } from "@/shared/ui/Button/Button";
+import { Button, Toast } from "@/shared/ui";
 import { LoadFailure } from "@/shared/system";
 import { WarnIcon } from "@/shared/system/icons";
+import { systemClock } from "@/lib/storage/clock";
 import { BalanceList } from "./BalanceList";
+import { PaymentNoteSheet } from "./PaymentNoteSheet";
+import { RemindSheet } from "./RemindSheet";
+import { SettleSheet } from "./SettleSheet";
+import { SettlementHistory } from "./SettlementHistory";
 import { SuggestedTransfers } from "./SuggestedTransfers";
 import { TransferNetwork } from "./TransferNetwork";
+import { useSettleActions } from "./use-settle-actions";
 import type { GroupBalanceState, SettlementMode } from "./use-group-balance";
 import styles from "./BalanceTab.module.css";
+
+// Web Share API isn't available on every device — RemindSheet must not
+// render a share button that does nothing when tapped (spec.md 11.5).
+function webShare(): ((text: string) => Promise<void>) | undefined {
+  if (typeof navigator === "undefined" || navigator.share === undefined) return undefined;
+  return (text: string) => navigator.share({ text });
+}
 
 // How long a row stays flagged after the header's "posisi kamu" card is
 // tapped — same duration the mockup's own flash animation uses.
@@ -35,6 +48,7 @@ function EmptyBalance({ onAddExpense }: { readonly onAddExpense: () => void }) {
 
 interface DoneBalanceProps {
   readonly expenseCount: number;
+  readonly settlementCount: number;
   readonly memberCount: number;
 }
 
@@ -42,7 +56,7 @@ interface DoneBalanceProps {
 // and "semua lunas" have to feel different) — this one only shows once at
 // least one expense actually calculated and settled to zero, never when
 // uncountedExpenseCount hides the real picture (BalanceTab guards that).
-function DoneBalance({ expenseCount, memberCount }: DoneBalanceProps) {
+function DoneBalance({ expenseCount, settlementCount, memberCount }: DoneBalanceProps) {
   return (
     <div className={styles.overlay}>
       <div className={styles.seal} aria-hidden="true">
@@ -54,6 +68,10 @@ function DoneBalance({ expenseCount, memberCount }: DoneBalanceProps) {
         <div className={styles.stat}>
           <div className={`${styles.statNum} bb-numeral`}>{expenseCount}</div>
           <div className={styles.statLabel}>{t("common.expenseCount", { count: expenseCount })}</div>
+        </div>
+        <div className={styles.stat}>
+          <div className={`${styles.statNum} bb-numeral`}>{settlementCount}</div>
+          <div className={styles.statLabel}>{t("settle.history.count", { count: settlementCount })}</div>
         </div>
         <div className={styles.stat}>
           <div className={`${styles.statNum} bb-numeral`}>{memberCount}</div>
@@ -162,9 +180,17 @@ function ReadyBalance({
   readonly mode: SettlementMode;
   readonly onModeChange: (mode: SettlementMode) => void;
 }) {
+  const actions = useSettleActions(balance);
   const allSettled = balance.uncountedExpenseCount === 0 && balance.rows.length > 0 && balance.rows.every((row) => row.netMinor === 0);
+  const lastToastItem = actions.toast.items[actions.toast.items.length - 1];
+
   if (allSettled) {
-    return <DoneBalance expenseCount={balance.expenseCount} memberCount={balance.rows.length} />;
+    return (
+      <>
+        <DoneBalance expenseCount={balance.expenseCount} settlementCount={balance.settlementCount} memberCount={balance.rows.length} />
+        <SettlementHistory entries={actions.historyEntries} currency={balance.currency} onUndo={actions.undoHistoryEntry} />
+      </>
+    );
   }
 
   const transfers = mode === "simplified" ? balance.simplifiedTransfers : balance.directTransfers;
@@ -181,7 +207,12 @@ function ReadyBalance({
         currency={balance.currency}
       />
       <div className={styles.sectionLabel}>{t("group.balance.peopleHeading")}</div>
-      <BalanceList rows={balance.rows} currency={balance.currency} highlightedMemberId={highlightedMemberId} />
+      <BalanceList
+        rows={balance.rows}
+        currency={balance.currency}
+        highlightedMemberId={highlightedMemberId}
+        onSelect={actions.onSelectMember}
+      />
       <div className={styles.sectionLabel}>{t("group.balance.transfersHeading")}</div>
       <SuggestedTransfers
         rows={balance.rows}
@@ -189,7 +220,47 @@ function ReadyBalance({
         directTransfers={balance.directTransfers}
         mode={mode}
         currency={balance.currency}
+        onSettle={actions.onSettleTransfer}
+        onSendInfo={actions.onSendInfo}
+        onRemind={(memberId) => {
+          const debtorTransfer = transfers.find((transfer) => balance.rows[transfer.fromIndex]?.memberId === memberId);
+          actions.onRemindMember(memberId, debtorTransfer?.amountMinor ?? 0);
+        }}
       />
+      <SettlementHistory entries={actions.historyEntries} currency={balance.currency} onUndo={actions.undoHistoryEntry} />
+
+      <SettleSheet
+        open={actions.settleTarget !== undefined}
+        onClose={actions.closeSettle}
+        target={actions.settleTarget}
+        currency={balance.currency}
+        nowMs={systemClock.now()}
+        onSave={actions.saveSettlement}
+      />
+      <PaymentNoteSheet
+        open={actions.noteTarget !== undefined}
+        onClose={actions.closeNote}
+        target={actions.noteTarget}
+        currency={balance.currency}
+        groupName={balance.groupName}
+        onRemind={(memberId) => {
+          const row = balance.rows.find((candidate) => candidate.memberId === memberId);
+          actions.closeNote();
+          actions.onRemindMember(memberId, Math.abs(row?.netMinor ?? 0));
+        }}
+      />
+      <RemindSheet open={actions.remindTarget !== undefined} onClose={actions.closeRemind} target={actions.remindTarget} share={webShare()} />
+
+      {lastToastItem ? (
+        <Toast
+          message={lastToastItem.message}
+          secondsRemaining={actions.toast.remainingSeconds}
+          secondsTotal={actions.toast.totalSeconds}
+          count={actions.toast.items.length}
+          onUndo={actions.toast.undoLast}
+          onUndoAll={actions.toast.items.length > 1 ? actions.toast.undoAll : undefined}
+        />
+      ) : null}
     </>
   );
 }
