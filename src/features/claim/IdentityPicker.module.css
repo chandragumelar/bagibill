@@ -1,0 +1,110 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-4) var(--sp-8);
+  max-width: var(--size-column-max);
+  margin: 0 auto;
+}
+
+.eyebrow {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.heading {
+  font-size: var(--fs-title2);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  margin: 0;
+}
+
+.body {
+  font-size: var(--fs-subhead);
+  color: var(--text-secondary);
+  line-height: var(--line-relaxed);
+  margin: 0;
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-footnote);
+  color: var(--brand-strong);
+  background: var(--brand-tint);
+  border-radius: var(--r-field);
+  padding: var(--sp-3);
+  margin: 0;
+  line-height: var(--line-relaxed);
+}
+
+.sectionLabel {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: var(--sp-2) 0 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.row {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-card);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  min-height: var(--size-touch-min);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.rowName {
+  flex: 1 1 auto;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  flex: 0 0 auto;
+  font-size: var(--fs-caption2);
+  font-weight: var(--fw-semibold);
+  color: var(--brand-strong);
+  background: var(--brand-tint);
+  border-radius: var(--r-pill);
+  padding: 0 var(--sp-2);
+}
+
+.radio {
+  flex: 0 0 auto;
+  width: var(--sp-5);
+  height: var(--sp-5);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+}
+
+.newName {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}

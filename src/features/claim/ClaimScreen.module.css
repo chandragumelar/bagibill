@@ -1,0 +1,24 @@
+.invalid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sp-2);
+  padding: var(--sp-8) var(--sp-4);
+  max-width: var(--size-column-max);
+  margin: 0 auto;
+}
+
+.invalidHeading {
+  font-size: var(--fs-title3);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  margin: 0;
+}
+
+.invalidBody {
+  font-size: var(--fs-subhead);
+  color: var(--text-secondary);
+  line-height: var(--line-relaxed);
+  margin: 0;
+}
