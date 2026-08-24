@@ -106,6 +106,8 @@
   --r-icon-badge: 9px;        /* radius kotak ikon dekoratif, LS */
   --size-loadfail-message-max: 250px; /* lebar maksimum paragraf layar gagal muat, LS */
   --size-loadfail-btn-max: 220px;     /* lebar maksimum tombol muat ulang, LS */
+  --size-column-max: 480px; /* lebar maksimum kolom tunggal, CLAUDE.md K-05 — dipakai F3-08, belum ada di Screen shell app-dalam */
+  --size-indicator-sm: 6px; /* aksen kecil klaim: tinggi track progress & diameter dot status belum-diklaim, F3-08 */
   /* Shimmer skeleton — angka gradient/posisi saling bergantung (satu efek
      utuh), disimpan di sini karena tokens.css bebas dari guard nilai
      mentah. Component CSS cuma referensi var(), nol persen mentah. */
