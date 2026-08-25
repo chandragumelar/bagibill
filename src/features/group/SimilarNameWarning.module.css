@@ -1,0 +1,58 @@
+.warning {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  margin-top: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--r-card);
+  background: var(--warn-tint);
+  border: 1px solid var(--border);
+}
+
+.icon {
+  flex: 0 0 auto;
+  line-height: 1;
+  color: var(--warn-text);
+}
+
+.icon svg {
+  width: var(--size-icon-inline);
+  height: var(--size-icon-inline);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.message {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-footnote);
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--r-pill);
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  font-family: inherit;
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.actionPrimary {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--surface);
+}
