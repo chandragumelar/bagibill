@@ -1,0 +1,95 @@
+.section {
+  margin-bottom: var(--sp-5);
+}
+
+.heading {
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 var(--sp-2);
+}
+
+.composerRow {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+}
+
+.addButton {
+  flex: 0 0 auto;
+  appearance: none;
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-4);
+  border: none;
+  border-radius: var(--r-btn);
+  background: var(--brand);
+  color: var(--surface);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.addButton:disabled {
+  background: var(--brand-tint);
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.list {
+  margin-top: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--size-touch-min);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+}
+
+.roleLabel {
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.remove {
+  appearance: none;
+  border: none;
+  background: none;
+  width: var(--size-touch-min);
+  height: var(--size-touch-min);
+  color: var(--text-muted);
+  font-size: var(--fs-title3);
+  line-height: 1;
+  cursor: pointer;
+}

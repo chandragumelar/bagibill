@@ -1,0 +1,119 @@
+.panel {
+  padding: var(--sp-3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
+.nameInput {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+}
+
+.groupLabel {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.statusToggle {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+
+.statusOption {
+  flex: 1;
+  appearance: none;
+  min-height: var(--size-touch-min);
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.statusOptionSelected {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+  color: var(--brand);
+  font-weight: var(--fw-semibold);
+}
+
+.statusHint {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.deleteButton {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--risk-high-text);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  min-height: var(--size-touch-min);
+  padding: 0;
+  cursor: pointer;
+}
+
+.cancelButton {
+  flex: 1;
+  appearance: none;
+  min-height: var(--size-touch-min);
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.saveButton {
+  flex: 1;
+  appearance: none;
+  min-height: var(--size-touch-min);
+  border: none;
+  border-radius: var(--r-btn);
+  background: var(--brand);
+  color: var(--surface);
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+
+.saveButton:disabled {
+  background: var(--brand-tint);
+  color: var(--text-muted);
+  cursor: default;
+}
