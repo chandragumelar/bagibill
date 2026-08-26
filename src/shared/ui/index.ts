@@ -1,4 +1,5 @@
 export { Avatar, type AvatarProps, type AvatarSize } from "@/shared/ui/Avatar/Avatar";
+export { AvatarStack, type AvatarStackMember, type AvatarStackProps } from "@/shared/ui/AvatarStack/AvatarStack";
 export { Button, type ButtonProps, type ButtonVariant } from "@/shared/ui/Button/Button";
 export { ListRow, type ListRowProps } from "@/shared/ui/ListRow/ListRow";
 export { MoneyInput, type MoneyInputProps } from "@/shared/ui/MoneyInput/MoneyInput";
