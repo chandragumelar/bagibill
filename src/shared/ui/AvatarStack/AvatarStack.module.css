@@ -1,0 +1,30 @@
+.stack {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.item {
+  display: inline-flex;
+  margin-left: var(--size-avatar-stack-overlap);
+}
+
+.item:first-child {
+  margin-left: 0;
+}
+
+.more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-avatar-stack);
+  height: var(--size-avatar-stack);
+  margin-left: var(--size-avatar-stack-overlap);
+  border-radius: var(--r-pill);
+  border: var(--border-width-thick) solid var(--surface);
+  background: var(--n-3);
+  color: var(--text-secondary);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  flex: 0 0 auto;
+}

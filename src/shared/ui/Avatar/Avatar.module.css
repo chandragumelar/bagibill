@@ -20,6 +20,13 @@
   font-size: var(--fs-caption2);
 }
 
+.stack {
+  width: var(--size-avatar-stack);
+  height: var(--size-avatar-stack);
+  font-size: var(--fs-caption);
+  border: var(--border-width-thick) solid var(--surface);
+}
+
 .active {
   color: var(--on-member);
 }

@@ -89,6 +89,8 @@
      eksplisit CLAUDE.md, sisanya dari kecocokan nilai di 2+ mockup. */
   --size-avatar: 38px;      /* avatar() BG */
   --size-avatar-sm: 22px;   /* .k-avatar--sm KI */
+  --size-avatar-stack: 32px;         /* .avstack .av, identik DT + DS; BR pakai 30px, konvergen ke nilai 2-mockup (F3-10) */
+  --size-avatar-stack-overlap: -8px; /* margin-left tumpuk avatar, identik DT + DS + BR (F3-10) */
   --size-control: 50px;     /* .btn min-height, identik DS + LS + KI */
   --size-touch-min: 44px;   /* target sentuh minimum, CLAUDE.md Aksesibilitas */
   --size-grab-w: 36px;      /* .grab lebar, identik DS + LS */

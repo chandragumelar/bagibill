@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import styles from "@/shared/ui/Avatar/Avatar.module.css";
 
-export type AvatarSize = "normal" | "small";
+export type AvatarSize = "normal" | "small" | "stack";
 
 export interface AvatarProps {
   /** Inisial dari kata, dihitung pemanggil (mis. "Dimas Prasetyo" -> "DP"). */
@@ -18,8 +18,14 @@ export interface AvatarProps {
   name?: string;
 }
 
+const SIZE_CLASS: Record<AvatarSize, string> = {
+  normal: styles.normal ?? "",
+  small: styles.small ?? "",
+  stack: styles.stack ?? "",
+};
+
 export function Avatar({ initials, color, size = "normal", active = true, colorRepeated = false, name }: AvatarProps) {
-  const sizeClass = size === "small" ? styles.small : styles.normal;
+  const sizeClass = SIZE_CLASS[size];
   const stateClass = active ? styles.active : styles.inactive;
   const style: CSSProperties = active ? { background: color } : { borderColor: color, color };
   const a11yProps = name ? { role: "img" as const, "aria-label": name } : { "aria-hidden": true as const };
