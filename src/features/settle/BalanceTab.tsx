@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MutableRefObject } from "react";
 import { t } from "@/lib/i18n";
 import { Button, Toast } from "@/shared/ui";
 import { LoadFailure } from "@/shared/system";
@@ -32,6 +32,8 @@ export interface BalanceTabProps {
   /** Bumped by GroupDetailScreen whenever the header position card is tapped — the value itself carries no meaning, only its change does. */
   readonly highlightSignal: number;
   readonly onAddExpense: () => void;
+  /** Set to the undo toast's commitAll while a settlement is pending — GroupDetailScreen calls it before this tab unmounts on tab switch (F4-01b). */
+  readonly commitPendingRef?: MutableRefObject<(() => void) | undefined>;
 }
 
 function EmptyBalance({ onAddExpense }: { readonly onAddExpense: () => void }) {
@@ -182,13 +184,24 @@ function ReadyBalance({
   highlightedMemberId,
   mode,
   onModeChange,
+  commitPendingRef,
 }: {
   readonly balance: Extract<GroupBalanceState, { status: "ready" }>;
   readonly highlightedMemberId: string | undefined;
   readonly mode: SettlementMode;
   readonly onModeChange: (mode: SettlementMode) => void;
+  readonly commitPendingRef?: MutableRefObject<(() => void) | undefined>;
 }) {
   const actions = useSettleActions(balance);
+
+  useEffect(() => {
+    if (commitPendingRef === undefined) return;
+    commitPendingRef.current = actions.toast.commitAll;
+    return () => {
+      commitPendingRef.current = undefined;
+    };
+  }, [commitPendingRef, actions.toast.commitAll]);
+
   // Both exclusion counts have to be zero — a pending-claim expense means
   // real money that hasn't found its owner yet, so "semua sudah beres"
   // (K-122) must never show while one is still waiting.
@@ -293,7 +306,7 @@ function ReadyBalance({
   );
 }
 
-export function BalanceTab({ balance, highlightSignal, onAddExpense }: BalanceTabProps) {
+export function BalanceTab({ balance, highlightSignal, onAddExpense, commitPendingRef }: BalanceTabProps) {
   const highlightedMemberId = useHighlightedMember(balance, highlightSignal);
   const [mode, setMode] = useSettlementMode(balance);
 
@@ -310,5 +323,13 @@ export function BalanceTab({ balance, highlightSignal, onAddExpense }: BalanceTa
   }
   if (balance.status === "empty") return <EmptyBalance onAddExpense={onAddExpense} />;
 
-  return <ReadyBalance balance={balance} highlightedMemberId={highlightedMemberId} mode={mode} onModeChange={setMode} />;
+  return (
+    <ReadyBalance
+      balance={balance}
+      highlightedMemberId={highlightedMemberId}
+      mode={mode}
+      onModeChange={setMode}
+      commitPendingRef={commitPendingRef}
+    />
+  );
 }

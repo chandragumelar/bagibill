@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type MutableRefObject } from "react";
 import { formatMoney, t } from "@/lib/i18n";
 import { systemClock } from "@/lib/storage/clock";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
@@ -58,11 +58,13 @@ interface GroupDetailBodyProps {
   readonly members: readonly FilterMemberOption[];
   readonly balance: GroupBalanceState;
   readonly highlightSignal: number;
+  /** Filled by BalanceTab while its undo toast has pending items — GroupDetailScreen calls this before switching away from tab Saldo so the action becomes final instead of just disappearing (F4-01b). */
+  readonly balanceCommitRef: MutableRefObject<(() => void) | undefined>;
 }
 
 // Data lokal (IndexedDB) tidak pernah dapat spinner (F0-07) — keadaan
 // "loading" cuma berarti belum ada apapun buat dirender, bukan skeleton.
-function GroupDetailBody({ slug, state, activeTab, transactionFilter, members, balance, highlightSignal }: GroupDetailBodyProps) {
+function GroupDetailBody({ slug, state, activeTab, transactionFilter, members, balance, highlightSignal, balanceCommitRef }: GroupDetailBodyProps) {
   if (state.status === "loading") return null;
   if (state.status === "error") {
     return (
@@ -75,7 +77,14 @@ function GroupDetailBody({ slug, state, activeTab, transactionFilter, members, b
     );
   }
   if (activeTab === "balance") {
-    return <BalanceTab balance={balance} highlightSignal={highlightSignal} onAddExpense={() => navigate(`/g/${slug}/add`)} />;
+    return (
+      <BalanceTab
+        balance={balance}
+        highlightSignal={highlightSignal}
+        onAddExpense={() => navigate(`/g/${slug}/add`)}
+        commitPendingRef={balanceCommitRef}
+      />
+    );
   }
   return (
     <>
@@ -139,6 +148,7 @@ export function GroupDetailScreen() {
   const { slug = "" } = useRouteParams();
   const [activeTab, setActiveTab] = useState<TabId>("transactions");
   const [highlightSignal, setHighlightSignal] = useState(0);
+  const balanceCommitRef = useRef<(() => void) | undefined>(undefined);
   const state = useGroupDetail(slug);
   const balance = useGroupBalance(slug);
   const items = state.status === "ready" ? state.items : EMPTY_ITEMS;
@@ -146,6 +156,13 @@ export function GroupDetailScreen() {
   const transactionFilter = useTransactionFilter(items);
 
   if (state.status === "not-found") return <NotFoundScreen />;
+
+  function selectTab(id: TabId): void {
+    // F4-01b: tab Saldo unmounts on switch (GroupDetailBody), so any pending
+    // undo toast has to become final here, not just vanish with the component.
+    if (activeTab === "balance" && id !== "balance") balanceCommitRef.current?.();
+    setActiveTab(id);
+  }
 
   const title = state.status === "ready" ? state.group.name : t("group.detail.titleFallback", { slug });
   const positionCurrency = state.status === "ready" ? state.currency : "IDR";
@@ -157,7 +174,7 @@ export function GroupDetailScreen() {
     <Screen
       header={
         <GroupHeader title={title} onBack={() => navigate("/app")} onMenu={() => navigate(`/g/${slug}/members`)} position={position}>
-          <TabBar tabs={tabs()} activeId={activeTab} onSelect={(id) => setActiveTab(id as TabId)} />
+          <TabBar tabs={tabs()} activeId={activeTab} onSelect={(id) => selectTab(id as TabId)} />
         </GroupHeader>
       }
       bottomBar={
@@ -176,6 +193,7 @@ export function GroupDetailScreen() {
         members={members}
         balance={balance}
         highlightSignal={highlightSignal}
+        balanceCommitRef={balanceCommitRef}
       />
     </Screen>
   );

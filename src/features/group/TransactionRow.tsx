@@ -1,6 +1,7 @@
 import { t, formatMoney } from "@/lib/i18n";
 import { Avatar } from "@/shared/ui/Avatar/Avatar";
 import { ListRow } from "@/shared/ui/ListRow/ListRow";
+import { PaperclipIcon } from "@/shared/system/icons";
 import styles from "./TransactionRow.module.css";
 
 // A single participant's effect on "kamu" for one expense — bucketed here
@@ -123,14 +124,14 @@ function ExpenseRow({ row, currency }: ExpenseRowProps) {
         <span className={styles.payer}>{payerLabel(row)}</span>
         {row.foreignAmountMinor !== undefined && row.foreignCurrency !== undefined ? (
           <>
-            <span className={styles.payer}>· {formatMoney(row.foreignAmountMinor, row.foreignCurrency)}</span>
+            <span className={`${styles.payer} bb-numeral`}>· {formatMoney(row.foreignAmountMinor, row.foreignCurrency)}</span>
             <span className={styles.fxBadge}>{row.foreignCurrency}</span>
           </>
         ) : null}
         {row.isPerItemMode ? <span className={styles.mark}>{t("group.transaction.perItemBadge")}</span> : null}
         {row.hasAttachment ? (
           <span className={styles.mark} role="img" aria-label={t("group.transaction.attachmentLabel")}>
-            📎
+            <PaperclipIcon />
           </span>
         ) : null}
       </div>

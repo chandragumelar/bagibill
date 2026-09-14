@@ -344,6 +344,7 @@ find src/ -name "utils.ts" -o -name "helpers.ts"
 - `utils.ts` atau `helpers.ts` tanpa cakupan jelas.
 - Komentar yang cuma ngulang isi kode. Setiap rumus uang wajib punya satu baris kenapa.
 - File test sejajar dengan file yang diuji, dan menguji lewat pintu publik modul. Test yang manggil fungsi internal berarti refactor bakal mecahin test yang seharusnya ga peduli.
+- Hook dengan kontrak eksplisit di komentarnya (misal `useUndoQueue`: pemanggil wajib manggil `commitAll()` pas rute/tab berubah) — cek pemanggilnya beneran manggil, bukan cuma didokumentasikan di komentar hook-nya sendiri. F4-01: `GroupDetailScreen` unmount `BalanceTab` pas ganti tab tanpa pernah manggil `commitAll()`, window urungkan pelunasan abis diam-diam tanpa pernah final. Gate: grep tiap pemanggil hook yang punya kontrak begini, pastikan ada pemenuhan kontraknya di titik yang didokumentasikan (unmount, ganti rute, ganti tab), bukan cuma dibiarkan `useState` mati kena unmount.
 
 ## 14. Aturan repo
 

@@ -9,6 +9,7 @@ export {
   CloudIcon,
   LockIcon,
   OffIcon,
+  PaperclipIcon,
   RetryIcon,
   TrashIcon,
   WarnIcon,

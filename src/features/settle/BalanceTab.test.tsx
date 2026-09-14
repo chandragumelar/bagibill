@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
+import type { MutableRefObject } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { t } from "@/lib/i18n";
 import { db } from "@/lib/storage/schema";
 import type { GroupBalanceState } from "./use-group-balance";
@@ -16,8 +17,28 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  await db.settlements.clear();
+  await Promise.all([db.settlements.clear(), db.groups.clear(), db.members.clear()]);
 });
+
+// createSettlement (settlement-repository.ts) validates fromMemberId/
+// toMemberId/currency against a real group+members record — needed only by
+// the commitPendingRef test below, which actually saves a settlement rather
+// than just rendering the ready-state props.
+async function seedGroupAndMembers(): Promise<void> {
+  await db.groups.add({
+    slug: "g1",
+    name: "Trip Bali",
+    baseCurrency: "IDR",
+    template: "blank",
+    createdAt: 1_000,
+    settings: { simplifyDebts: true, locked: false, archived: false },
+    seq: 0,
+  });
+  await db.members.bulkAdd([
+    { memberId: "m1", groupSlug: "g1", name: "Nadia", color: "--m-1", joinedAt: 1_000, seq: 0 },
+    { memberId: "m2", groupSlug: "g1", name: "Farhan", color: "--m-2", joinedAt: 1_000, seq: 0 },
+  ]);
+}
 
 function readyState(overrides: Partial<Extract<GroupBalanceState, { status: "ready" }>> = {}): GroupBalanceState {
   return {
@@ -166,5 +187,29 @@ describe("BalanceTab", () => {
     rerender(<BalanceTab balance={readyState()} highlightSignal={1} onAddExpense={vi.fn()} />);
 
     expect(container.querySelector('[class*="highlighted"]')).toBeInTheDocument();
+  });
+
+  // F4-01b: GroupDetailScreen unmounts this tab on tab switch, so it must
+  // reach for commitPendingRef before that happens — this proves the ref
+  // is wired to the real undo queue's commitAll, not a stub.
+  it("finalizes a pending settlement's undo toast when commitPendingRef.current is invoked", async () => {
+    await seedGroupAndMembers();
+    const commitPendingRef: MutableRefObject<(() => void) | undefined> = { current: undefined };
+    render(
+      <BalanceTab balance={readyState()} highlightSignal={0} onAddExpense={vi.fn()} commitPendingRef={commitPendingRef} />,
+    );
+
+    const markSettledButton = screen.getAllByText(t("settle.action.markSettled")).at(0);
+    if (markSettledButton === undefined) throw new Error("expected at least one markSettled button");
+    fireEvent.click(markSettledButton);
+    fireEvent.click(screen.getByText(t("settle.form.saveButton")));
+    expect(await screen.findByRole("status")).toBeInTheDocument();
+
+    expect(commitPendingRef.current).toBeDefined();
+    commitPendingRef.current?.();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    });
   });
 });
