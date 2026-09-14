@@ -37,7 +37,7 @@ async function assertValidSettlement(adapter: StorageAdapter, input: CreateSettl
 
   const group = await adapter.groups.get(input.groupSlug);
   if (group === undefined || group.deletedAt !== undefined) {
-    throw new Error(`createSettlement: no group found for slug "${input.groupSlug}"`);
+    throw new Error("createSettlement: no group found for the given slug");
   }
   if (input.currency !== group.baseCurrency) {
     throw new Error(

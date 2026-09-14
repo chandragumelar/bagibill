@@ -121,7 +121,7 @@ function ItemRow({ item, currentMemberId, currency, byId, onTap }: ItemRowProps)
           <span className={styles.itemName}>{item.name}</span>
           <span className={`${styles.itemAmount} bb-numeral`}>{formatMoney(itemTotalMinor, currency)}</span>
         </span>
-        <span className={styles.itemSub}>
+        <span className={`${styles.itemSub} bb-numeral`}>
           {item.quantity > 1 ? `${item.quantity} × ${formatMoney(item.unitPriceMinor, currency)}` : formatMoney(item.unitPriceMinor, currency)}
           {item.quantity > 1 ? ` · ${t("claim.item.portionRatio", { claimed: claimedWeight, quantity: item.quantity })}` : ""}
         </span>

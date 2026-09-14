@@ -123,6 +123,18 @@ describe("createSettlement and getSettlement", () => {
     const repository = makeRepository();
     await expect(repository.createSettlement(makeInput({ currency: "USD" }))).rejects.toThrow(/base currency/);
   });
+
+  it("never leaks the group slug into the error for a nonexistent group — CLAUDE.md hard rule", async () => {
+    const repository = makeRepository();
+    const missingSlug = "never-logged-slug";
+
+    await expect(repository.createSettlement(makeInput({ groupSlug: missingSlug }))).rejects.toThrow(
+      /no group found/,
+    );
+    await expect(repository.createSettlement(makeInput({ groupSlug: missingSlug }))).rejects.not.toThrow(
+      new RegExp(missingSlug),
+    );
+  });
 });
 
 describe("listSettlementsByGroup", () => {

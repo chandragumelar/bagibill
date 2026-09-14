@@ -68,6 +68,17 @@ describe("TransactionList", () => {
     expect(screen.getByText(formatMoney(132_000, "IDR"))).toBeInTheDocument();
   });
 
+  // Skill QA bagian 8: empty state hasil pencarian tidak boleh pakai
+  // ilustrasi, beda dari EmptyTransactions (grup beneran kosong) yang boleh.
+  it("shows the filtered-empty state without an illustration, distinct from the group-empty state", () => {
+    render(
+      <TransactionList items={[]} currency="IDR" nowMs={NOW_MS} onAddExpense={() => {}} isFiltered onClearFilter={() => {}} />,
+    );
+
+    expect(screen.getByText(t("group.transaction.filteredEmptyHeading"))).toBeInTheDocument();
+    expect(document.querySelector('[class*="emptyArt"]')).not.toBeInTheDocument();
+  });
+
   it("keeps the given order (already date-descending), never re-sorting", () => {
     const items: TransactionListItem[] = [
       item({ key: "e1", date: TODAY_MS, row: expenseRow({ expenseId: "e1", title: "Kedua" }) }),

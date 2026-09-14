@@ -115,9 +115,6 @@ interface FilteredEmptyProps {
 function FilteredEmpty({ onClearFilter }: FilteredEmptyProps) {
   return (
     <div className={styles.empty}>
-      <div className={styles.emptyArt} aria-hidden="true">
-        🔍
-      </div>
       <h2 className={styles.emptyHeading}>{t("group.transaction.filteredEmptyHeading")}</h2>
       <p className={styles.emptyBody}>{t("group.transaction.filteredEmptyBody")}</p>
       <Button onClick={onClearFilter} variant="secondary">
