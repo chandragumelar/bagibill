@@ -36,6 +36,29 @@ describe("DevDataPage", () => {
     expect(screen.getByText("Export data")).toBeInTheDocument();
   });
 
+  it("seeds sample data and lists the created groups as links when the button is pressed", async () => {
+    render(<DevDataPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Seed sample data" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Trip Bromo")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Trip Bromo").closest("a")).toHaveAttribute("href", expect.stringMatching(/^\/g\//));
+    expect(screen.getByText(/groups: 4/)).toBeInTheDocument();
+  });
+
+  it("shows the error message when seeding fails, instead of swallowing it", async () => {
+    const groupsAddSpy = vi.spyOn(db.groups, "put").mockRejectedValue(new Error("seed boom"));
+
+    render(<DevDataPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Seed sample data" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("seed boom");
+    });
+    groupsAddSpy.mockRestore();
+  });
+
   it("exports data and shows a row-count summary when the button is pressed", async () => {
     const adapter = createDexieAdapter(db);
     await adapter.groups.put({
