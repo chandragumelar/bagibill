@@ -1,15 +1,17 @@
-# index.html nol pernah di-cache jangka panjang. Kalau iya, user yang app-nya
-# masih kebuka pas ada deploy baru bakal nyangkut di versi lama selamanya —
-# nol ada cara buat mereka keluar dari situ selain hapus cache manual.
-/index.html
-  Cache-Control: no-cache
-
-# Aset di /assets/* nama filenya mengandung hash isi (dari Vite). Ganti isi
-# berarti ganti nama file, jadi aman di-cache permanen di browser dan edge.
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
-
+# HTML app nol pernah diminta lewat "/index.html" secara literal. Semua rute
+# (/, /app, /g/:slug, /g/:slug/members, /c/:token, dst) dirender lewat
+# fallback SPA di public/_redirects (`/* /index.html 200`, status 200, bukan
+# redirect). Cloudflare Pages mencocokkan pola _headers terhadap URL ASLI
+# yang diminta browser, bukan terhadap target rewrite-nya — makanya aturan
+# cache HTML di bawah nempel di /*, bukan /index.html (blok /index.html versi
+# lama nol pernah kena satupun request nyata, sudah dihapus).
 /*
+  # index.html nol pernah di-cache jangka panjang. Kalau iya, user yang
+  # app-nya masih kebuka pas ada deploy baru bakal nyangkut di versi lama
+  # selamanya — nol ada cara buat mereka keluar dari situ selain hapus cache
+  # manual. no-cache beda dari no-store: browser tetap boleh nyimpen, tapi
+  # wajib revalidate ke edge dulu sebelum dipakai.
+  Cache-Control: no-cache
   # script-src pakai hash sha256, bukan 'unsafe-inline'. Ada satu IIFE
   # anti-kedip tema di index.html yang HARUS jalan sinkron sebelum paint
   # (baca localStorage, pasang data-theme sebelum apapun ke-render) — kalau
@@ -39,3 +41,31 @@
   # Proteksi framing dobel: frame-ancestors 'none' di atas buat browser yang
   # baca CSP, X-Frame-Options di sini buat browser lama yang nol baca itu.
   X-Frame-Options: DENY
+
+# Aset di /assets/* nama filenya mengandung hash isi (dari Vite). Ganti isi
+# berarti ganti nama file, jadi aman di-cache permanen di browser dan edge.
+# Blok ini WAJIB di bawah /* dalam file ini, dan WAJIB buka dengan
+# `! Cache-Control`. Alasan: Cloudflare Pages nol bikin aturan paling
+# spesifik menang kalau dua blok _headers sama-sama cocok ke satu request —
+# dua-duanya tetap dipakai dan nilai header yang sama DIGABUNG pakai koma
+# (dari dokumentasi resmi: "If a header is applied twice in the _headers
+# file, the values are joined with a comma separator"). Tanpa `!` di sini,
+# /assets/*.js bakal kewarisan DUA Cache-Control (punya /* digabung punya
+# blok ini) dan `no-cache` di dalamnya bikin browser tetap wajib revalidate
+# walau ada `immutable` — cache panjangnya rusak diam-diam, bukan salah
+# ketik yang keliatan. `!` mencabut nilai yang sudah kewarisin dari /* dulu,
+# baris sesudahnya baru nyetel ulang jadi satu nilai bersih.
+# CATATAN JUJUR (nol yakin 100%, belum diverifikasi live): kombinasi
+# "`!` lalu set ulang, di blok yang ditaruh SETELAH aturan yang lebih luas"
+# nol ketemu contoh eksplisit di dokumentasi resmi Cloudflare buat kasus
+# detach-lalu-reattach ini. Disimpulkan dari section "Detach a header" yang
+# eksplisit bilang gunanya "hapus header yang ditambahin aturan lebih luas",
+# plus satu-satunya contoh resminya (`/*` set CSP duluan, `/*.jpg` hapus
+# sesudahnya) juga urutan luas-ke-sempit yang sama. Kalau ternyata urutan
+# blok di file nol berpengaruh ke urutan eksekusi remove/set, pola ini bisa
+# gagal — satu-satunya cara mastiin adalah curl langsung ke
+# https://bagibill.pika-xu.com/assets/*.js setelah deploy dan cek nol ada
+# `no-cache` nyempil di header Cache-Control-nya (lihat docs/deploy.md).
+/assets/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
