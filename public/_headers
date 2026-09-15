@@ -1,0 +1,41 @@
+# index.html nol pernah di-cache jangka panjang. Kalau iya, user yang app-nya
+# masih kebuka pas ada deploy baru bakal nyangkut di versi lama selamanya —
+# nol ada cara buat mereka keluar dari situ selain hapus cache manual.
+/index.html
+  Cache-Control: no-cache
+
+# Aset di /assets/* nama filenya mengandung hash isi (dari Vite). Ganti isi
+# berarti ganti nama file, jadi aman di-cache permanen di browser dan edge.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*
+  # script-src pakai hash sha256, bukan 'unsafe-inline'. Ada satu IIFE
+  # anti-kedip tema di index.html yang HARUS jalan sinkron sebelum paint
+  # (baca localStorage, pasang data-theme sebelum apapun ke-render) — kalau
+  # dipindah ke file terpisah dia kehilangan alasan dia ada (telat satu
+  # frame kaya modul biasa). Hash-nya dihitung ulang tiap `pnpm build` lewat
+  # scripts/check-csp-hash.ts dan build gagal kalau nilai di sini basi.
+  # style-src 'self' tanpa unsafe-inline: React nyetel `style={{...}}` lewat
+  # CSSOM property-by-property (element.style.setProperty per key), bukan
+  # lewat string HTML attribute, jadi nol kena aturan CSP soal inline style.
+  # Nol domain luar di directive manapun karena app ini belum manggil apapun
+  # ke luar origin sendiri (backend belum ada).
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-p3vDcHbGu47tzrFdMdbm+2g4vFZkItz8ktmMI39NbzE='; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  # Cegah browser nebak MIME dari isi file lalu salah eksekusi/render tipe
+  # yang bukan aslinya (misal file .js ditebak jadi HTML).
+  X-Content-Type-Options: nosniff
+  # Slug grup dan token klaim ada di PATH URL (/g/:slug, /c/:token). Referrer
+  # default ngirim full URL termasuk path itu ke pihak ketiga kalau ada link
+  # keluar dari halaman manapun. no-referrer matiin pengiriman referrer sama
+  # sekali, bukan cuma nyembunyiin origin-nya doang.
+  Referrer-Policy: no-referrer
+  # Matiin kapabilitas browser yang app ini nol pernah pakai (kamera, mic,
+  # lokasi, dst) biar nol ada permukaan yang kebuka percuma.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  # Isolasi browsing context dari origin lain — cegah tab/window lain pegang
+  # referensi ke halaman ini lewat window.opener.
+  Cross-Origin-Opener-Policy: same-origin
+  # Proteksi framing dobel: frame-ancestors 'none' di atas buat browser yang
+  # baca CSP, X-Frame-Options di sini buat browser lama yang nol baca itu.
+  X-Frame-Options: DENY

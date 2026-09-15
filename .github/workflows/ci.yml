@@ -29,7 +29,7 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Build (termasuk kunci i18n dan nilai CSS mentah)
+      - name: Build (termasuk kunci i18n, nilai CSS mentah, hash CSP)
         run: pnpm build
 
       - name: Anggaran bundle

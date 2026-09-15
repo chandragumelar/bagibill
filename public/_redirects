@@ -1,0 +1,8 @@
+# SPA fallback. Semua rute app (/app, /g/:slug, /c/:token, /j/:token, dst)
+# dirender client-side oleh satu index.html — tanpa baris ini, refresh atau
+# buka langsung ke URL manapun selain root bakal 404 di Cloudflare Pages.
+# Status 200 (bukan 301/302) wajib: ini bukan redirect ke halaman lain,
+# cuma bilang ke Cloudflare "serve index.html, biarin browser tetap lihat
+# URL aslinya" supaya router client-side (src/routes/router.tsx) yang baca
+# pathname dan App.tsx yang cabang ke /c/, /j/, /dev/* tetap jalan benar.
+/*   /index.html   200
