@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import * as allocateExtraChargesModule from "../../../packages/split-engine/charges/allocate-extra-charges";
 import { useExpenseDraft } from "./use-expense-draft";
 import type { DraftInit } from "./expense-draft";
 
@@ -162,5 +163,39 @@ describe("useExpenseDraft", () => {
       expect(result.current.result.memberOrder).toEqual(["m1"]);
       expect(result.current.result.calculation.sharesMinor).toEqual([9_000]);
     }
+  });
+
+  // F4-02: measures the doubled computation noted for F3-03/K-90 —
+  // toCalculationInput's computeGrandTotalMinor allocates charges once to
+  // work out the single payer's payment, then calculateExpense allocates
+  // the very same charges again internally (runCharges). Spying on the
+  // shared allocateExtraCharges module (both call paths resolve to this
+  // exact file — the facade re-export expense-draft.ts imports from and
+  // the relative import calculate-expense.ts uses internally) counts real
+  // work, not just how many times calculateExpense itself is invoked (that
+  // part is already exactly once per render, per the "no calculate call
+  // involved" test above).
+  it("runs allocateExtraCharges twice per single draft change when the draft has charges (F4-02, K-90)", () => {
+    const spy = vi.spyOn(allocateExtraChargesModule, "allocateExtraCharges");
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.setAmountMinor(10_000);
+      result.current.addEmptyCharge();
+    });
+    const chargeId = result.current.draft.charges[0]?.id;
+    if (chargeId === undefined) throw new Error("expected a charge to be added");
+    act(() => {
+      result.current.updateCharge(chargeId, { rawValue: "10" });
+    });
+    spy.mockClear();
+
+    // One character change: one digit added to an already-valid charge.
+    act(() => {
+      result.current.updateCharge(chargeId, { rawValue: "105" });
+    });
+
+    expect(result.current.result.ready).toBe(true);
+    expect(spy).toHaveBeenCalledTimes(2);
+    spy.mockRestore();
   });
 });
