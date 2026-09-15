@@ -5,7 +5,7 @@ Panduan buat orang yang belum pernah pakai Cloudflare Pages. Ini langkah manual,
 Yang sudah siap di repo sebelum kamu mulai:
 
 - `public/_redirects` — fallback SPA (semua path balik ke `index.html`, status 200).
-- `public/_headers` — CSP, `nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `X-Frame-Options`, plus aturan cache buat `index.html` dan `/assets/*`.
+- `public/_headers` — CSP, `nosniff`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `X-Frame-Options`, plus aturan cache di `/*` (kena semua rute HTML lewat fallback SPA) dan `/assets/*`.
 - `pnpm build` sudah termasuk `scripts/check-csp-hash.ts` — build gagal duluan kalau hash CSP di `_headers` basi terhadap script inline di `index.html`, jadi kalau langkah build di Cloudflare hijau, hash-nya sudah pasti cocok.
 
 Belum ada di repo, dan memang belum waktunya (PR 12): service worker, `manifest.json`, ikon PWA. Jangan kaget kalau Lighthouse bilang "not installable" — itu belum dikerjakan, bukan bug.
@@ -77,7 +77,7 @@ Cek juga aset ber-hash dapat cache panjang:
 curl -sI https://bagibill.pika-xu.com/assets/$(curl -s https://bagibill.pika-xu.com/ | grep -o 'assets/[^"]*\.js' | head -1)
 ```
 
-harus muncul `cache-control: public, max-age=31536000, immutable`.
+harus muncul persis `cache-control: public, max-age=31536000, immutable` — **bukan** itu digabung koma sama `no-cache`. Ini bukan cuma cek nilai salah ketik: kalau muncul `cache-control: public, max-age=31536000, immutable, no-cache`, artinya urutan blok `/*` dan `/assets/*` di `public/_headers` gagal bikin `! Cache-Control` mencabut nilai yang kewarisin dari `/*` sebelum di-set ulang, dan cache panjang asetnya rusak diam-diam (browser tetap wajib revalidate walau ada `immutable`). Ini kondisi yang belum bisa diverifikasi tanpa deploy beneran (lihat komentar di `public/_headers` sendiri) — kalau kejadian, laporkan, jangan diotak-atik manual di dashboard.
 
 **Kalau header CSP/security nol muncul sama sekali** (bukan cuma beda isi, tapi header-nya hilang total): kemungkinan besar baris komentar (`#...`) di `public/_headers` nol ke-parse seperti dugaan. Perbaikannya: buka `public/_headers`, hapus semua baris yang diawali `#`, commit, redeploy, curl ulang. Kalau setelah itu header muncul, berarti dugaan soal dukungan komentar salah — laporkan biar dicatat, karena artinya penjelasan "kenapa" tiap header perlu dipindah keluar dari file ini.
 
