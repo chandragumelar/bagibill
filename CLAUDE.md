@@ -24,7 +24,7 @@ Urutan baca sebelum mulai kerja: `progress.md` untuk tahu posisi sekarang, lalu 
 
 Sudah diputuskan, tidak usah ditawar ulang kecuali anggaran bundle terlampaui.
 
-- React 19 + TypeScript strict + Vite. Kalau anggaran bundle terlampaui di PR manapun, tukar ke Preact lewat alias Vite, bukan dengan menurunkan target.
+- React 19 + TypeScript strict + Vite. Kalau bundle awal (first-load, bukan total seluruh chunk — lihat `pnpm size`) tembus ~100 KB brotli di PR manapun, buka lagi opsi tukar ke Preact lewat alias Vite; di bawah itu jangan ditawar (K-147/K-150, `progress.md`).
 - Styling: CSS Modules plus custom property dari `packages/tokens`. Tidak ada Tailwind. Jangan dua sistem styling sekaligus.
 - Data lokal: Dexie di atas IndexedDB. State di memori pakai store ringan, jangan tarik Redux.
 - Test: Vitest plus Testing Library. File test sejajar dengan file yang diuji.
