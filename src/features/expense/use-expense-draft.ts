@@ -12,6 +12,7 @@ import type {
   ExpenseSplitMode,
   TreatDraft,
 } from "./expense-draft";
+import type { CategoryKey } from "@/lib/storage/templates";
 
 // spec.md 7.1's default allocation for a fresh custom charge — proportional
 // is also what the preset uses for tax/service (spec.md 7.3: "default untuk
@@ -28,6 +29,8 @@ export interface UseExpenseDraftResult {
   readonly result: ExpenseDraftResult;
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
+  readonly setDate: (date: number) => void;
+  readonly setCategory: (category: CategoryKey) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
   readonly setPayer: (memberId: string) => void;
   readonly setWeight: (memberId: string, weight: number) => void;
@@ -75,6 +78,17 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
 
   function setAmountMinor(amountMinor: number): void {
     setDraft((current) => ({ ...current, amountMinor }));
+  }
+
+  // Never touches title, amount, mode, membership, charges, or treats —
+  // same precedent as setPayer/setMode (F4-05/F3-02): changing when or what
+  // an expense is doesn't reset anything else that was already filled in.
+  function setDate(date: number): void {
+    setDraft((current) => ({ ...current, date }));
+  }
+
+  function setCategory(category: CategoryKey): void {
+    setDraft((current) => ({ ...current, category }));
   }
 
   // Switching modes never touches title, amount, or membership — the same
@@ -238,6 +252,8 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
     result,
     setTitle,
     setAmountMinor,
+    setDate,
+    setCategory,
     setMode,
     setPayer,
     setWeight,

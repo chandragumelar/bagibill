@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import styles from "@/shared/ui/ListRow/ListRow.module.css";
 
 export interface ListRowProps {
-  leading: ReactNode;
+  /** Omitted for rows with nothing to show there (e.g. a plain text picker) — the column still reserves its width, so trailing stays aligned across rows. */
+  leading?: ReactNode;
   children: ReactNode;
   trailing?: ReactNode;
   onClick?: () => void;

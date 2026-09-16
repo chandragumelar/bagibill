@@ -23,6 +23,7 @@ const INIT: DraftInit = {
   currency: "IDR",
   category: "food",
   date: 1_000,
+  templateCategories: ["food"],
 };
 
 function draftWith(overrides: Partial<ExpenseDraft> = {}): ExpenseDraft {
@@ -171,7 +172,7 @@ describe("toCalculationInput — byWeights mode", () => {
 });
 
 describe("toCreateExpenseInput", () => {
-  const save = { groupSlug: "g1", createdBy: "m1", date: 2_000 };
+  const save = { groupSlug: "g1", createdBy: "m1" };
 
   it("returns null when the draft cannot be calculated", () => {
     expect(toCreateExpenseInput(draftWith({ amountMinor: 0 }), save)).toBeNull();
@@ -182,6 +183,17 @@ describe("toCreateExpenseInput", () => {
     expect(toCreateExpenseInput(noParticipants, save)).toBeNull();
   });
 
+  // F4-06 regression: date is a field the user edits on the draft (the date
+  // pill), not a save-time timestamp — a stored expense must carry the date
+  // the user actually picked, not whatever moment the save button happened
+  // to be tapped at. `save` deliberately has no `date` field to make that
+  // impossible to get wrong again the same way.
+  it("saves the draft's own date, not a save-time value", () => {
+    const draft = draftWith({ amountMinor: 9_000, date: 86_400_000 });
+    const input = toCreateExpenseInput(draft, save);
+    expect(input?.date).toBe(86_400_000);
+  });
+
   it("shapes an evenly SplitDataRecord with memberIds in display order and a single full-amount payer", () => {
     const draft = draftWith({ amountMinor: 9_000, title: "Makan malam" });
     const input = toCreateExpenseInput(draft, save);
@@ -189,7 +201,7 @@ describe("toCreateExpenseInput", () => {
       groupSlug: "g1",
       title: "Makan malam",
       category: "food",
-      date: 2_000,
+      date: 1_000,
       notes: "",
       currency: "IDR",
       fxRate: 1,
@@ -408,7 +420,7 @@ describe("toCalculationInput — treats", () => {
 });
 
 describe("toCreateExpenseInput — charges and treats", () => {
-  const save = { groupSlug: "g1", createdBy: "m1", date: 2_000 };
+  const save = { groupSlug: "g1", createdBy: "m1" };
 
   it("shapes charges with memberId (not a participant index) for single_payer", () => {
     const draft = draftWith({

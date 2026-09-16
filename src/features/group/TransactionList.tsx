@@ -1,23 +1,8 @@
-import { t, formatDate, formatMoney } from "@/lib/i18n";
+import { t, dayLabel, formatMoney, startOfDay } from "@/lib/i18n";
 import { Button } from "@/shared/ui/Button/Button";
 import type { TransactionListItem } from "./use-group-detail";
 import { TransactionRow } from "./TransactionRow";
 import styles from "./TransactionList.module.css";
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function startOfDay(ms: number): number {
-  const date = new Date(ms);
-  date.setHours(0, 0, 0, 0);
-  return date.getTime();
-}
-
-function dayLabel(dayStartMs: number, nowMs: number): string {
-  const diffDays = Math.round((startOfDay(nowMs) - dayStartMs) / MS_PER_DAY);
-  if (diffDays === 0) return t("group.transaction.dayToday");
-  if (diffDays === 1) return t("group.transaction.dayYesterday");
-  return formatDate(new Date(dayStartMs), { day: "numeric", month: "short" });
-}
 
 interface DayGroup {
   readonly dayStartMs: number;

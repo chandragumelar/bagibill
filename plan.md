@@ -423,6 +423,14 @@ Isi: pembayar di Tambah Pengeluaran kekunci ke member pertama grup, nol ada cara
 
 Selesai kalau: pembayar bisa diganti ke siapa saja (termasuk non-peserta) di kelima mode, hasil hitungan dan `payers[0].memberId` yang tersimpan ikut berubah, dan lima gerbang hijau.
 
+### F4-06 Tanggal dan kategori bisa diubah di layar tambah pengeluaran
+
+Tergantung: F4-05 (ditemukan di uji HP fisik pertama, di luar urutan tugas awal).
+
+Isi: pill tanggal, kategori, dan mata uang di Tambah Pengeluaran cuma `<span>` mati — pengeluaran selalu kesimpan bertanggal hari ini dan berkategori pertama dari template, apapun yang sebenarnya terjadi. Tanggal jadi tombol yang membuka `<input type="date">` bawaan peramban (nol kalender buatan sendiri), nol boleh masa depan. Kategori jadi tombol yang membuka sheet delapan `CategoryKey`, seluruhnya tetap bisa dipilih (kategori bawaan template cuma menentukan urutan, bukan pagar). Mata uang tetap `<span>` mati, itu properti grup bukan properti pengeluaran. Bug ikut ketemu dan dibetulkan: `toCreateExpenseInput` menyimpan tanggal dari waktu simpan (`save.date`), bukan dari draft yang sedang diedit (`draft.date`) — jadi walau pill-nya sudah bisa diubah, angkanya bisa saja tetap ketimpa diam-diam tanpa perbaikan ini.
+
+Selesai kalau: tanggal dan kategori bisa diubah di kelima mode, tanggal yang dipilih (bukan waktu simpan) yang beneran tersimpan, dan lima gerbang hijau.
+
 ---
 
 ## Setelah ini

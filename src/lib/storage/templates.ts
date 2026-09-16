@@ -10,6 +10,20 @@ export type CategoryKey =
   | "health"
   | "other";
 
+// The single canonical order for the eight keys — every UI that lists all
+// categories (picker, label maps) derives its order from this, not its own
+// copy, so the catalog can't drift between call sites.
+export const CATEGORY_KEYS: readonly CategoryKey[] = [
+  "food",
+  "transport",
+  "stay",
+  "shopping",
+  "fun",
+  "bills",
+  "health",
+  "other",
+];
+
 // spec.md 12.1 names five templates (Trip, Roommate, Pasangan, Acara sekali
 // jalan, Kosong) but doesn't map categories, simplifyDebts, or recurring per
 // template — these keys are internal identifiers only, same pattern as K-04
