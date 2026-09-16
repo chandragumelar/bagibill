@@ -246,6 +246,14 @@ export function hasAllocationMismatchWarning(warnings: readonly SplitWarning[]):
   return warnings.some((warning) => warning.code === "under_allocated" || warning.code === "over_allocated");
 }
 
+// spec.md 6.5: mode Selisih stays computable and previewable when
+// adjustments exceed the total (splitByAdjustment never throws for it), but
+// it can't be saved — same "warn while editing, block on save" split as
+// hasAllocationMismatchWarning above.
+export function hasAdjustmentExceedsTotalWarning(warnings: readonly SplitWarning[]): boolean {
+  return warnings.some((warning) => warning.code === "adjustment_exceeds_total");
+}
+
 // A charge row mid-typing ("", "-", "12.") parses to nothing yet — treated
 // as 0 rather than blocking the whole panel, the same way a fresh row
 // contributes nothing until filled in. Once ChargeEditor sanitizes keystrokes
@@ -506,6 +514,13 @@ function isAmountsBalanced(totalMinor: number, checked: readonly ExpenseDraftMem
   return !hasAllocationMismatchWarning(warnings);
 }
 
+// Mirrors isAmountsBalanced above, for mode Selisih's own save gate
+// (spec.md 6.5: adjustments summing past the total block saving).
+function isAdjustmentSaveable(totalMinor: number, checked: readonly ExpenseDraftMember[]): boolean {
+  const { warnings } = splitByAdjustment({ totalMinor, adjustmentsMinor: checked.map((member) => member.adjustmentMinor) });
+  return !hasAdjustmentExceedsTotalWarning(warnings);
+}
+
 // Mirrors toCalculationInput's readiness check, but returns the shape
 // createExpense (F2-03 repository) accepts instead of calculateExpense's.
 // null means the same "not ready yet" the panel already shows — the save
@@ -522,6 +537,7 @@ export function toCreateExpenseInput(
   if (draft.mode === "byPercentage" && !isPercentageBalanced(sumPercent(resolved.checked))) return null;
   if (draft.mode === "byAmounts" && hasProportionalChargeOnZeroAmounts(draft.charges, resolved.checked)) return null;
   if (draft.mode === "byAmounts" && !isAmountsBalanced(draft.amountMinor, resolved.checked)) return null;
+  if (draft.mode === "byAdjustment" && !isAdjustmentSaveable(draft.amountMinor, resolved.checked)) return null;
   if (findInvalidTreatReason(draft.treats, resolved.checked) !== undefined) return null;
 
   return {

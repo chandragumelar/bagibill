@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type ReactNode } from "react";
+import type { SplitWarning } from "@bagibill/split-engine";
 import { t, formatMoney } from "@/lib/i18n";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
 import { Screen } from "@/app/layout/Screen/Screen";
@@ -10,10 +11,10 @@ import { expenseRepository } from "@/lib/storage/repositories";
 import type { CategoryKey } from "@/lib/storage/templates";
 import {
   NOT_READY_MESSAGE_KEY,
+  hasAdjustmentExceedsTotalWarning,
   toCreateExpenseInput,
   type ChargeDraft,
   type ExpenseDraft,
-  type ExpenseDraftMember,
   type ExpenseSplitMode,
   type TreatDraft,
 } from "./expense-draft";
@@ -197,17 +198,17 @@ export function ExpenseFormSelisih({
   }
 
   // The even-share reference ("bagian rata") shown once above the list —
-  // read off the engine's own result (shareMinor minus the known
-  // adjustment), never recomputed by re-deriving the split here.
-  function evenShareMinorFor(members: readonly ExpenseDraftMember[]): number | undefined {
-    const first = members[0];
-    if (first === undefined) return undefined;
-    const firstShareMinor = shareFor(first.memberId);
-    if (firstShareMinor === undefined) return undefined;
-    return firstShareMinor - first.adjustmentMinor;
-  }
+  // read straight off splitByAdjustment's own evenSharesMinor (spec.md 6.5),
+  // never recomputed here (CLAUDE.md: zero arithmetic in .tsx).
+  const evenShareMinor = result.ready ? result.calculation.evenSharesMinor?.[0] : undefined;
 
-  const evenShareMinor = evenShareMinorFor(checkedMembers);
+  const canSave = result.ready && !hasAdjustmentExceedsTotalWarning(result.calculation.warnings);
+  const exceedsTotalWarning = result.ready
+    ? result.calculation.warnings.find(
+        (warning): warning is Extract<SplitWarning, { code: "adjustment_exceeds_total" }> =>
+          warning.code === "adjustment_exceeds_total",
+      )
+    : undefined;
 
   async function handleSave(): Promise<void> {
     const input = toCreateExpenseInput(draft, {
@@ -256,7 +257,7 @@ export function ExpenseFormSelisih({
               </div>
             </div>
           </div>
-          <Button onClick={() => void handleSave()} disabled={!result.ready || saving}>
+          <Button onClick={() => void handleSave()} disabled={!canSave || saving}>
             {t("expense.save.button")}
           </Button>
         </BottomBar>
@@ -314,6 +315,12 @@ export function ExpenseFormSelisih({
 
         {evenShareMinor !== undefined ? (
           <p className={styles.explainerBody}>{t("expense.deviation.evenShare", { amount: formatMoney(evenShareMinor, draft.currency) })}</p>
+        ) : null}
+
+        {result.ready && exceedsTotalWarning !== undefined ? (
+          <p className={styles.explainerWarning}>
+            {t("expense.warning.adjustmentExceedsTotal", { amount: formatMoney(exceedsTotalWarning.shortfallMinor, draft.currency) })}
+          </p>
         ) : null}
 
         <div className={styles.participantList}>

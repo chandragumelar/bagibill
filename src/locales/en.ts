@@ -176,6 +176,7 @@ export const en: LocaleDictionary = {
   "expense.warning.underAllocated": "{amount} left unallocated",
   "expense.warning.overAllocated": "{amount} over the total",
   "expense.warning.negativeShare": "Some shares went negative",
+  "expense.warning.adjustmentExceedsTotal": "Adjustments exceed the total by {amount}, can't save yet",
   "expense.warning.unclaimedItems": "Some items are unclaimed",
   "expense.warning.claimWeightMismatch": "Item claim weights don't add up, split proportionally",
   "expense.warning.largeGroupSimplify": "Large group, debt simplification was capped",

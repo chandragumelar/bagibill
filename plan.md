@@ -431,6 +431,14 @@ Isi: pill tanggal, kategori, dan mata uang di Tambah Pengeluaran cuma `<span>` m
 
 Selesai kalau: tanggal dan kategori bisa diubah di kelima mode, tanggal yang dipilih (bukan waktu simpan) yang beneran tersimpan, dan lima gerbang hijau.
 
+### F4-07 Mode Selisih: bagian rata dihitung dari base, bukan dari total
+
+Tergantung: F4-06 (ditemukan di uji HP fisik pertama, di luar urutan tugas awal).
+
+Isi: label "Bagian rata" di mode Selisih ternyata dihitung ulang di `.tsx` (mengurangi `adjustmentMinor` dari `shareMinor`), bukan dibaca langsung dari engine — `splitByAdjustment` sendiri sudah benar tapi hasilnya tidak diekspos. `evenSharesMinor` sekarang jadi bagian dari `AdjustmentSplitResult`/`ExpenseCalculation`, dan UI baca dari sana (nol aritmatika di `.tsx`). Ditambah kasus yang belum ditangani: jumlah penyesuaian melebihi total (baseMinor negatif) sekarang tetap dihitung, bukan dibiarkan diam-diam salah — mengangkat warning baru `adjustment_exceeds_total` yang memblokir simpan lewat `toCreateExpenseInput`, mirip pola `hasAllocationMismatchWarning` di mode Nominal.
+
+Selesai kalau: label bagian rata mode Selisih ikut berubah realtime dari engine, penyesuaian yang melebihi total dicegah tersimpan dengan pesan yang jelas, dan lima gerbang hijau.
+
 ---
 
 ## Setelah ini

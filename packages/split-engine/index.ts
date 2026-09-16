@@ -8,6 +8,7 @@ export { splitByAmounts } from "./modes/split-by-amounts";
 export { splitByPercentage } from "./modes/split-by-percentage";
 export { splitByWeights } from "./modes/split-by-weights";
 export { splitByAdjustment } from "./modes/split-by-adjustment";
+export type { AdjustmentSplitResult } from "./modes/split-by-adjustment";
 export { splitByItems } from "./modes/split-by-items";
 export type { SplitResult, SplitWarning } from "./modes/split-result";
 export type { ExpenseItem, ItemClaim, ItemBreakdown, ItemSplitResult } from "./modes/split-by-items.types";
