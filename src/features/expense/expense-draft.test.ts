@@ -55,7 +55,10 @@ describe("toCalculationInput", () => {
     expect(result).toEqual({ ready: false, reason: "noParticipants" });
   });
 
-  it("is not calculable when the payer is unchecked", () => {
+  // spec.md 6.7: the payer can front the bill without eating — an unchecked
+  // payer must still produce a calculable split among the people who are
+  // actually checked, not a blocked draft.
+  it("is calculable when the payer is unchecked, splitting only between checked members", () => {
     const draft = draftWith({
       amountMinor: 9_000,
       members: [
@@ -66,7 +69,15 @@ describe("toCalculationInput", () => {
       payerMemberId: "m1",
     });
     const result = toCalculationInput(draft);
-    expect(result).toEqual({ ready: false, reason: "payerExcluded" });
+    expect(result.ready).toBe(true);
+    if (result.ready) {
+      expect(result.memberOrder).toEqual(["m2", "m3"]);
+      expect(result.input.split).toEqual({ mode: "evenly", participantCount: 2 });
+      // m1 (the unchecked payer) isn't one of the two payment slots — the
+      // full amount is attributed to slot 0 as an internal bookkeeping
+      // detail (resolvePaymentIndex's fallback), never shown to the user.
+      expect(result.input.paymentsMinor).toEqual([9_000, 0]);
+    }
   });
 
   it("builds an evenly-split calculateExpense input, one payment slot per checked member", () => {
@@ -212,6 +223,22 @@ describe("toCreateExpenseInput", () => {
         { memberId: "m3", weight: 1 },
       ],
     });
+  });
+
+  it("saves with the unchecked payer's memberId, paying the full amount, per spec.md 6.7", () => {
+    const draft = draftWith({
+      amountMinor: 9_000,
+      title: "Nasi goreng",
+      members: [
+        { memberId: "m1", name: "Farhan", color: "--m-1", checked: false, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m2", name: "Sarah", color: "--m-2", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+        { memberId: "m3", name: "Andi", color: "--m-3", checked: true, weight: 1, amountMinor: 0, percent: 0, adjustmentMinor: 0 },
+      ],
+      payerMemberId: "m1",
+    });
+    const input = toCreateExpenseInput(draft, save);
+    expect(input?.payers).toEqual([{ memberId: "m1", amountMinor: 9_000 }]);
+    expect(input?.splitData).toEqual({ mode: "evenly", memberIds: ["m2", "m3"] });
   });
 
   it("returns null when every checked member is at weight zero", () => {

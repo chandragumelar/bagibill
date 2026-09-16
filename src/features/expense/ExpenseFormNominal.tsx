@@ -22,6 +22,7 @@ import { AllocationBar } from "./AllocationBar";
 import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
+import { PayerButton } from "./PayerButton";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 
@@ -69,6 +70,7 @@ export interface ExpenseFormNominalProps {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
+  readonly setPayer: (memberId: string) => void;
   readonly setMemberAmountMinor: (memberId: string, amountMinor: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
@@ -95,6 +97,7 @@ export function ExpenseFormNominal({
   setTitle,
   setAmountMinor,
   setMode,
+  setPayer,
   setMemberAmountMinor,
   toggleMember,
   checkAllMembers,
@@ -111,7 +114,6 @@ export function ExpenseFormNominal({
 
   const checkedMembers = draft.members.filter((member) => member.checked);
   const checkedCount = checkedMembers.length;
-  const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
 
   // Nominal always computes (splitByAmounts only warns on a mismatch, it
   // never throws), so result.ready is never false here just because the
@@ -186,16 +188,7 @@ export function ExpenseFormNominal({
         <span className={styles.chip}>{draft.currency}</span>
       </div>
 
-      {payer ? (
-        <div className={styles.section}>
-          <div className={styles.sectionHeading}>{t("expense.payer.label")}</div>
-          <div className={styles.participantList}>
-            <ListRow leading={<Avatar initials={initialsFromName(payer.name)} color={`var(${payer.color})`} name={payer.name} />}>
-              <span className={styles.memberName}>{payer.name}</span>
-            </ListRow>
-          </div>
-        </div>
-      ) : null}
+      <PayerButton members={draft.members} payerMemberId={draft.payerMemberId} onSelect={setPayer} />
 
       <div className={styles.section}>
         <div className={styles.sectionHeadingRow}>

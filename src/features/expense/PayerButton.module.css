@@ -1,0 +1,34 @@
+/* Flex row, bukan grid ListRow — trailing "Ubah ›" tidak boleh menekan nama
+   sampai nol lebar di layar sempit, preseden sama dengan ParticipantControlRow
+   (F4-04). Menyalin docs/mockups/Tambah_Pengeluaran.html blok "Dibayar". */
+.button {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: var(--size-touch-min);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-1);
+  cursor: pointer;
+  text-align: left;
+}
+
+.name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+}
+
+.changeAffordance {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: var(--fs-footnote);
+}

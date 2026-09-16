@@ -415,6 +415,14 @@ Isi: baris peserta mode Nominal/Persen/Porsi/Selisih di Tambah Pengeluaran numpu
 
 Selesai kalau: nama member nol lagi ketiban kontrol di 360px, input nominal berpemisah ribuan sesuai locale, dan lima gerbang hijau — dicek di HP fisik, bukan cuma kode.
 
+### F4-05 Pemilih pembayar di layar tambah pengeluaran
+
+Tergantung: F4-04 (ditemukan di uji HP fisik pertama, di luar urutan tugas awal).
+
+Isi: pembayar di Tambah Pengeluaran kekunci ke member pertama grup, nol ada cara menggantinya. Tombol Dibayar (mockup: avatar, nama, afordans "Ubah ›") sekarang membuka pemilih member lewat `Sheet` yang sudah ada, daftarnya seluruh member aktif termasuk yang nol dicentang sebagai peserta (spec.md 6.7). Ikut diperbaiki: gerbang `payerExcluded` di `expense-draft.ts` yang sebelumnya memblokir draft begitu pembayar bukan peserta — bertentangan dengan spec.md 6.7 sendiri.
+
+Selesai kalau: pembayar bisa diganti ke siapa saja (termasuk non-peserta) di kelima mode, hasil hitungan dan `payers[0].memberId` yang tersimpan ikut berubah, dan lima gerbang hijau.
+
 ---
 
 ## Setelah ini
