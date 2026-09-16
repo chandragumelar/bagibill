@@ -1,0 +1,34 @@
+/* Baris peserta versi mode berkontrol (Nominal, Persen, Porsi, Selisih).
+   Flexbox, bukan grid tiga kolom ListRow — trailing di sini tidak pernah
+   bisa mengecil (stepper, input, pil %), jadi kalau dipaksa lewat grid
+   `auto` + `minmax(0,1fr)`, kolom nama kehabisan lebar sampai nol dan
+   teksnya numpuk di belakang kontrol pas layar HP sempit (F4-04). Flex row
+   menjamin nama yang mengecil duluan lewat ellipsis, trailing selalu dapat
+   lebar penuh sesuai kontennya — susunan ini menyalin
+   docs/mockups/Tambah_Pengeluaran.html (rowBase/rowLast: flex, align-items
+   flex-start, name flex:1 min-width:0, trailing flex:0 0 auto). */
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-3);
+  min-height: var(--size-touch-min);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.leading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.trailing {
+  flex: 0 0 auto;
+}

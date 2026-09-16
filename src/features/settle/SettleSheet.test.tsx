@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { t } from "@/lib/i18n";
+import { setLocale, t } from "@/lib/i18n";
 import { SettleSheet, type SettleSheetTarget } from "./SettleSheet";
+
+beforeEach(() => {
+  setLocale("id");
+});
 
 const TARGET: SettleSheetTarget = {
   fromMemberId: "m-farhan",
@@ -18,7 +22,7 @@ describe("SettleSheet", () => {
     render(
       <SettleSheet open target={TARGET} currency="IDR" nowMs={1_700_000_000_000} onClose={vi.fn()} onSave={vi.fn()} />,
     );
-    expect(screen.getByLabelText(t("settle.form.amountLabel"))).toHaveValue("705000");
+    expect(screen.getByLabelText(t("settle.form.amountLabel"))).toHaveValue("705.000");
   });
 
   it("allows the amount to be reduced below the suggestion — spec.md 11.3 partial payoff", () => {
@@ -27,7 +31,7 @@ describe("SettleSheet", () => {
     );
     const amountField = screen.getByLabelText(t("settle.form.amountLabel"));
     fireEvent.change(amountField, { target: { value: "400000" } });
-    expect(amountField).toHaveValue("400000");
+    expect(amountField).toHaveValue("400.000");
   });
 
   it("calls onSave with the fields shaped for the repository", async () => {

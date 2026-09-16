@@ -19,6 +19,7 @@ import {
 } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
 import { DeviationBar } from "./DeviationBar";
+import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
@@ -341,9 +342,20 @@ export function ExpenseFormSelisih({
               );
             }
             return (
-              <ListRow
+              <ParticipantControlRow
                 key={member.memberId}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
+                name={member.name}
+                secondary={
+                  shareMinor !== undefined ? (
+                    <DeviationBar
+                      shareMinor={shareMinor}
+                      adjustmentMinor={member.adjustmentMinor}
+                      maxAbsAdjustmentMinor={maxAbsAdjustmentMinor}
+                      currency={draft.currency}
+                    />
+                  ) : null
+                }
                 trailing={
                   <AdjustmentStepper
                     memberName={member.name}
@@ -352,17 +364,7 @@ export function ExpenseFormSelisih({
                     onChange={(adjustmentMinor) => setAdjustmentMinor(member.memberId, adjustmentMinor)}
                   />
                 }
-              >
-                <span className={styles.memberName}>{member.name}</span>
-                {shareMinor !== undefined ? (
-                  <DeviationBar
-                    shareMinor={shareMinor}
-                    adjustmentMinor={member.adjustmentMinor}
-                    maxAbsAdjustmentMinor={maxAbsAdjustmentMinor}
-                    currency={draft.currency}
-                  />
-                ) : null}
-              </ListRow>
+              />
             );
           })}
         </div>

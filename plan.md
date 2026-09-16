@@ -407,6 +407,14 @@ Isi: Cloudflare Pages, domain `bagibill.pika-xu.com`, header keamanan, dan pasti
 
 Selesai kalau: dibuka dari HP di jaringan seluler, tujuh layar jalan, dan angkanya masih benar setelah app ditutup lalu dibuka lagi.
 
+### F4-04 Perbaiki tabrakan baris peserta dan pemisah ribuan
+
+Tergantung: F4-03 (ditemukan di uji HP fisik pertama, di luar urutan tugas awal).
+
+Isi: baris peserta mode Nominal/Persen/Porsi/Selisih di Tambah Pengeluaran numpuk sama kontrolnya di layar 360-390px, dan `MoneyInput` menampilkan angka tanpa pemisah ribuan. Dua-duanya cuma kelihatan di lebar layar HP beneran, nol ketangkep F4-01.
+
+Selesai kalau: nama member nol lagi ketiban kontrol di 360px, input nominal berpemisah ribuan sesuai locale, dan lima gerbang hijau — dicek di HP fisik, bukan cuma kode.
+
 ---
 
 ## Setelah ini
