@@ -18,6 +18,17 @@
   color: var(--text-secondary);
 }
 
+/* Date and category pills are <button>s wearing .chip's look — reset the
+   button-specific chrome a plain <span> chip never had to deal with. */
+.chipButton {
+  appearance: none;
+  font-family: inherit;
+  min-height: var(--size-touch-min);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
 .section {
   margin-bottom: var(--sp-5);
 }

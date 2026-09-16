@@ -111,6 +111,8 @@ export interface DraftInit {
   readonly currency: string;
   readonly category: CategoryKey;
   readonly date: number;
+  /** The group template's own categories, in its order — pinned to the top of the category picker (F4-06). Every one of the 8 CategoryKeys stays pickable regardless; this only orders them. */
+  readonly templateCategories: readonly CategoryKey[];
 }
 
 // spec.md default: every active member starts checked, first member by
@@ -511,7 +513,7 @@ function isAmountsBalanced(totalMinor: number, checked: readonly ExpenseDraftMem
 // value while it's null.
 export function toCreateExpenseInput(
   draft: ExpenseDraft,
-  save: { readonly groupSlug: string; readonly createdBy: string; readonly date: number },
+  save: { readonly groupSlug: string; readonly createdBy: string },
 ): CreateExpenseInput | null {
   if (draft.amountMinor <= 0) return null;
   const resolved = resolveParticipants(draft);
@@ -526,7 +528,7 @@ export function toCreateExpenseInput(
     groupSlug: save.groupSlug,
     title: draft.title,
     category: draft.category,
-    date: save.date,
+    date: draft.date,
     notes: "",
     currency: draft.currency,
     fxRate: 1,

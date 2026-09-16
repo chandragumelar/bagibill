@@ -1,0 +1,12 @@
+/* Visually hidden but still rendered (not display:none) — HTMLInputElement's
+   showPicker() needs the element connected and laid out, not just clicked.
+   Same visually-hidden shape as ChargeEditor's .visuallyHiddenLabel. */
+.hiddenInput {
+  position: absolute;
+  width: var(--size-visually-hidden);
+  height: var(--size-visually-hidden);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

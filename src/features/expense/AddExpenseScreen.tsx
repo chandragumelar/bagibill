@@ -5,7 +5,7 @@ import { Topbar, TopbarButton } from "@/app/layout/Topbar/Topbar";
 import { navigate, useRouteParams } from "@/routes/router";
 import { systemClock } from "@/lib/storage/clock";
 import { groupRepository, memberRepository } from "@/lib/storage/repositories";
-import { GROUP_TEMPLATES, type CategoryKey } from "@/lib/storage/templates";
+import { GROUP_TEMPLATES } from "@/lib/storage/templates";
 import type { DraftInit } from "./expense-draft";
 import { useExpenseDraft } from "./use-expense-draft";
 import { ExpenseFormRata } from "./ExpenseFormRata";
@@ -14,9 +14,8 @@ import { ExpenseFormPersen } from "./ExpenseFormPersen";
 import { ExpenseFormPorsi } from "./ExpenseFormPorsi";
 import { ExpenseFormSelisih } from "./ExpenseFormSelisih";
 
-function firstCategoryForTemplate(templateKey: string): CategoryKey {
-  const template = Object.values(GROUP_TEMPLATES).find((candidate) => candidate.key === templateKey);
-  return template?.defaultCategories[0] ?? "other";
+function templateFor(templateKey: string) {
+  return Object.values(GROUP_TEMPLATES).find((candidate) => candidate.key === templateKey);
 }
 
 function topbarHeader(slug: string) {
@@ -39,7 +38,7 @@ interface ExpenseFormRouterProps {
 // the draft and never resets title/amount/membership (plan.md F3-02/F3-04).
 function ExpenseFormRouter({ slug, init, header }: ExpenseFormRouterProps) {
   const draftState = useExpenseDraft(init);
-  const formProps = { slug, header, ...draftState };
+  const formProps = { slug, header, templateCategories: init.templateCategories, ...draftState };
   switch (draftState.draft.mode) {
     case "byAmounts":
       return <ExpenseFormNominal {...formProps} />;
@@ -72,6 +71,8 @@ export function AddExpenseScreen() {
       const members = await memberRepository.listMembers(slug);
       if (cancelled) return;
       const sortedMembers = [...members].sort((a, b) => a.joinedAt - b.joinedAt);
+      const template = templateFor(group.template);
+      const templateCategories = template?.defaultCategories ?? [];
       setInit({
         members: sortedMembers.map((member) => ({
           memberId: member.memberId,
@@ -79,8 +80,9 @@ export function AddExpenseScreen() {
           color: member.color,
         })),
         currency: group.baseCurrency,
-        category: firstCategoryForTemplate(group.template),
+        category: templateCategories[0] ?? "other",
         date: systemClock.now(),
+        templateCategories,
       });
     }
     void load();

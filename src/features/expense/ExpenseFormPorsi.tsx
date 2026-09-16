@@ -22,6 +22,7 @@ import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { PayerButton } from "./PayerButton";
+import { ExpenseChips } from "./ExpenseChips";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 
@@ -43,17 +44,6 @@ const MODE_LABEL_KEY: Record<SplitModeKey, string> = {
   byItems: "expense.mode.byItems",
 };
 
-const CATEGORY_LABEL_KEY: Record<CategoryKey, string> = {
-  food: "category.food",
-  transport: "category.transport",
-  stay: "category.stay",
-  shopping: "category.shopping",
-  fun: "category.fun",
-  bills: "category.bills",
-  health: "category.health",
-  other: "category.other",
-};
-
 function initialsFromName(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const first = words[0]?.charAt(0) ?? "";
@@ -66,8 +56,11 @@ export interface ExpenseFormPorsiProps {
   readonly header: ReactNode;
   readonly draft: ExpenseDraft;
   readonly result: ExpenseDraftResult;
+  readonly templateCategories: readonly CategoryKey[];
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
+  readonly setDate: (date: number) => void;
+  readonly setCategory: (category: CategoryKey) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
   readonly setPayer: (memberId: string) => void;
   readonly setWeight: (memberId: string, weight: number) => void;
@@ -89,8 +82,11 @@ export function ExpenseFormPorsi({
   header,
   draft,
   result,
+  templateCategories,
   setTitle,
   setAmountMinor,
+  setDate,
+  setCategory,
   setMode,
   setPayer,
   setWeight,
@@ -121,7 +117,6 @@ export function ExpenseFormPorsi({
     const input = toCreateExpenseInput(draft, {
       groupSlug: slug,
       createdBy: draft.payerMemberId,
-      date: systemClock.now(),
     });
     if (input === null) return;
     setSaving(true);
@@ -185,11 +180,15 @@ export function ExpenseFormPorsi({
           onChange={setAmountMinor}
         />
       </div>
-      <div className={styles.chipRow}>
-        <span className={styles.chip}>{t("expense.date.today")}</span>
-        <span className={styles.chip}>{t(CATEGORY_LABEL_KEY[draft.category])}</span>
-        <span className={styles.chip}>{draft.currency}</span>
-      </div>
+      <ExpenseChips
+        dateMs={draft.date}
+        nowMs={systemClock.now()}
+        category={draft.category}
+        templateCategories={templateCategories}
+        currency={draft.currency}
+        onDateChange={setDate}
+        onCategoryChange={setCategory}
+      />
 
       <PayerButton members={draft.members} payerMemberId={draft.payerMemberId} onSelect={setPayer} />
 

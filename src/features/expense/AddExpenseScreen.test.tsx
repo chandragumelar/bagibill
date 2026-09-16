@@ -157,6 +157,56 @@ describe("AddExpenseScreen", () => {
     expect(renderedMoney(recalculated.sharesMinor[0] ?? 0, "IDR")).toBe(shownPerPerson);
   });
 
+  // F4-06 regression: the date pill used to be a dead <span> that always
+  // showed "Hari ini" — the date actually stored came from save-time
+  // systemClock.now(), never from what was picked. Both must now line up:
+  // the pill reflects the picked date, and the repository stores it.
+  it("changing the date pill stores the picked date, not the moment save was tapped", async () => {
+    await seedGroup();
+    const { container } = renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+
+    const input = container.querySelector('input[type="date"]');
+    if (input === null) throw new Error("date input not found");
+    fireEvent.change(input, { target: { value: "2020-01-15" } });
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    const stored = expenses[0];
+    if (stored === undefined) throw new Error("expected one stored expense");
+    expect(stored.date).toBe(new Date(2020, 0, 15).getTime());
+  });
+
+  // F4-06 regression: the category pill used to be a dead <span> stuck on
+  // the template's first default category — picking a different one from
+  // the sheet must actually change what gets saved.
+  it("changing the category via the pill stores the picked category", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+
+    // The group template is "trip", whose first default category is
+    // "transport" — the pill starts there before anything is picked.
+    fireEvent.click(screen.getByRole("button", { name: t("category.transport") }));
+    fireEvent.click(screen.getByText(t("category.food")));
+
+    fireEvent.click(screen.getByText(t("expense.save.button")));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/g/g1");
+    });
+
+    const expenses = await expenseRepository.listExpensesByGroup("g1");
+    const stored = expenses[0];
+    if (stored === undefined) throw new Error("expected one stored expense");
+    expect(stored.category).toBe("food");
+  });
+
   it("shows an inline failure and does not navigate away when the save call fails", async () => {
     await seedGroup();
     vi.spyOn(expenseRepository, "createExpense").mockRejectedValueOnce(new Error("boom"));

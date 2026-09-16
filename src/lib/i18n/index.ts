@@ -1,3 +1,4 @@
+export { dayLabel, startOfDay } from "@/lib/i18n/day-label";
 export { formatDate } from "@/lib/i18n/format-date";
 export { formatGroupedDigits, formatMoney, getCurrencyDecimals } from "@/lib/i18n/format-money";
 export { detectDefaultLocale, getLocale, setLocale, subscribeLocale } from "@/lib/i18n/locale-store";

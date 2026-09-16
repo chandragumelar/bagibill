@@ -12,6 +12,7 @@ const INIT: DraftInit = {
   currency: "IDR",
   category: "food",
   date: 1_000,
+  templateCategories: ["food"],
 };
 
 describe("useExpenseDraft", () => {
