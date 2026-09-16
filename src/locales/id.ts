@@ -174,6 +174,7 @@ export const id: LocaleDictionary = {
   "expense.warning.underAllocated": "Sisa {amount} belum dialokasikan",
   "expense.warning.overAllocated": "Kelebihan {amount} dari total",
   "expense.warning.negativeShare": "Ada bagian yang jadi minus",
+  "expense.warning.adjustmentExceedsTotal": "Penyesuaian melebihi total {amount}, tidak bisa disimpan",
   "expense.warning.unclaimedItems": "Ada item yang belum diklaim",
   "expense.warning.claimWeightMismatch": "Bobot klaim item tidak pas, dibagi proporsional",
   "expense.warning.largeGroupSimplify": "Grup besar, penyederhanaan utang disederhanakan",

@@ -188,6 +188,11 @@
   color: var(--text-secondary);
 }
 
+.explainerWarning {
+  color: var(--warn-text);
+  font-weight: var(--fw-semibold);
+}
+
 .proportionBar {
   display: flex;
   height: var(--sp-6);

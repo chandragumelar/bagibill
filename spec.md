@@ -248,9 +248,30 @@ Nama mode ini di UI adalah **Selisih**. Identifier di kode adalah `adjustment`, 
 
 - Semua bagi rata, lalu tambahan tetap per orang.
 - Contoh: makan bersama 200 ribu, si B pesan tambahan es teh 8 ribu. B kena rata plus 8 ribu, sisanya dibagi rata.
-- Bagian rata dihitung ulang setelah penyesuaian diambil, yaitu (total dikurangi jumlah seluruh penyesuaian) dibagi jumlah orang. Bukan total dibagi orang lalu ditambahi.
 - Tambahan boleh negatif untuk potongan personal.
 - Potongan boleh lebih besar dari bagian rata. Orang itu berakhir minus, artinya dia menerima uang kembali, dan angkanya ditampilkan apa adanya. Tidak diklamp ke nol karena itu menyembunyikan uang, dan tidak ditolak karena niatnya sah.
+
+Urutan hitung, supaya tidak ada tafsir lain:
+
+```
+baseMinor    = totalMinor - jumlah semua penyesuaian   (penyesuaian boleh negatif)
+evenShares   = largestRemainder(baseMinor, jumlah peserta)
+bagian[i]    = evenShares[i] + penyesuaian[i]
+```
+
+Bagian rata dihitung dari `baseMinor`, bukan dari `totalMinor` langsung dibagi jumlah orang lalu ditambahi — total dibagi rata dulu baru ditambah penyesuaian di atasnya menghitung penyesuaian dua kali dan melanggar invarian jumlah bagian sama dengan total tagihan.
+
+Contoh: total 200.000, 4 orang, Siska dapat penyesuaian +8.000, tiga lainnya 0.
+
+```
+baseMinor  = 200.000 - 8.000 = 192.000
+evenShares = 192.000 / 4     = 48.000 tiap orang
+bagian     = 48.000, 48.000, 48.000, 48.000 + 8.000 = 56.000
+```
+
+Hasil: 48.000, 48.000, 48.000, 56.000. Jumlah 200.000.
+
+Kalau jumlah seluruh penyesuaian lebih besar dari total tagihan, `baseMinor` jadi negatif. Perhitungan tetap jalan, bukan error — tampilkan peringatan dan cegah simpan sampai penyesuaian dikurangi. Kalau bagian satu orang jadi negatif karena potongan personalnya sendiri lebih besar dari bagian ratanya, itu kasus berbeda: tetap bisa disimpan, ditampilkan apa adanya sebagai saldo minus (lihat aturan potongan di atas).
 
 ### 6.6 Per Item
 

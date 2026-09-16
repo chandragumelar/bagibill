@@ -3,10 +3,19 @@ import type { SplitResult, SplitWarning } from "./split-result";
 
 const EVEN_WEIGHT = 1;
 
+// Mode Selisih's own result: UI reads evenSharesMinor straight off here
+// (the "Bagian rata" label, spec.md 6.5) instead of re-deriving it by
+// subtracting adjustmentMinor from sharesMinor itself — that subtraction
+// belongs to the engine, never to a component (CLAUDE.md: zero arithmetic
+// in .tsx).
+export interface AdjustmentSplitResult extends SplitResult {
+  readonly evenSharesMinor: readonly number[];
+}
+
 export function splitByAdjustment(input: {
   totalMinor: number;
   adjustmentsMinor: readonly number[];
-}): SplitResult {
+}): AdjustmentSplitResult {
   const { totalMinor, adjustmentsMinor } = input;
   assertIntegerTotal(totalMinor, adjustmentsMinor);
   assertValidAdjustments(adjustmentsMinor, totalMinor);
@@ -18,12 +27,23 @@ export function splitByAdjustment(input: {
   const sumAdjustmentsMinor = adjustmentsMinor.reduce((sum, adjustmentMinor) => sum + adjustmentMinor, 0);
   const baseTotalMinor = totalMinor - sumAdjustmentsMinor;
   const evenWeights = adjustmentsMinor.map(() => EVEN_WEIGHT);
+  // allocateByWeights accepts a negative totalMinor (K-25) and still
+  // distributes it via largest remainder — needed below, since adjustments
+  // summing past the total is a warned state, not a thrown one.
   const evenSharesMinor = allocateByWeights({ totalMinor: baseTotalMinor, weights: evenWeights });
 
   const sharesMinor = applyAdjustments(evenSharesMinor, adjustmentsMinor);
-  const warnings = buildNegativeShareWarnings(sharesMinor);
+  const warnings = [...buildAdjustmentExceedsTotalWarnings(baseTotalMinor), ...buildNegativeShareWarnings(sharesMinor)];
 
-  return { sharesMinor, warnings };
+  return { sharesMinor, evenSharesMinor, warnings };
+}
+
+// spec.md 6.5: adjustments may exceed the total — computed anyway, never
+// thrown, so the draft stays editable. The UI blocks *saving* on this
+// warning (same pattern as byAmounts' hasAllocationMismatchWarning).
+function buildAdjustmentExceedsTotalWarnings(baseTotalMinor: number): SplitWarning[] {
+  if (baseTotalMinor >= 0) return [];
+  return [{ code: "adjustment_exceeds_total", shortfallMinor: -baseTotalMinor }];
 }
 
 // allocateByWeights returns one share per weight, so evenSharesMinor is always

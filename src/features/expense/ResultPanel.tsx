@@ -152,6 +152,8 @@ function warningMessage(warning: SplitWarning, currency: string): string {
       return t("expense.warning.overAllocated", { amount: formatMoney(warning.excessMinor, currency) });
     case "negative_share":
       return t("expense.warning.negativeShare");
+    case "adjustment_exceeds_total":
+      return t("expense.warning.adjustmentExceedsTotal", { amount: formatMoney(warning.shortfallMinor, currency) });
     case "unclaimed_items":
       return t("expense.warning.unclaimedItems");
     case "claim_weight_mismatch":

@@ -20,5 +20,7 @@ export interface ExpenseCalculation {
   readonly perItem?: readonly ItemBreakdown[];
   /** byItems only (K-122) — the total of items nobody has claimed yet, straight from splitByItems's own count, never recomputed. */
   readonly unclaimedTotalMinor?: number;
+  /** byAdjustment only (spec.md 6.5) — the "Bagian rata" reference per person, straight from splitByAdjustment, never rederived. */
+  readonly evenSharesMinor?: readonly number[];
   readonly warnings: readonly SplitWarning[];
 }

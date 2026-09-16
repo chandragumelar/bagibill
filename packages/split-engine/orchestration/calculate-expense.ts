@@ -46,6 +46,7 @@ export function calculateExpense(input: {
     treatTransfers: treatResult.transfers,
     perItem: splitOutcome.perItem,
     unclaimedTotalMinor: splitOutcome.unclaimedTotalMinor,
+    evenSharesMinor: splitOutcome.evenSharesMinor,
     warnings,
   };
 }
@@ -107,6 +108,7 @@ interface SplitOutcome {
   readonly perItem?: readonly ItemBreakdown[];
   readonly itemSharesMinor?: readonly (readonly number[])[];
   readonly unclaimedTotalMinor?: number;
+  readonly evenSharesMinor?: readonly number[];
 }
 
 function runSplit(totalMinor: number, split: SplitInput): SplitOutcome {
@@ -129,7 +131,7 @@ function runSplit(totalMinor: number, split: SplitInput): SplitOutcome {
     }
     case "byAdjustment": {
       const result = splitByAdjustment({ totalMinor, adjustmentsMinor: split.adjustmentsMinor });
-      return { sharesMinor: result.sharesMinor, warnings: result.warnings };
+      return { sharesMinor: result.sharesMinor, warnings: result.warnings, evenSharesMinor: result.evenSharesMinor };
     }
     case "byItems": {
       const result = splitByItems({ participantCount: split.participantCount, items: split.items });
