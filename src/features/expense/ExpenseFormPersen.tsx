@@ -21,6 +21,7 @@ import { PercentageTrack, type PercentSpreadUpdate } from "./PercentageTrack";
 import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
+import { PayerButton } from "./PayerButton";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 import stepperStyles from "./WeightStepper.module.css";
@@ -135,6 +136,7 @@ export interface ExpenseFormPersenProps {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
+  readonly setPayer: (memberId: string) => void;
   readonly setPercent: (memberId: string, percent: number) => void;
   readonly setPercents: (updates: readonly PercentSpreadUpdate[]) => void;
   readonly toggleMember: (memberId: string) => void;
@@ -156,6 +158,7 @@ export function ExpenseFormPersen({
   setTitle,
   setAmountMinor,
   setMode,
+  setPayer,
   setPercent,
   setPercents,
   toggleMember,
@@ -173,7 +176,6 @@ export function ExpenseFormPersen({
 
   const checkedMembers = draft.members.filter((member) => member.checked);
   const checkedCount = checkedMembers.length;
-  const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
 
   function shareFor(memberId: string): number | undefined {
     if (!result.ready) return undefined;
@@ -252,16 +254,7 @@ export function ExpenseFormPersen({
         <span className={styles.chip}>{draft.currency}</span>
       </div>
 
-      {payer ? (
-        <div className={styles.section}>
-          <div className={styles.sectionHeading}>{t("expense.payer.label")}</div>
-          <div className={styles.participantList}>
-            <ListRow leading={<Avatar initials={initialsFromName(payer.name)} color={`var(${payer.color})`} name={payer.name} />}>
-              <span className={styles.memberName}>{payer.name}</span>
-            </ListRow>
-          </div>
-        </div>
-      ) : null}
+      <PayerButton members={draft.members} payerMemberId={draft.payerMemberId} onSelect={setPayer} />
 
       <div className={styles.section}>
         <div className={styles.sectionHeadingRow}>

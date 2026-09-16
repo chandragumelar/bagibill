@@ -142,7 +142,6 @@ export function createInitialDraft(init: DraftInit): ExpenseDraft {
 export type DraftNotReadyReason =
   | "emptyAmount"
   | "noParticipants"
-  | "payerExcluded"
   | "allWeightsZero"
   | "percentageOutOfTolerance"
   | "amountsNotBalanced"
@@ -159,7 +158,6 @@ export type DraftNotReadyReason =
 export const NOT_READY_MESSAGE_KEY: Record<DraftNotReadyReason, string> = {
   emptyAmount: "expense.result.needAmount",
   noParticipants: "expense.result.needParticipants",
-  payerExcluded: "expense.result.payerExcluded",
   allWeightsZero: "expense.result.needWeights",
   percentageOutOfTolerance: "expense.result.percentageOutOfTolerance",
   amountsNotBalanced: "expense.result.amountsNotBalanced",
@@ -175,17 +173,30 @@ export type DraftCalculationInput =
 
 interface ResolvedParticipants {
   readonly checked: readonly ExpenseDraftMember[];
-  readonly payerIndex: number;
 }
 
 // Shared by toCalculationInput and toCreateExpenseInput so "who's actually
-// in this split, and where does the payer sit" is decided in one place.
+// in this split" is decided in one place. The payer is resolved separately
+// (resolvePaymentIndex below) — spec.md 6.7 lets the payer front money
+// without eating, so payerMemberId is never required to be one of `checked`.
 function resolveParticipants(draft: ExpenseDraft): ResolvedParticipants | undefined {
   const checked = draft.members.filter((member) => member.checked);
   if (checked.length === 0) return undefined;
-  const payerIndex = checked.findIndex((member) => member.memberId === draft.payerMemberId);
-  if (payerIndex === -1) return undefined;
-  return { checked, payerIndex };
+  return { checked };
+}
+
+// The preview-only paymentsMinor array below exists purely to keep
+// calculateExpense's internal payments-vs-shares check happy (K-43) — the
+// UI never displays it (only sharesMinor and warnings are read). So when
+// the payer isn't a checked participant, attributing their payment to slot
+// 0 instead of "their" slot changes nothing anyone sees: the sum still
+// matches sharesMinor exactly (computeGrandTotalMinor already equals it),
+// which is all resolveBalance actually checks.
+const FALLBACK_PAYMENT_INDEX = 0;
+
+function resolvePaymentIndex(payerMemberId: string, checked: readonly ExpenseDraftMember[]): number {
+  const payerIndex = checked.findIndex((member) => member.memberId === payerMemberId);
+  return payerIndex === -1 ? FALLBACK_PAYMENT_INDEX : payerIndex;
 }
 
 function buildSplitInput(mode: ExpenseSplitMode, checked: readonly ExpenseDraftMember[]): SplitInput {
@@ -381,12 +392,9 @@ export function toCalculationInput(draft: ExpenseDraft): DraftCalculationInput {
   if (draft.amountMinor <= 0) return { ready: false, reason: "emptyAmount" };
 
   const resolved = resolveParticipants(draft);
-  if (resolved === undefined) {
-    const anyChecked = draft.members.some((member) => member.checked);
-    return { ready: false, reason: anyChecked ? "payerExcluded" : "noParticipants" };
-  }
+  if (resolved === undefined) return { ready: false, reason: "noParticipants" };
 
-  const { checked, payerIndex } = resolved;
+  const { checked } = resolved;
   if (draft.mode === "byWeights" && checked.every((member) => member.weight === 0)) {
     return { ready: false, reason: "allWeightsZero" };
   }
@@ -401,7 +409,8 @@ export function toCalculationInput(draft: ExpenseDraft): DraftCalculationInput {
   if (treatReason !== undefined) return { ready: false, reason: treatReason };
 
   const payerAmountMinor = computeGrandTotalMinor(draft, checked);
-  const paymentsMinor = checked.map((_, index) => (index === payerIndex ? payerAmountMinor : 0));
+  const paymentIndex = resolvePaymentIndex(draft.payerMemberId, checked);
+  const paymentsMinor = checked.map((_, index) => (index === paymentIndex ? payerAmountMinor : 0));
 
   // charges/treats are omitted entirely (not sent as []) when the draft has
   // none — calculateExpense already defaults both to [] internally, and

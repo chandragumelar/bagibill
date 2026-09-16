@@ -21,6 +21,7 @@ import { WeightStepper } from "./WeightStepper";
 import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
+import { PayerButton } from "./PayerButton";
 import { ResultPanel } from "./ResultPanel";
 import styles from "./AddExpenseScreen.module.css";
 
@@ -68,6 +69,7 @@ export interface ExpenseFormPorsiProps {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
+  readonly setPayer: (memberId: string) => void;
   readonly setWeight: (memberId: string, weight: number) => void;
   readonly toggleMember: (memberId: string) => void;
   readonly checkAllMembers: () => void;
@@ -90,6 +92,7 @@ export function ExpenseFormPorsi({
   setTitle,
   setAmountMinor,
   setMode,
+  setPayer,
   setWeight,
   toggleMember,
   checkAllMembers,
@@ -107,7 +110,6 @@ export function ExpenseFormPorsi({
   const checkedCount = draft.members.filter((member) => member.checked).length;
   const checkedMembers = draft.members.filter((member) => member.checked);
   const totalWeight = checkedMembers.reduce((sum, member) => sum + member.weight, 0);
-  const payer = draft.members.find((member) => member.memberId === draft.payerMemberId);
 
   function shareFor(memberId: string): number | undefined {
     if (!result.ready) return undefined;
@@ -189,16 +191,7 @@ export function ExpenseFormPorsi({
         <span className={styles.chip}>{draft.currency}</span>
       </div>
 
-      {payer ? (
-        <div className={styles.section}>
-          <div className={styles.sectionHeading}>{t("expense.payer.label")}</div>
-          <div className={styles.participantList}>
-            <ListRow leading={<Avatar initials={initialsFromName(payer.name)} color={`var(${payer.color})`} name={payer.name} />}>
-              <span className={styles.memberName}>{payer.name}</span>
-            </ListRow>
-          </div>
-        </div>
-      ) : null}
+      <PayerButton members={draft.members} payerMemberId={draft.payerMemberId} onSelect={setPayer} />
 
       <div className={styles.section}>
         <div className={styles.sectionHeadingRow}>

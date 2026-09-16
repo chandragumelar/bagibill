@@ -29,6 +29,7 @@ export interface UseExpenseDraftResult {
   readonly setTitle: (title: string) => void;
   readonly setAmountMinor: (amountMinor: number) => void;
   readonly setMode: (mode: ExpenseSplitMode) => void;
+  readonly setPayer: (memberId: string) => void;
   readonly setWeight: (memberId: string, weight: number) => void;
   readonly setMemberAmountMinor: (memberId: string, amountMinor: number) => void;
   readonly setPercent: (memberId: string, percent: number) => void;
@@ -81,6 +82,13 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
   // what keeps a Rata-to-Porsi switch from resetting anything (plan.md F3-02).
   function setMode(mode: ExpenseSplitMode): void {
     setDraft((current) => ({ ...current, mode }));
+  }
+
+  // Never touches title, amount, mode, membership, charges, or treats — same
+  // precedent as setMode (plan.md F3-02/F3-04). The payer isn't required to
+  // be a checked member (spec.md 6.7), so this never checks membership.checked.
+  function setPayer(memberId: string): void {
+    setDraft((current) => ({ ...current, payerMemberId: memberId }));
   }
 
   function setWeight(memberId: string, weight: number): void {
@@ -231,6 +239,7 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
     setTitle,
     setAmountMinor,
     setMode,
+    setPayer,
     setWeight,
     setMemberAmountMinor,
     setPercent,
