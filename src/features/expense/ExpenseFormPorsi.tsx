@@ -18,6 +18,7 @@ import {
 } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
 import { WeightStepper } from "./WeightStepper";
+import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
@@ -267,9 +268,10 @@ export function ExpenseFormPorsi({
               );
             }
             return (
-              <ListRow
+              <ParticipantControlRow
                 key={member.memberId}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
+                name={member.name}
                 trailing={
                   <div className={styles.weightTrailing}>
                     <WeightStepper
@@ -282,9 +284,7 @@ export function ExpenseFormPorsi({
                     </span>
                   </div>
                 }
-              >
-                <span className={styles.memberName}>{member.name}</span>
-              </ListRow>
+              />
             );
           })}
         </div>

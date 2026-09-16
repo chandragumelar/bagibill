@@ -18,6 +18,7 @@ import {
 } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
 import { PercentageTrack, type PercentSpreadUpdate } from "./PercentageTrack";
+import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
@@ -312,24 +313,23 @@ export function ExpenseFormPersen({
               );
             }
             return (
-              <ListRow
+              <ParticipantControlRow
                 key={member.memberId}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
+                name={member.name}
                 trailing={
-                  <div className={styles.weightTrailing}>
+                  <div className={styles.percentTrailing}>
                     <PercentStepper
                       memberName={member.name}
                       percent={member.percent}
                       onChange={(percent) => setPercent(member.memberId, percent)}
                     />
-                    <span className={`${styles.amount} bb-numeral`}>
+                    <span className={`${styles.percentAmount} bb-numeral`}>
                       {shareMinor === undefined ? "—" : formatMoney(shareMinor, draft.currency)}
                     </span>
                   </div>
                 }
-              >
-                <span className={styles.memberName}>{member.name}</span>
-              </ListRow>
+              />
             );
           })}
         </div>

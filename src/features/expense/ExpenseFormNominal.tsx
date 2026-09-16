@@ -19,6 +19,7 @@ import {
 } from "./expense-draft";
 import type { ExpenseDraftResult } from "./use-expense-draft";
 import { AllocationBar } from "./AllocationBar";
+import { ParticipantControlRow } from "./ParticipantControlRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { ResultPanel } from "./ResultPanel";
@@ -258,20 +259,21 @@ export function ExpenseFormNominal({
               );
             }
             return (
-              <ListRow
+              <ParticipantControlRow
                 key={member.memberId}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
+                name={member.name}
                 trailing={
-                  <MoneyInput
-                    label={t("expense.amount.memberLabel", { name: member.name })}
-                    prefix={draft.currency}
-                    amountMinor={member.amountMinor}
-                    onChange={(amountMinor) => setMemberAmountMinor(member.memberId, amountMinor)}
-                  />
+                  <div className={styles.nominalFieldWidth}>
+                    <MoneyInput
+                      label={t("expense.amount.memberLabel", { name: member.name })}
+                      prefix={draft.currency}
+                      amountMinor={member.amountMinor}
+                      onChange={(amountMinor) => setMemberAmountMinor(member.memberId, amountMinor)}
+                    />
+                  </div>
                 }
-              >
-                <span className={styles.memberName}>{member.name}</span>
-              </ListRow>
+              />
             );
           })}
         </div>

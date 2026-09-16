@@ -10,6 +10,16 @@ export function getCurrencyDecimals(currency: string): number {
 }
 
 /**
+ * Pemisah ribuan buat MoneyInput — bukan formatMoney karena di sini yang
+ * ditampilkan angka minor unit mentah yang sedang diketik (belum dibagi
+ * skala desimal mata uang, lihat MoneyInput), tapi lewat locale dan Intl
+ * yang sama supaya karakter pemisahnya nol pernah beda dengan panel hasil.
+ */
+export function formatGroupedDigits(amountMinor: number): string {
+  return new Intl.NumberFormat(LOCALE_BCP47[getLocale()], { maximumFractionDigits: 0 }).format(amountMinor);
+}
+
+/**
  * Format nominal dari integer minor unit (sen untuk USD, angka polos untuk
  * IDR) jadi teks lokal lewat Intl — nol nilai float, nol format manual.
  */

@@ -95,6 +95,9 @@
 
 .memberName {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text);
   font-size: var(--fs-subhead);
   font-weight: var(--fw-medium);
@@ -199,4 +202,28 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+}
+
+/* Mode Persen: pil stepper di atas, nominal per-orang kecil-muted di bawah
+   (bukan bersisian seperti Porsi) — mengikuti docs/mockups/Tambah_Pengeluaran.html
+   row.isPct, dan sekalian memangkas lebar horizontal trailing di layar sempit. */
+.percentTrailing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+}
+
+.percentAmount {
+  font-size: var(--fs-footnote);
+  color: var(--text-muted);
+}
+
+/* Lebar tetap buat MoneyInput mode Nominal saat jadi satu-satunya trailing
+   per peserta — .field milik MoneyInput sendiri nol punya lebar intrinsik
+   (mengisi apa pun yang disediakan induknya), jadi tanpa ini lebar bawaan
+   browser buat <input type=text> menyita ruang nama di layar sempit. Angka
+   menyalin lebar input row.isNom di docs/mockups/Tambah_Pengeluaran.html. */
+.nominalFieldWidth {
+  width: 6.5rem;
 }
