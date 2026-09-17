@@ -179,6 +179,7 @@ export const en: LocaleDictionary = {
   "expense.charge.preset.tip": "Tip",
   "expense.treat.heading": "Treats",
   "expense.treat.add": "+ Add treat",
+  "expense.treat.addAnother": "+ Add another treat",
   "expense.treat.needTwoMembers": "Needs at least two people checked",
   "expense.treat.sponsorLabel": "Sponsor",
   "expense.treat.beneficiaryLabel": "Treated",

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import { t } from "@/lib/i18n";
 import { App, resolveBranch } from "@/App";
 
 describe("resolveBranch", () => {
@@ -29,10 +30,8 @@ describe("App", () => {
   });
 
   it("renders without throwing on the default path", async () => {
-    const { container } = render(<App />);
-    await waitFor(() => {
-      expect(container).toBeTruthy();
-    });
+    const { findByRole } = render(<App />);
+    expect(await findByRole("heading", { name: t("route.title.home") })).toBeInTheDocument();
   });
 
   it("renders the dev/ui page directly at /dev/ui", async () => {

@@ -24,12 +24,18 @@ function treat(overrides: Partial<TreatDraft> = {}): TreatDraft {
   };
 }
 
-function ControlledTreatEditor({ initialTreats }: { initialTreats: readonly TreatDraft[] }) {
+function ControlledTreatEditor({
+  initialTreats,
+  members = CHECKED_MEMBERS,
+}: {
+  readonly initialTreats: readonly TreatDraft[];
+  readonly members?: readonly ExpenseDraftMember[];
+}) {
   const [treats, setTreats] = useState(initialTreats);
   return (
     <TreatEditor
       treats={treats}
-      checkedMembers={CHECKED_MEMBERS}
+      checkedMembers={members}
       currency="IDR"
       onAdd={() =>
         setTreats((current) => [
@@ -49,8 +55,25 @@ describe("TreatEditor", () => {
     fireEvent.click(screen.getByText(t("expense.treat.add")));
     expect(screen.getByLabelText(t("expense.treat.remove"))).toBeInTheDocument();
 
+    expect(screen.getByText(t("expense.treat.addAnother"))).toBeInTheDocument();
+
     fireEvent.click(screen.getByLabelText(t("expense.treat.remove")));
     expect(screen.queryByLabelText(t("expense.treat.remove"))).not.toBeInTheDocument();
+  });
+
+  it("adds a second atomic treat without changing the first treat", () => {
+    render(<ControlledTreatEditor initialTreats={[]} members={MEMBERS} />);
+    fireEvent.click(screen.getByText(t("expense.treat.add")));
+    fireEvent.click(screen.getByText(t("expense.treat.addAnother")));
+
+    const beneficiarySelects = screen.getAllByLabelText(t("expense.treat.beneficiaryLabel"));
+    fireEvent.change(beneficiarySelects[1] as HTMLSelectElement, { target: { value: "m3" } });
+
+    expect(screen.getAllByLabelText(t("expense.treat.remove"))).toHaveLength(2);
+    expect(screen.getAllByLabelText(t("expense.treat.sponsorLabel"))).toHaveLength(2);
+    expect(screen.getAllByLabelText(t("expense.treat.beneficiaryLabel"))).toHaveLength(2);
+    expect((beneficiarySelects[0] as HTMLSelectElement).value).toBe("m2");
+    expect((beneficiarySelects[1] as HTMLSelectElement).value).toBe("m3");
   });
 
   it("only offers checked members as sponsor/beneficiary options", () => {

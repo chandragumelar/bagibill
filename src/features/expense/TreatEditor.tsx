@@ -113,13 +113,14 @@ export interface TreatEditorProps {
 
 export function TreatEditor({ treats, checkedMembers, currency, onAdd, onUpdate, onRemove }: TreatEditorProps) {
   const canAddTreat = checkedMembers.length >= MIN_MEMBERS_FOR_TREAT;
+  const addLabelKey = treats.length === 0 ? "expense.treat.add" : "expense.treat.addAnother";
 
   return (
     <div className={styles.section}>
       <div className={styles.sectionHeader}>
         <span className={styles.sectionHeading}>{t("expense.treat.heading")}</span>
         <button type="button" className={styles.headerAction} onClick={onAdd} disabled={!canAddTreat}>
-          {t("expense.treat.add")}
+          {t(addLabelKey)}
         </button>
       </div>
       {!canAddTreat ? <p className={styles.hint}>{t("expense.treat.needTwoMembers")}</p> : null}

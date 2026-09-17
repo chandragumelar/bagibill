@@ -177,6 +177,7 @@ export const id: LocaleDictionary = {
   "expense.charge.preset.tip": "Tip",
   "expense.treat.heading": "Traktir",
   "expense.treat.add": "+ Tambah traktir",
+  "expense.treat.addAnother": "+ Tambah traktir lain",
   "expense.treat.needTwoMembers": "Butuh minimal dua orang tercentang",
   "expense.treat.sponsorLabel": "Penanggung",
   "expense.treat.beneficiaryLabel": "Ditraktir",
