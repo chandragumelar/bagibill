@@ -449,6 +449,16 @@ Tidak masuk: pengaturan grup dan hapus grup.
 
 Selesai kalau: edit menaikkan `updatedAt`, undo mengembalikan urutan asli, ambang swipe 90px, dua bahasa lengkap, dan lima gerbang hijau. Tetap menunggu uji HP fisik sebelum dicentang.
 
+### F4-09 Pengaturan grup dan hapus grup
+
+Tergantung: F4-08. Rujukan `spec.md` 5.2 dan mockup `Lapisan_Sistem.html` (`openGroupDelete` dan `bindHold`).
+
+Isi: menu detail grup membuka pengaturan minimal yang hanya memuat tindakan hapus grup. Sheet konfirmasi memakai copy mockup: badge permanen, penjelasan bahwa ini bukan satu transaksi, daftar transaksi/pelunasan/member dengan saldo berjalan dari data lokal, dan peringatan anggota lain melihat grup hilang tanpa pemberitahuan. Batal menerima fokus awal dan sheet menjebak fokus; hapus perlu tahan sekitar satu detik dengan bar isi. Repository menandai grup dan seluruh data terkait dengan `deletedAt` dalam satu transaksi; startup membersihkan rekaman yang sudah 30 hari. Tidak ada undo atau layar sampah. Sukses kembali ke Beranda, grup tidak lagi muncul.
+
+Tidak masuk: pengaturan grup lain, pemulihan, atau layar sampah.
+
+Selesai kalau: angka konfirmasi berasal dari data nyata, quick tap tidak menghapus, keyboard fokus tetap terjebak, hapus menyembunyikan grup dari Beranda, dan lima gerbang hijau. Tetap menunggu uji HP fisik sebelum dicentang.
+
 ---
 
 ## Setelah ini

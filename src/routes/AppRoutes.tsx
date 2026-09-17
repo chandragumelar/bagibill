@@ -6,6 +6,7 @@ const routes: RouteDef[] = [
   { path: "/app/new", Component: lazy(() => import("@/routes/group/NewGroup")) },
   { path: "/g/:slug", Component: lazy(() => import("@/routes/group/GroupDetail")) },
   { path: "/g/:slug/members", Component: lazy(() => import("@/routes/group/GroupMembers")) },
+  { path: "/g/:slug/settings", Component: lazy(() => import("@/routes/group/GroupSettings")) },
   { path: "/g/:slug/add", Component: lazy(() => import("@/routes/expense/AddExpense")) },
   { path: "/g/:slug/e/:expenseId", Component: lazy(() => import("@/routes/expense/AddExpense")) },
 ];

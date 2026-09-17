@@ -37,6 +37,15 @@ export function TrashIcon() {
   );
 }
 
+export function ReceiptIcon() {
+  return (
+    <Svg>
+      <path d="M4 3v18l3-2 2 2 3-2 3 2 2-2 3 2V3l-3 2-2-2-3 2-3-2-2 2z" />
+      <path d="M8 9h8M8 13h6" />
+    </Svg>
+  );
+}
+
 export function LockIcon() {
   return (
     <Svg>

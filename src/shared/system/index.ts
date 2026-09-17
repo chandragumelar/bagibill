@@ -10,6 +10,7 @@ export {
   LockIcon,
   OffIcon,
   PaperclipIcon,
+  ReceiptIcon,
   RetryIcon,
   TrashIcon,
   WarnIcon,

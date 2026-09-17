@@ -1,5 +1,5 @@
 import type { KeyboardEvent, PointerEvent } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TrashIcon } from "@/shared/system/icons";
 import styles from "@/shared/system/holdToDelete/HoldToDeleteButton.module.css";
 
@@ -21,6 +21,12 @@ export function HoldToDeleteButton({ label, completingLabel, onComplete }: HoldT
   const [holding, setHolding] = useState(false);
   const [done, setDone] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (completionRef.current) clearTimeout(completionRef.current);
+  }, []);
 
   function start(): void {
     if (done) return;
@@ -29,7 +35,7 @@ export function HoldToDeleteButton({ label, completingLabel, onComplete }: HoldT
     timeoutRef.current = setTimeout(() => {
       setDone(true);
       setHolding(false);
-      setTimeout(onComplete, COMPLETION_DISPLAY_MS);
+      completionRef.current = setTimeout(onComplete, COMPLETION_DISPLAY_MS);
     }, holdMs);
   }
 
@@ -59,7 +65,12 @@ export function HoldToDeleteButton({ label, completingLabel, onComplete }: HoldT
     if (event.key === " " || event.key === "Enter") cancel();
   }
 
-  const className = holding ? `${styles.button} ${styles.holding}` : styles.button;
+  let className = styles.button;
+  if (done) {
+    className = `${styles.button} ${styles.done}`;
+  } else if (holding) {
+    className = `${styles.button} ${styles.holding}`;
+  }
 
   return (
     <button
