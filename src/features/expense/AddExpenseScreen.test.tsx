@@ -334,7 +334,8 @@ describe("AddExpenseScreen", () => {
     await screen.findAllByText("Farhan Maulana");
     typeAmount("10000");
 
-    fireEvent.click(screen.getByText(t("expense.charge.loadPreset")));
+    fireEvent.click(screen.getByText(t("expense.charge.add")));
+    fireEvent.click(screen.getByText(t("expense.charge.addPreset")));
     fireEvent.click(screen.getByText(t("expense.treat.add")));
 
     // subtotal 10,000 -> service 5% of subtotal (500) -> PB1 10% of
@@ -372,7 +373,8 @@ describe("AddExpenseScreen", () => {
     await screen.findAllByText("Farhan Maulana");
     typeAmount("10000");
 
-    fireEvent.click(screen.getByText(t("expense.charge.loadPreset")));
+    fireEvent.click(screen.getByText(t("expense.charge.add")));
+    fireEvent.click(screen.getByText(t("expense.charge.addPreset")));
     fireEvent.click(screen.getByText(t("expense.treat.add")));
     expect(screen.getAllByLabelText(t("expense.treat.remove"))).toHaveLength(1);
 
@@ -422,7 +424,8 @@ describe("AddExpenseScreen", () => {
     renderScreen();
     await screen.findAllByText("Farhan Maulana");
     typeAmount("10000");
-    fireEvent.click(screen.getByText(t("expense.charge.loadPreset")));
+    fireEvent.click(screen.getByText(t("expense.charge.add")));
+    fireEvent.click(screen.getByText(t("expense.charge.addPreset")));
     fireEvent.click(screen.getByText(t("expense.treat.add")));
     // "Sarah" also names <select> options in the treat editor by this point
     // — the participant row's name renders first in document order.
