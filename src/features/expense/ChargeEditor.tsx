@@ -1,5 +1,6 @@
-import { useId, type ChangeEvent } from "react";
+import { useId, useState, type ChangeEvent } from "react";
 import { t } from "@/lib/i18n";
+import { ListRow, Sheet } from "@/shared/ui";
 import type { ChargeDraft, ChargeDraftAllocationMode, ChargeAmountKind, ExpenseDraftMember } from "./expense-draft";
 import styles from "./ChargeEditor.module.css";
 
@@ -204,36 +205,60 @@ export interface ChargeEditorProps {
 }
 
 export function ChargeEditor({ charges, checkedMembers, onAdd, onLoadPreset, onUpdate, onRemove }: ChargeEditorProps) {
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
   const percentChargeCount = charges.filter((charge) => charge.amountKind === "percent").length;
 
+  function chooseAddAction(action: "preset" | "custom"): void {
+    setAddSheetOpen(false);
+    if (action === "preset") {
+      onLoadPreset();
+      return;
+    }
+    onAdd();
+  }
+
   return (
-    <div className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <span className={styles.sectionHeading}>{t("expense.charge.heading")}</span>
-        <div className={styles.headerActions}>
-          <button type="button" className={styles.headerAction} onClick={onLoadPreset}>
-            {t("expense.charge.loadPreset")}
-          </button>
-          <button type="button" className={styles.headerAction} onClick={onAdd}>
-            {t("expense.charge.add")}
-          </button>
+    <>
+      <div className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionHeading}>{t("expense.charge.heading")}</span>
+          <div className={styles.headerActions}>
+            <button type="button" className={styles.headerAction} onClick={() => setAddSheetOpen(true)}>
+              {t("expense.charge.add")}
+            </button>
+          </div>
         </div>
+        {charges.length === 0 ? null : (
+          <div className={styles.list}>
+            {charges.map((charge, index) => (
+              <ChargeRow
+                key={charge.id}
+                charge={charge}
+                index={index}
+                showBasisPicker={charge.amountKind === "percent" && percentChargeCount > 1}
+                checkedMembers={checkedMembers}
+                onUpdate={onUpdate}
+                onRemove={onRemove}
+              />
+            ))}
+          </div>
+        )}
       </div>
-      {charges.length === 0 ? null : (
-        <div className={styles.list}>
-          {charges.map((charge, index) => (
-            <ChargeRow
-              key={charge.id}
-              charge={charge}
-              index={index}
-              showBasisPicker={charge.amountKind === "percent" && percentChargeCount > 1}
-              checkedMembers={checkedMembers}
-              onUpdate={onUpdate}
-              onRemove={onRemove}
-            />
-          ))}
+      <Sheet
+        open={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        title={t("expense.charge.addSheetTitle")}
+        subtitle={t("expense.charge.addSheetSubtitle")}
+      >
+        <div className={styles.addChoices}>
+          <ListRow onClick={() => chooseAddAction("preset")}>
+            <span>{t("expense.charge.addPreset")}</span>
+          </ListRow>
+          <ListRow onClick={() => chooseAddAction("custom")}>
+            <span>{t("expense.charge.addCustom")}</span>
+          </ListRow>
         </div>
-      )}
-    </div>
+      </Sheet>
+    </>
   );
 }

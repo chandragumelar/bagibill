@@ -49,26 +49,73 @@ describe("ChargeEditor", () => {
   it("adds a new empty row and removes it", () => {
     render(<ControlledChargeEditor initialCharges={[]} />);
     fireEvent.click(screen.getByText(t("expense.charge.add")));
+    fireEvent.click(screen.getByText(t("expense.charge.addCustom")));
     expect(screen.getByLabelText(t("expense.charge.remove", { name: t("expense.charge.unnamed", { index: 1 }) }))).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText(t("expense.charge.remove", { name: t("expense.charge.unnamed", { index: 1 }) })));
     expect(screen.queryByText(t("expense.charge.kindPercent"))).not.toBeInTheDocument();
   });
 
-  it("calls onLoadPreset when the preset button is tapped", () => {
+  it("opens one add action and keeps preset access behind it", () => {
     const onLoadPreset = vi.fn();
+    const onAdd = vi.fn();
     render(
       <ChargeEditor
         charges={[]}
         checkedMembers={MEMBERS}
-        onAdd={() => {}}
+        onAdd={onAdd}
         onLoadPreset={onLoadPreset}
         onUpdate={() => {}}
         onRemove={() => {}}
       />,
     );
-    fireEvent.click(screen.getByText(t("expense.charge.loadPreset")));
+
+    expect(screen.getByText(t("expense.charge.add"))).toBeInTheDocument();
+    expect(screen.queryByText(t("expense.charge.loadPreset"))).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(t("expense.charge.add")));
+    fireEvent.click(screen.getByText(t("expense.charge.addPreset")));
     expect(onLoadPreset).toHaveBeenCalledOnce();
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  it("adds a custom charge through the add sheet", () => {
+    const onAdd = vi.fn();
+    render(
+      <ChargeEditor
+        charges={[]}
+        checkedMembers={MEMBERS}
+        onAdd={onAdd}
+        onLoadPreset={() => {}}
+        onUpdate={() => {}}
+        onRemove={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(t("expense.charge.add")));
+    fireEvent.click(screen.getByText(t("expense.charge.addCustom")));
+    expect(onAdd).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("cancels add without changing charges", () => {
+    const onAdd = vi.fn();
+    const onLoadPreset = vi.fn();
+    render(
+      <ChargeEditor
+        charges={[]}
+        checkedMembers={MEMBERS}
+        onAdd={onAdd}
+        onLoadPreset={onLoadPreset}
+        onUpdate={() => {}}
+        onRemove={() => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByText(t("expense.charge.add")));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(onLoadPreset).not.toHaveBeenCalled();
   });
 
   it("toggling percent<->nominal clears the typed value instead of translating it", () => {
