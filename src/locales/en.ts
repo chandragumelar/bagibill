@@ -89,6 +89,7 @@ export const en: LocaleDictionary = {
   "devui.sample.netbandRecipients": "Farhan, Sarah & 2 others",
   "expense.title.label": "Expense title",
   "expense.amount.label": "Amount",
+  "expense.date.pickerLabel": "Choose expense date, currently {date}",
   "expense.payer.label": "Paid by",
   "expense.payer.changeAffordance": "Change ›",
   "expense.payer.pickerTitle": "Choose payer",
