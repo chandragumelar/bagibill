@@ -48,16 +48,20 @@
   text-transform: uppercase;
 }
 
-.selectAll {
-  appearance: none;
-  border: none;
-  background: none;
+.participantSelectAll {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-touch-min);
+  width: 100%;
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
   color: var(--brand);
-  font-family: inherit;
+  font: inherit;
   font-size: var(--fs-footnote);
   font-weight: var(--fw-medium);
-  min-height: var(--size-touch-min);
-  padding: 0 var(--sp-2);
+  text-align: left;
   cursor: pointer;
 }
 
@@ -241,5 +245,5 @@
    browser buat <input type=text> menyita ruang nama di layar sempit. Angka
    menyalin lebar input row.isNom di docs/mockups/Tambah_Pengeluaran.html. */
 .nominalFieldWidth {
-  width: 6.5rem;
+  max-width: 11rem;
 }

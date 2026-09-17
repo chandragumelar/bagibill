@@ -162,10 +162,13 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
   }
 
   function checkAllMembers(): void {
-    setDraft((current) => ({
-      ...current,
-      members: current.members.map((member) => ({ ...member, checked: true })),
-    }));
+    setDraft((current) => {
+      const nextChecked = !current.members.every((member) => member.checked);
+      return {
+        ...current,
+        members: current.members.map((member) => ({ ...member, checked: nextChecked })),
+      };
+    });
   }
 
   function addEmptyCharge(): void {

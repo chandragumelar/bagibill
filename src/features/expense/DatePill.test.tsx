@@ -20,9 +20,9 @@ describe("DatePill", () => {
     expect(screen.getByRole("button", { name: "Hari ini" })).toBeInTheDocument();
   });
 
-  it('shows "Kemarin" when the draft date is one day before now', () => {
+  it("shows a locale date when the draft date is not today", () => {
     render(<DatePill dateMs={NOW_MS - DAY_MS} nowMs={NOW_MS} onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Kemarin" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "15 Sep" })).toBeInTheDocument();
   });
 
   it("calls onChange with the picked date", () => {

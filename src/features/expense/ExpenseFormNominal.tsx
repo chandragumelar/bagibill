@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { t, formatMoney } from "@/lib/i18n";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
 import { Screen } from "@/app/layout/Screen/Screen";
-import { Avatar, Button, ListRow, MoneyInput, TextInput } from "@/shared/ui";
+import { Avatar, Button, MoneyInput, TextInput } from "@/shared/ui";
 import { InlineFailure } from "@/shared/system";
 import { navigate } from "@/routes/router";
 import { systemClock } from "@/lib/storage/clock";
@@ -20,6 +20,7 @@ import {
 import type { ExpenseDraftResult } from "./use-expense-draft";
 import { AllocationBar } from "./AllocationBar";
 import { ParticipantControlRow } from "./ParticipantControlRow";
+import { ParticipantToggleRow } from "./ParticipantToggleRow";
 import { ChargeEditor } from "./ChargeEditor";
 import { TreatEditor } from "./TreatEditor";
 import { PayerButton } from "./PayerButton";
@@ -112,6 +113,7 @@ export function ExpenseFormNominal({
 
   const checkedMembers = draft.members.filter((member) => member.checked);
   const checkedCount = checkedMembers.length;
+  const allMembersChecked = checkedCount === draft.members.length;
 
   // Nominal always computes (splitByAmounts only warns on a mismatch, it
   // never throws), so result.ready is never false here just because the
@@ -195,9 +197,6 @@ export function ExpenseFormNominal({
       <div className={styles.section}>
         <div className={styles.sectionHeadingRow}>
           <span className={styles.sectionHeading}>{t("expense.participants.heading", { count: checkedCount })}</span>
-          <button type="button" className={styles.selectAll} onClick={checkAllMembers}>
-            {t("expense.participants.selectAll")}
-          </button>
         </div>
 
         <div className={styles.modeGroup} role="group" aria-label={t("expense.mode.groupLabel")}>
@@ -233,24 +232,20 @@ export function ExpenseFormNominal({
         ) : null}
 
         <div className={styles.participantList}>
+          <button type="button" className={styles.participantSelectAll} onClick={checkAllMembers}>
+            {t(allMembersChecked ? "expense.participants.clearAll" : "expense.participants.selectAll")}
+          </button>
           {draft.members.map((member) => {
-            // A checked row's trailing holds a real MoneyInput — ListRow
-            // renders as a <button> when given onClick (K-82), and a real
-            // input inside a button is both invalid HTML and a bug (typing
-            // in it would bubble a click that un-checks the member). So only
-            // an unchecked row (plain text trailing) gets the re-include tap.
             if (!member.checked) {
               return (
-                <ListRow
+                <ParticipantToggleRow
                   key={member.memberId}
-                  onClick={() => toggleMember(member.memberId)}
+                  checked={false}
+                  onToggle={() => toggleMember(member.memberId)}
+                  name={member.name}
+                  toggleLabel={t("expense.participants.toggleLabel", { name: member.name })}
                   leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
-                  trailing={
-                    <span className={`${styles.amount} ${styles.amountExcluded}`}>{t("expense.participants.excluded")}</span>
-                  }
-                >
-                  <span className={styles.memberName}>{member.name}</span>
-                </ListRow>
+                />
               );
             }
             return (
@@ -258,6 +253,9 @@ export function ExpenseFormNominal({
                 key={member.memberId}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
                 name={member.name}
+                checked={member.checked}
+                onToggle={() => toggleMember(member.memberId)}
+                toggleLabel={t("expense.participants.toggleLabel", { name: member.name })}
                 trailing={
                   <div className={styles.nominalFieldWidth}>
                     <MoneyInput

@@ -181,7 +181,6 @@ describe("AddExpenseScreen", () => {
     typeAmount("10000");
     fireEvent.click(screen.getByText("Sarah"));
     expect(screen.getAllByText(renderedMoney(10_000, "IDR")).length).toBeGreaterThan(0);
-    expect(screen.getByText(t("expense.participants.excluded"))).toBeInTheDocument();
   });
 
   it("saves one evenly split expense through the screen, and the read-back numbers match the panel", async () => {
@@ -280,12 +279,10 @@ describe("AddExpenseScreen", () => {
     await screen.findAllByText("Farhan Maulana");
     typeAmount("10000");
     fireEvent.click(screen.getByText("Sarah"));
-    expect(screen.getByText(t("expense.participants.excluded"))).toBeInTheDocument();
 
     switchToPorsi();
 
     expect(screen.getAllByText(renderedMoney(10_000, "IDR")).length).toBeGreaterThan(0);
-    expect(screen.getByText(t("expense.participants.excluded"))).toBeInTheDocument();
   });
 
   it("changing a weight updates the result panel in the same render, no calculate button involved", async () => {
@@ -440,7 +437,6 @@ describe("AddExpenseScreen", () => {
     ]) {
       switchTo();
       expect(screen.getAllByText(renderedMoney(10_000, "IDR")).length).toBeGreaterThan(0);
-      expect(screen.getByText(t("expense.participants.excluded"))).toBeInTheDocument();
       expect(screen.getByDisplayValue("Service charge")).toBeInTheDocument();
       expect(screen.getAllByLabelText(t("expense.treat.remove"))).toHaveLength(1);
     }

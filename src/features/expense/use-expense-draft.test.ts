@@ -61,6 +61,14 @@ describe("useExpenseDraft", () => {
     expect(result.current.draft.members.every((member) => member.checked)).toBe(true);
   });
 
+  it("checkAllMembers clears everyone when all members are already checked", () => {
+    const { result } = renderHook(() => useExpenseDraft(INIT));
+    act(() => {
+      result.current.checkAllMembers();
+    });
+    expect(result.current.draft.members.every((member) => !member.checked)).toBe(true);
+  });
+
   it("setMode switches the split mode without touching amount or membership", () => {
     const { result } = renderHook(() => useExpenseDraft(INIT));
     act(() => {

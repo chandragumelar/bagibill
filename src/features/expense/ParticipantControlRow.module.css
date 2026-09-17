@@ -17,6 +17,23 @@
   background: var(--surface);
 }
 
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--size-touch-min);
+  width: var(--size-touch-min);
+  height: var(--size-touch-min);
+  cursor: pointer;
+}
+
+.toggle input {
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
+  margin: 0;
+  accent-color: var(--brand);
+}
+
 .leading {
   display: flex;
   align-items: center;

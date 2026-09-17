@@ -1,5 +1,5 @@
 import { useRef, type ChangeEvent } from "react";
-import { dayLabel, startOfDay } from "@/lib/i18n";
+import { formatDate, startOfDay, t } from "@/lib/i18n";
 import formStyles from "./AddExpenseScreen.module.css";
 import styles from "./DatePill.module.css";
 
@@ -42,6 +42,9 @@ export interface DatePillProps {
 // `max` anyway (some browsers allow it) is clamped here too.
 export function DatePill({ dateMs, nowMs, onChange }: DatePillProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const dateLabel = startOfDay(dateMs) === startOfDay(nowMs)
+    ? t("group.transaction.dayToday")
+    : formatDate(new Date(startOfDay(dateMs)), { day: "numeric", month: "short" });
 
   function handleChange(event: ChangeEvent<HTMLInputElement>): void {
     const parsedMs = fromDateInputValue(event.target.value, dateMs);
@@ -55,7 +58,7 @@ export function DatePill({ dateMs, nowMs, onChange }: DatePillProps) {
         className={`${formStyles.chip} ${formStyles.chipButton}`}
         onClick={() => openNativePicker(inputRef.current)}
       >
-        {dayLabel(startOfDay(dateMs), nowMs)}
+        {dateLabel}
       </button>
       <input
         ref={inputRef}
