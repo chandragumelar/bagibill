@@ -46,6 +46,7 @@ export interface ExpenseRepository {
   createExpense(input: CreateExpenseInput): Promise<ExpenseRecord>;
   updateExpense(expenseId: string, patch: UpdateExpenseInput): Promise<ExpenseRecord>;
   softDeleteExpense(expenseId: string): Promise<void>;
+  restoreExpense(expenseId: string): Promise<void>;
   getExpense(expenseId: string): Promise<ExpenseRecord | undefined>;
   listExpensesByGroup(groupSlug: string, options?: ListExpensesOptions): Promise<readonly ExpenseRecord[]>;
 }
@@ -103,7 +104,8 @@ export function createExpenseRepository(
     if (existing === undefined) {
       throw new Error(`updateExpense: no expense found for id "${expenseId}"`);
     }
-    const updated: ExpenseRecord = { ...existing, ...patch, updatedAt: clock.now() };
+    const updatedAt = Math.max(clock.now(), existing.updatedAt + 1);
+    const updated: ExpenseRecord = { ...existing, ...patch, updatedAt };
     assertCalculable(updated);
     await adapter.expenses.put(updated);
     return updated;
@@ -115,6 +117,14 @@ export function createExpenseRepository(
       throw new Error(`softDeleteExpense: no expense found for id "${expenseId}"`);
     }
     await adapter.expenses.put({ ...existing, deletedAt: clock.now() });
+  }
+
+  async function restoreExpense(expenseId: string): Promise<void> {
+    const existing = await adapter.expenses.get(expenseId);
+    if (existing === undefined) {
+      throw new Error(`restoreExpense: no expense found for id "${expenseId}"`);
+    }
+    await adapter.expenses.put({ ...existing, deletedAt: undefined });
   }
 
   async function getExpense(expenseId: string): Promise<ExpenseRecord | undefined> {
@@ -140,5 +150,5 @@ export function createExpenseRepository(
     return order === "asc" ? visible : [...visible].reverse();
   }
 
-  return { createExpense, updateExpense, softDeleteExpense, getExpense, listExpensesByGroup };
+  return { createExpense, updateExpense, softDeleteExpense, restoreExpense, getExpense, listExpensesByGroup };
 }

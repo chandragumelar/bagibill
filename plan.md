@@ -439,6 +439,16 @@ Isi: label "Bagian rata" di mode Selisih ternyata dihitung ulang di `.tsx` (meng
 
 Selesai kalau: label bagian rata mode Selisih ikut berubah realtime dari engine, penyesuaian yang melebihi total dicegah tersimpan dengan pesan yang jelas, dan lima gerbang hijau.
 
+### F4-08 Ubah dan hapus pengeluaran
+
+Tergantung: F4-07. Rujukan `spec.md` bagian inti penyimpanan dan mockup `Lapisan_Sistem.html`.
+
+Isi: tap baris transaksi membuka layar tambah pengeluaran dalam mode edit, dengan seluruh data tersimpan dihydrate ke draft dan penyimpanan lewat repository. Hapus pengeluaran memakai soft delete dari swipe kiri atau menu baris. Toast lima detik menumpuk penghapusan, mendukung urungkan terakhir dan semua, lalu memuat ulang angka transaksi dan saldo.
+
+Tidak masuk: pengaturan grup dan hapus grup.
+
+Selesai kalau: edit menaikkan `updatedAt`, undo mengembalikan urutan asli, ambang swipe 90px, dua bahasa lengkap, dan lima gerbang hijau. Tetap menunggu uji HP fisik sebelum dicentang.
+
 ---
 
 ## Setelah ini

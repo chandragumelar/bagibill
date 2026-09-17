@@ -22,7 +22,7 @@ interface LoadedState {
 // (F0-07); the "loading" status is just "nothing to render yet". The actual
 // balance math lives in group-balance.ts's computeGroupBalanceState — this
 // hook is just that function wired to storage and re-fetchable.
-export function useGroupBalance(slug: string): GroupBalanceState {
+export function useGroupBalance(slug: string, refreshSignal: number = 0): GroupBalanceState {
   const [loaded, setLoaded] = useState<LoadedState>({ slug, state: { status: "loading" } });
   const [reloadToken, setReloadToken] = useState(0);
   const reload = () => setReloadToken((token) => token + 1);
@@ -55,7 +55,7 @@ export function useGroupBalance(slug: string): GroupBalanceState {
     return () => {
       cancelled = true;
     };
-  }, [slug, reloadToken]);
+  }, [slug, reloadToken, refreshSignal]);
 
   return loaded.slug === slug ? loaded.state : { status: "loading" };
 }

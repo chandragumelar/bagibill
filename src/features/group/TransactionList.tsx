@@ -38,9 +38,12 @@ export interface TransactionListProps {
   /** True when `items` is empty because a filter cut it down, not because the group has nothing yet. */
   readonly isFiltered?: boolean;
   readonly onClearFilter?: () => void;
+  readonly onEditExpense?: (expenseId: string) => void;
+  readonly onDeleteExpense?: (expenseId: string, title: string) => void;
+  readonly highlightedExpenseId?: string;
 }
 
-export function TransactionList({ items, currency, nowMs, onAddExpense, isFiltered, onClearFilter }: TransactionListProps) {
+export function TransactionList({ items, currency, nowMs, onAddExpense, isFiltered, onClearFilter, onEditExpense, onDeleteExpense, highlightedExpenseId }: TransactionListProps) {
   if (items.length === 0) {
     if (isFiltered === true && onClearFilter !== undefined) {
       return <FilteredEmpty onClearFilter={onClearFilter} />;
@@ -60,7 +63,14 @@ export function TransactionList({ items, currency, nowMs, onAddExpense, isFilter
           </div>
           <div className={styles.dayCard}>
             {group.items.map((item) => (
-              <TransactionRow key={item.key} row={item.row} currency={currency} />
+              <TransactionRow
+                key={item.key}
+                row={item.row}
+                currency={currency}
+                onEdit={onEditExpense}
+                onDelete={onDeleteExpense}
+                highlighted={item.key === highlightedExpenseId}
+              />
             ))}
           </div>
         </div>

@@ -120,6 +120,7 @@ function PercentStepper({ memberName, percent, onChange }: PercentStepperProps) 
 
 export interface ExpenseFormPersenProps {
   readonly slug: string;
+  readonly expenseId?: string;
   readonly header: ReactNode;
   readonly draft: ExpenseDraft;
   readonly result: ExpenseDraftResult;
@@ -145,6 +146,7 @@ export interface ExpenseFormPersenProps {
 
 export function ExpenseFormPersen({
   slug,
+  expenseId,
   header,
   draft,
   result,
@@ -188,8 +190,9 @@ export function ExpenseFormPersen({
     setSaving(true);
     setSaveError(false);
     try {
-      await expenseRepository.createExpense(input);
-      navigate(`/g/${slug}`);
+      if (expenseId === undefined) await expenseRepository.createExpense(input);
+      else await expenseRepository.updateExpense(expenseId, input);
+      navigate(`/g/${slug}${expenseId === undefined ? "" : `?edited=${expenseId}`}`);
     } catch {
       setSaveError(true);
     } finally {
@@ -227,7 +230,7 @@ export function ExpenseFormPersen({
             </div>
           </div>
           <Button onClick={() => void handleSave()} disabled={!result.ready || saving}>
-            {t("expense.save.button")}
+            {t(expenseId === undefined ? "expense.save.button" : "expense.save.editButton")}
           </Button>
         </BottomBar>
       }
@@ -253,7 +256,7 @@ export function ExpenseFormPersen({
         onCategoryChange={setCategory}
       />
 
-      <PayerButton members={draft.members} payerMemberId={draft.payerMemberId} onSelect={setPayer} />
+      <PayerButton members={draft.members} payerMemberId={draft.payerMemberId} storedPayers={draft.storedPayers} currency={draft.currency} onSelect={setPayer} />
 
       <div className={styles.section}>
         <div className={styles.sectionHeadingRow}>

@@ -36,7 +36,10 @@ export type ChargeAllocationRecord =
   | (Omit<Extract<ChargeAllocation, { mode: "single_payer" }>, "participantIndex"> & { readonly memberId: string })
   | (Omit<Extract<ChargeAllocation, { mode: "items" }>, "itemIndices"> & { readonly itemIds: readonly string[] });
 
-export type ChargeRecord = Omit<ExtraCharge, "allocation"> & { readonly allocation: ChargeAllocationRecord };
+export type ChargeRecord = Omit<ExtraCharge, "allocation"> & {
+  readonly allocation: ChargeAllocationRecord;
+  readonly name?: string;
+};
 
 // Treat mirrors the same derivation. spec.md 5.1's Item sketch has its own
 // sponsorId field for item-level treats, but that's dropped here in favor

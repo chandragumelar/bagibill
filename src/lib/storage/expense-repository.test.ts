@@ -75,6 +75,18 @@ describe("softDeleteExpense", () => {
     const stillStored = await adapter.expenses.get(created.expenseId);
     expect(stillStored?.deletedAt).toBeDefined();
   });
+
+  it("restores a soft-deleted expense without changing its original ordering fields", async () => {
+    const { repository } = makeRepository();
+    const created = await repository.createExpense(makeCreateInput({ date: 2_000 }));
+    await repository.softDeleteExpense(created.expenseId);
+    await repository.restoreExpense(created.expenseId);
+
+    const restored = await repository.getExpense(created.expenseId);
+    expect(restored?.deletedAt).toBeUndefined();
+    expect(restored?.date).toBe(2_000);
+    expect(restored?.createdAt).toBe(created.createdAt);
+  });
 });
 
 describe("listExpensesByGroup", () => {

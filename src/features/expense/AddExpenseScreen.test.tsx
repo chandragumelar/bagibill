@@ -67,6 +67,11 @@ function renderScreen() {
   return render(<AppRouter routes={[{ path: "/g/:slug/add", Component: AddExpenseScreen }]} fallbackPath="/app" />);
 }
 
+function renderEditScreen(expenseId: string) {
+  window.history.pushState(null, "", `/g/g1/e/${expenseId}`);
+  return render(<AppRouter routes={[{ path: "/g/:slug/e/:expenseId", Component: AddExpenseScreen }]} fallbackPath="/app" />);
+}
+
 // Several mode-pill labels collide with unrelated field labels elsewhere on
 // the same screen ("Amount"/"Percent" also name the amount field and a
 // charge's value-kind toggle) — queries are scoped to the mode pill group
@@ -104,6 +109,55 @@ function renderedMoney(amountMinor: number, currency: string): string {
 }
 
 describe("AddExpenseScreen", () => {
+  it("hydrates every stored edit field and saves through updateExpense", async () => {
+    await seedGroup();
+    const created = await expenseRepository.createExpense({
+      groupSlug: "g1",
+      title: "Makan lama",
+      category: "food",
+      date: 2_000,
+      notes: "",
+      currency: "IDR",
+      fxRate: 1,
+      amountTotalMinor: 10_000,
+      payers: [
+        { memberId: "m1", amountMinor: 6_000 },
+        { memberId: "m2", amountMinor: 4_000 },
+      ],
+      splitData: {
+        mode: "byWeights",
+        entries: [
+          { memberId: "m1", weight: 2 },
+          { memberId: "m2", weight: 1 },
+        ],
+      },
+      charges: [{ name: "PB1", amount: { kind: "percent", percent: 10, basis: "subtotal" }, allocation: { mode: "even" } }],
+      items: [],
+      treats: [{ kind: "person", sponsorMemberId: "m1", beneficiaryMemberId: "m2" }],
+      attachments: [],
+      createdBy: "m1",
+    });
+    renderEditScreen(created.expenseId);
+
+    expect(await screen.findByDisplayValue("Makan lama")).toBeInTheDocument();
+    expect(screen.getByText(t("route.title.editExpense"))).toBeInTheDocument();
+    expect(modePill("expense.mode.byWeights")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByText(/Farhan Maulana.*Sarah/).length).toBeGreaterThan(0);
+    expect(screen.getByDisplayValue("PB1")).toBeInTheDocument();
+    expect(screen.getByText(t("expense.save.editButton"))).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(t("expense.title.label")), { target: { value: "Makan baru" } });
+    fireEvent.click(screen.getByText(t("expense.save.editButton")));
+    await waitFor(() => expect(window.location.pathname).toBe("/g/g1"));
+
+    const updated = await expenseRepository.getExpense(created.expenseId);
+    expect(updated?.title).toBe("Makan baru");
+    expect(updated?.updatedAt).toBeGreaterThan(created.updatedAt);
+    expect(updated?.splitData).toEqual(created.splitData);
+    expect(updated?.payers).toEqual(created.payers);
+    expect(updated?.charges).toEqual(created.charges);
+    expect(updated?.treats).toEqual(created.treats);
+  });
   it("renders and shows the result panel in its empty state from the start", async () => {
     await seedGroup();
     renderScreen();
@@ -306,8 +360,8 @@ describe("AddExpenseScreen", () => {
     expect(stored.amountTotalMinor).toBe(10_000);
     expect(stored.payers).toEqual([{ memberId: "m1", amountMinor: 11_550 }]);
     expect(stored.charges).toEqual([
-      { amount: { kind: "percent", percent: 5, basis: "subtotal" }, allocation: { mode: "proportional" } },
-      { amount: { kind: "percent", percent: 10, basis: "running_total" }, allocation: { mode: "proportional" } },
+      { name: "Service charge", amount: { kind: "percent", percent: 5, basis: "subtotal" }, allocation: { mode: "proportional" } },
+      { name: "PB1", amount: { kind: "percent", percent: 10, basis: "running_total" }, allocation: { mode: "proportional" } },
     ]);
     expect(stored.treats).toEqual([{ kind: "person", sponsorMemberId: "m1", beneficiaryMemberId: "m2" }]);
 

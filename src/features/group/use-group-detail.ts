@@ -164,7 +164,7 @@ interface LoadedState {
   readonly state: GroupDetailState;
 }
 
-export function useGroupDetail(slug: string): GroupDetailState {
+export function useGroupDetail(slug: string, refreshSignal: number = 0): GroupDetailState {
   const [loaded, setLoaded] = useState<LoadedState>({ slug, state: { status: "loading" } });
   const [reloadToken, setReloadToken] = useState(0);
 
@@ -206,7 +206,7 @@ export function useGroupDetail(slug: string): GroupDetailState {
     return () => {
       cancelled = true;
     };
-  }, [slug, reloadToken]);
+  }, [slug, reloadToken, refreshSignal]);
 
   // Falls back to "loading" whenever the slug being rendered hasn't been
   // loaded yet — covers first mount and a slug change alike, without ever
