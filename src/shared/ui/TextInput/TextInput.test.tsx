@@ -1,6 +1,11 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { TextInput } from "@/shared/ui/TextInput/TextInput";
+
+const textInputStyles = readFileSync(resolve(process.cwd(), "src/shared/ui/TextInput/TextInput.module.css"), "utf8");
+const designTokens = readFileSync(resolve(process.cwd(), "packages/tokens/tokens.css"), "utf8");
 
 describe("TextInput", () => {
   it("exposes the label to screen readers", () => {
@@ -26,5 +31,13 @@ describe("TextInput", () => {
   it("omits aria-describedby when there is no warning", () => {
     render(<TextInput label="Nama" value="" onChange={vi.fn()} />);
     expect(screen.getByLabelText("Nama")).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("keeps interactive text at least 16px to prevent mobile auto-zoom", () => {
+    expect(textInputStyles).toMatch(/\.field\s*\{[^}]*font-size:\s*var\(--fs-body\)/s);
+
+    const bodySizeMatch = designTokens.match(/--fs-body:\s*([\d.]+)px/);
+    expect(bodySizeMatch).not.toBeNull();
+    expect(Number(bodySizeMatch?.[1])).toBeGreaterThanOrEqual(16);
   });
 });

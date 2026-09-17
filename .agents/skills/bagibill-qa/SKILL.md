@@ -317,6 +317,7 @@ grep -rn "tailwind" package.json src/
 - Font sistem 200% tanpa layout rusak.
 - Setiap kontrol punya label yang terbaca screen reader. Nominal dibacakan lengkap dengan mata uangnya.
 - Fokus keyboard terlihat, ring-nya pakai `--focus-ring`, dan urutannya logis.
+- iOS Safari: setiap input teks interaktif punya ukuran font efektif minimal 16px supaya fokus tidak memicu auto-zoom. Jangan mengakalinya dengan `user-scalable=no` atau membatasi `maximum-scale` di viewport.
 - `prefers-reduced-motion` dan `prefers-color-scheme` dihormati.
 
 ## 13. QA Kualitas Kode
