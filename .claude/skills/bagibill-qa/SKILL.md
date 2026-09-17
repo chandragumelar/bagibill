@@ -85,7 +85,7 @@ Cek juga: pembulatan per item lalu dijumlah harus sama dengan pembulatan di leve
 Untuk setiap mode, uji tiga kelas kasus: normal, batas, dan yang seharusnya ditolak.
 
 - Rata: nol peserta harus ditolak. Satu peserta dapat semuanya.
-- Nominal: total kurang dari tagihan menyisakan sisa yang terlihat. Total lebih dari tagihan memberi peringatan tapi tetap bisa disimpan.
+- Nominal: total kurang dari tagihan menyisakan sisa yang terlihat, tombol Simpan mati. Total lebih dari tagihan boleh diketik bebas (nol clamp, nol keystroke ditolak), tapi begitu kelebihan baris status jadi nada error dan tombol Simpan mati juga — bukan cuma peringatan.
 - Persentase: harus 100. Selisih di bawah 0,01 dibulatkan diam-diam. Selisih lebih besar ditolak.
 - Porsi: semua bobot nol harus ditolak. Bobot nol untuk sebagian orang berarti dia ikut tercatat tapi bayar nol. Bobot pecahan harus jalan.
 - Penyesuaian: penyesuaian negatif jalan. Penyesuaian yang bikin bagian seseorang jadi negatif harus diperingatkan.
