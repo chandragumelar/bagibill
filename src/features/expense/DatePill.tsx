@@ -45,6 +45,7 @@ export function DatePill({ dateMs, nowMs, onChange }: DatePillProps) {
   const dateLabel = startOfDay(dateMs) === startOfDay(nowMs)
     ? t("group.transaction.dayToday")
     : formatDate(new Date(startOfDay(dateMs)), { day: "numeric", month: "short" });
+  const accessibleLabel = t("expense.date.pickerLabel", { date: dateLabel });
 
   function handleChange(event: ChangeEvent<HTMLInputElement>): void {
     const parsedMs = fromDateInputValue(event.target.value, dateMs);
@@ -56,6 +57,7 @@ export function DatePill({ dateMs, nowMs, onChange }: DatePillProps) {
       <button
         type="button"
         className={`${formStyles.chip} ${formStyles.chipButton}`}
+        aria-label={accessibleLabel}
         onClick={() => openNativePicker(inputRef.current)}
       >
         {dateLabel}

@@ -87,6 +87,7 @@ export const id: LocaleDictionary = {
   "devui.sample.netbandRecipients": "Farhan, Sarah & 2 lainnya",
   "expense.title.label": "Judul pengeluaran",
   "expense.amount.label": "Nominal",
+  "expense.date.pickerLabel": "Pilih tanggal pengeluaran, saat ini {date}",
   "expense.payer.label": "Dibayar",
   "expense.payer.changeAffordance": "Ubah ›",
   "expense.payer.pickerTitle": "Pilih pembayar",

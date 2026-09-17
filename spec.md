@@ -203,6 +203,7 @@ ActivityLog
 ### 5.2 Aturan penyimpanan
 
 - Angka uang disimpan sebagai integer minor unit (rupiah sebagai integer polos, dolar sebagai sen). Tidak pernah float.
+- Tanggal pengeluaran boleh hari ini atau tanggal yang sudah lewat, tidak boleh tanggal masa depan. Batas "hari ini" mengikuti timezone device dan waktu dibaca lewat abstraksi `Clock`.
 - Setiap perubahan menaikkan `seq` yang diberikan server. Client menggunakan ini untuk deteksi konflik.
 - Penghapusan adalah soft delete dengan `deletedAt`, dibersihkan permanen setelah 30 hari.
 - Attachment disimpan sebagai object storage dengan URL bertanda tangan, kedaluwarsa 1 jam, di-cache lokal.
