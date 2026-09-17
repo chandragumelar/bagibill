@@ -42,6 +42,13 @@
   overflow: hidden;
 }
 
+.addChoices {
+  margin-top: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
 .row {
   padding: var(--sp-3) var(--sp-4);
   border-bottom: 1px solid var(--border);
