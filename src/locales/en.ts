@@ -433,7 +433,6 @@ export const en: LocaleDictionary = {
   "member.danger.error": "Couldn't delete. Try again.",
   "home.section.groupsTitle": "Your groups",
   "home.section.addGroup": "New group",
-  "home.bottomBar.newGroup": "New group",
   "home.group.memberCount": { one: "{count} person", other: "{count} people" },
   "home.group.tagCredit": "you're owed",
   "home.group.tagDebt": "you owe",
