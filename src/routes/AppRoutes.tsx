@@ -7,6 +7,7 @@ const routes: RouteDef[] = [
   { path: "/g/:slug", Component: lazy(() => import("@/routes/group/GroupDetail")) },
   { path: "/g/:slug/members", Component: lazy(() => import("@/routes/group/GroupMembers")) },
   { path: "/g/:slug/add", Component: lazy(() => import("@/routes/expense/AddExpense")) },
+  { path: "/g/:slug/e/:expenseId", Component: lazy(() => import("@/routes/expense/AddExpense")) },
 ];
 
 /** Router rute-dalam-app gelombang 1. /c/ dan /j/ tidak lewat sini — lihat App.tsx. */

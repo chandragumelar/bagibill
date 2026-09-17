@@ -140,6 +140,38 @@ describe("GroupDetailScreen", () => {
     expect(await screen.findByText("Sate Padang")).toBeInTheDocument();
   });
 
+  it("soft-deletes from the row menu and undo restores the row in place", async () => {
+    await seedGroup();
+    const created = await expenseRepository.createExpense({
+      groupSlug: "g1",
+      title: "Sate Padang",
+      category: "food",
+      date: 1_000,
+      notes: "",
+      currency: "IDR",
+      fxRate: 1,
+      amountTotalMinor: 10_000,
+      payers: [{ memberId: "m1", amountMinor: 10_000 }],
+      splitData: { mode: "evenly", memberIds: ["m1", "m2"] },
+      charges: [],
+      items: [],
+      treats: [],
+      attachments: [],
+      createdBy: "m1",
+    });
+    renderScreen("g1");
+    await screen.findByText("Sate Padang");
+
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang" }) }));
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.delete") }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang" }) })).not.toBeInTheDocument());
+    expect((await expenseRepository.listExpensesByGroup("g1", { includeDeleted: true }))[0]?.deletedAt).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: t("toast.undo") }));
+    expect(await screen.findByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang" }) })).toBeInTheDocument();
+    expect((await expenseRepository.getExpense(created.expenseId))?.deletedAt).toBeUndefined();
+  });
+
   it("cuts the list down to matching rows when searching", async () => {
     await seedGroup();
     await expenseRepository.createExpense({

@@ -1,3 +1,4 @@
+import { useRef, useState, type PointerEvent } from "react";
 import { t, formatMoney } from "@/lib/i18n";
 import { Avatar } from "@/shared/ui/Avatar/Avatar";
 import { ListRow } from "@/shared/ui/ListRow/ListRow";
@@ -52,12 +53,15 @@ export type TransactionRowData = ExpenseTransactionRow | SettlementTransactionRo
 export interface TransactionRowProps {
   readonly row: TransactionRowData;
   readonly currency: string;
+  readonly onEdit?: (expenseId: string) => void;
+  readonly onDelete?: (expenseId: string, title: string) => void;
+  readonly highlighted?: boolean;
 }
 
-export function TransactionRow({ row, currency }: TransactionRowProps) {
+export function TransactionRow({ row, currency, onEdit, onDelete, highlighted }: TransactionRowProps) {
   if (row.kind === "broken") return <BrokenRow />;
   if (row.kind === "settlement") return <SettlementRow row={row} currency={currency} />;
-  return <ExpenseRow row={row} currency={currency} />;
+  return <ExpenseRow row={row} currency={currency} onEdit={onEdit} onDelete={onDelete} highlighted={highlighted} />;
 }
 
 function payerLabel(row: ExpenseTransactionRow): string {
@@ -104,6 +108,9 @@ function EffectView({ effect, currency }: EffectViewProps) {
 interface ExpenseRowProps {
   readonly row: ExpenseTransactionRow;
   readonly currency: string;
+  readonly onEdit?: (expenseId: string) => void;
+  readonly onDelete?: (expenseId: string, title: string) => void;
+  readonly highlighted?: boolean;
 }
 
 // The mockup's leading circle is a category icon, tinted per category —
@@ -112,16 +119,51 @@ interface ExpenseRowProps {
 // screen that shows people either way. The payer's own avatar fills the
 // same 40px slot instead: real data, real member color, and it answers
 // "who paid" at a glance instead of a color that isn't allowed here.
-function ExpenseRow({ row, currency }: ExpenseRowProps) {
+const DELETE_SWIPE_THRESHOLD_PX = 90;
+
+function ExpenseRow({ row, currency, onEdit, onDelete, highlighted }: ExpenseRowProps) {
+  const [offsetPx, setOffsetPx] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const startXRef = useRef<number | undefined>(undefined);
+  const swipedRef = useRef(false);
   const titleClassName = row.effect.kind === "out" ? `${styles.title} ${styles.titleMuted}` : styles.title;
+  function pointerDown(event: PointerEvent<HTMLDivElement>): void {
+    if ((event.target as HTMLElement).closest("button") !== null) return;
+    startXRef.current = event.clientX;
+    swipedRef.current = false;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+  function pointerMove(event: PointerEvent<HTMLDivElement>): void {
+    if (startXRef.current === undefined) return;
+    const next = Math.min(0, event.clientX - startXRef.current);
+    if (Math.abs(next) > 4) swipedRef.current = true;
+    setOffsetPx(next);
+  }
+  function pointerEnd(): void {
+    const shouldDelete = offsetPx < -DELETE_SWIPE_THRESHOLD_PX;
+    startXRef.current = undefined;
+    setOffsetPx(0);
+    if (shouldDelete) onDelete?.(row.expenseId, row.title);
+  }
   return (
-    <ListRow
-      leading={<Avatar initials={row.payerAvatarInitials} color={`var(${row.payerAvatarColor})`} />}
-      trailing={<EffectView effect={row.effect} currency={currency} />}
-    >
-      <div className={titleClassName}>{row.title}</div>
-      <div className={styles.meta}>
-        <span className={styles.payer}>{payerLabel(row)}</span>
+    <div className={`${styles.swipeWrap} ${highlighted === true ? styles.highlighted : ""}`}>
+      <div className={styles.deleteBack}>{t("group.transaction.delete")}</div>
+      <div
+        className={styles.swipeFront}
+        style={{ transform: `translateX(${offsetPx}px)` }}
+        onPointerDown={pointerDown}
+        onPointerMove={pointerMove}
+        onPointerUp={pointerEnd}
+        onPointerCancel={pointerEnd}
+      >
+        <ListRow
+          onClick={() => { if (!swipedRef.current) onEdit?.(row.expenseId); }}
+          leading={<Avatar initials={row.payerAvatarInitials} color={`var(${row.payerAvatarColor})`} />}
+          trailing={<EffectView effect={row.effect} currency={currency} />}
+        >
+          <div className={titleClassName}>{row.title}</div>
+          <div className={styles.meta}>
+            <span className={styles.payer}>{payerLabel(row)}</span>
         {row.foreignAmountMinor !== undefined && row.foreignCurrency !== undefined ? (
           <>
             <span className={`${styles.payer} bb-numeral`}>· {formatMoney(row.foreignAmountMinor, row.foreignCurrency)}</span>
@@ -134,8 +176,24 @@ function ExpenseRow({ row, currency }: ExpenseRowProps) {
             <PaperclipIcon />
           </span>
         ) : null}
+          </div>
+        </ListRow>
+        <button
+          type="button"
+          className={styles.menuButton}
+          aria-label={t("group.transaction.rowMenu", { title: row.title })}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          ⋯
+        </button>
+        {menuOpen ? (
+          <button type="button" className={styles.deleteMenuItem} onClick={() => onDelete?.(row.expenseId, row.title)}>
+            {t("group.transaction.delete")}
+          </button>
+        ) : null}
       </div>
-    </ListRow>
+    </div>
   );
 }
 

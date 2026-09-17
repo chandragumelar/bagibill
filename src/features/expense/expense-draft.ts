@@ -18,6 +18,7 @@ import type {
 import type { CategoryKey } from "@/lib/storage/templates";
 import type { CreateExpenseInput } from "@/lib/storage/expense-repository";
 import type { ChargeAllocationRecord, ChargeRecord, SplitDataRecord, TreatRecord } from "@/lib/storage/records";
+import type { ExpenseRecord } from "@/lib/storage/records";
 
 type CalculateExpenseInput = Parameters<typeof calculateExpense>[0];
 
@@ -95,6 +96,7 @@ export interface ExpenseDraft {
   readonly mode: ExpenseSplitMode;
   readonly members: readonly ExpenseDraftMember[];
   readonly payerMemberId: string;
+  readonly storedPayers: ExpenseRecord["payers"];
   readonly charges: readonly ChargeDraft[];
   readonly treats: readonly TreatDraft[];
 }
@@ -113,6 +115,7 @@ export interface DraftInit {
   readonly date: number;
   /** The group template's own categories, in its order — pinned to the top of the category picker (F4-06). Every one of the 8 CategoryKeys stays pickable regardless; this only orders them. */
   readonly templateCategories: readonly CategoryKey[];
+  readonly expense?: ExpenseRecord;
 }
 
 // spec.md default: every active member starts checked, first member by
@@ -120,6 +123,7 @@ export interface DraftInit {
 // group" (device identity, tracked separately from progress.md), so the
 // first member is a stand-in default, not a real identity lookup.
 export function createInitialDraft(init: DraftInit): ExpenseDraft {
+  if (init.expense !== undefined) return createDraftFromExpense(init, init.expense);
   return {
     title: "",
     amountMinor: 0,
@@ -136,8 +140,68 @@ export function createInitialDraft(init: DraftInit): ExpenseDraft {
       adjustmentMinor: 0,
     })),
     payerMemberId: init.members[0]?.memberId ?? "",
+    storedPayers: [],
     charges: [],
     treats: [],
+  };
+}
+
+function splitMemberIds(splitData: SplitDataRecord): readonly string[] {
+  return "memberIds" in splitData ? splitData.memberIds : splitData.entries.map((entry) => entry.memberId);
+}
+
+function chargeDraft(charge: ChargeRecord, index: number): ChargeDraft {
+  const allocationMemberId = charge.allocation.mode === "single_payer" ? charge.allocation.memberId : "";
+  const allocationMode = charge.allocation.mode === "items" ? "proportional" : charge.allocation.mode;
+  return {
+    id: `stored-charge-${index}`,
+    name: charge.name ?? "",
+    amountKind: charge.amount.kind,
+    rawValue: String(charge.amount.kind === "fixed" ? charge.amount.amountMinor : charge.amount.percent),
+    percentBasis: charge.amount.kind === "percent" ? charge.amount.basis : "subtotal",
+    allocationMode,
+    allocationMemberId,
+  };
+}
+
+function treatDraft(treat: TreatRecord, index: number): TreatDraft | undefined {
+  if (treat.kind === "item") return undefined;
+  return {
+    id: `stored-treat-${index}`,
+    kind: treat.kind,
+    sponsorMemberId: treat.sponsorMemberId,
+    beneficiaryMemberId: treat.beneficiaryMemberId,
+    partialAmountMinor: treat.kind === "partial" ? treat.amountMinor : 0,
+  };
+}
+
+export function createDraftFromExpense(init: DraftInit, expense: ExpenseRecord): ExpenseDraft {
+  const participantIds = new Set(splitMemberIds(expense.splitData));
+  const entryByMemberId = "entries" in expense.splitData
+    ? new Map(expense.splitData.entries.map((entry) => [entry.memberId, entry]))
+    : new Map<string, never>();
+  return {
+    title: expense.title,
+    amountMinor: expense.amountTotalMinor,
+    date: expense.date,
+    category: expense.category as CategoryKey,
+    currency: expense.currency,
+    mode: expense.splitData.mode === "byItems" ? "evenly" : expense.splitData.mode,
+    members: init.members.map((member) => {
+      const entry = entryByMemberId.get(member.memberId);
+      return {
+        ...member,
+        checked: participantIds.has(member.memberId),
+        weight: entry !== undefined && "weight" in entry ? entry.weight : DEFAULT_MEMBER_WEIGHT,
+        amountMinor: entry !== undefined && "amountMinor" in entry ? entry.amountMinor : 0,
+        percent: entry !== undefined && "percent" in entry ? entry.percent : 0,
+        adjustmentMinor: entry !== undefined && "adjustmentMinor" in entry ? entry.adjustmentMinor : 0,
+      };
+    }),
+    payerMemberId: expense.payers[0]?.memberId ?? init.members[0]?.memberId ?? "",
+    storedPayers: expense.payers,
+    charges: expense.charges.map(chargeDraft),
+    treats: expense.treats.map(treatDraft).filter((treat): treat is TreatDraft => treat !== undefined),
   };
 }
 
@@ -484,6 +548,7 @@ function buildChargeAllocationRecord(
 
 function buildChargeRecords(charges: readonly ChargeDraft[], checked: readonly ExpenseDraftMember[]): readonly ChargeRecord[] {
   return charges.map((charge) => ({
+    name: charge.name,
     amount: buildChargeAmount(charge),
     allocation: buildChargeAllocationRecord(charge, checked),
   }));
@@ -549,7 +614,9 @@ export function toCreateExpenseInput(
     currency: draft.currency,
     fxRate: 1,
     amountTotalMinor: draft.amountMinor,
-    payers: [{ memberId: draft.payerMemberId, amountMinor: computeGrandTotalMinor(draft, resolved.checked) }],
+    payers: draft.storedPayers.length > 0
+      ? draft.storedPayers
+      : [{ memberId: draft.payerMemberId, amountMinor: computeGrandTotalMinor(draft, resolved.checked) }],
     splitData: buildSplitData(draft.mode, resolved.checked),
     charges: buildChargeRecords(draft.charges, resolved.checked),
     items: [],

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { t, formatMoney } from "@/lib/i18n";
 import { TransactionRow } from "./TransactionRow";
 import type { ExpenseTransactionRow, SettlementTransactionRow } from "./TransactionRow";
@@ -25,6 +25,32 @@ function expenseRow(overrides: Partial<ExpenseTransactionRow> = {}): ExpenseTran
 }
 
 describe("TransactionRow — expense variants", () => {
+  it("opens edit on row tap and exposes keyboard-readable delete menu", () => {
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<TransactionRow row={expenseRow()} currency="IDR" onEdit={onEdit} onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByText("Sate Padang Ajo Ramon"));
+    expect(onEdit).toHaveBeenCalledWith("e1");
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang Ajo Ramon" }) }));
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.delete") }));
+    expect(onDelete).toHaveBeenCalledWith("e1", "Sate Padang Ajo Ramon");
+  });
+
+  it("deletes only after a left swipe passes 90px", () => {
+    const onDelete = vi.fn();
+    const { container } = render(<TransactionRow row={expenseRow()} currency="IDR" onDelete={onDelete} />);
+    const front = container.querySelector('[class*="swipeFront"]');
+    if (front === null) throw new Error("expected swipe surface");
+    fireEvent.pointerDown(front, { clientX: 200, pointerId: 1 });
+    fireEvent.pointerMove(front, { clientX: 120, pointerId: 1 });
+    fireEvent.pointerUp(front, { clientX: 120, pointerId: 1 });
+    expect(onDelete).not.toHaveBeenCalled();
+    fireEvent.pointerDown(front, { clientX: 200, pointerId: 2 });
+    fireEvent.pointerMove(front, { clientX: 100, pointerId: 2 });
+    fireEvent.pointerUp(front, { clientX: 100, pointerId: 2 });
+    expect(onDelete).toHaveBeenCalledWith("e1", "Sate Padang Ajo Ramon");
+  });
   it("renders a negative effect: bagianmu, someone else paid", () => {
     render(<TransactionRow row={expenseRow()} currency="IDR" />);
     expect(screen.getByText("Sate Padang Ajo Ramon")).toBeInTheDocument();

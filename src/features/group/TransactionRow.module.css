@@ -110,3 +110,70 @@
   background: var(--surface-sunken);
   border-bottom: 1px solid var(--border);
 }
+.swipeWrap {
+  position: relative;
+  overflow: hidden;
+  background: var(--risk-high-tint);
+}
+
+.swipeFront {
+  position: relative;
+  background: var(--surface);
+  touch-action: pan-y;
+  transition: transform var(--dur-tap) var(--ease);
+}
+
+.deleteBack {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: var(--sp-4);
+  color: var(--risk-high-text);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+}
+
+.menuButton {
+  position: absolute;
+  inset-block-start: var(--sp-1);
+  inset-inline-end: var(--sp-1);
+  width: var(--size-touch-min);
+  height: var(--size-touch-min);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.deleteMenuItem {
+  position: absolute;
+  inset-block-start: var(--sp-9);
+  inset-inline-end: var(--sp-2);
+  z-index: 2;
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-4);
+  border: var(--border-width-thin) solid var(--border);
+  border-radius: var(--r-btn);
+  background: var(--surface-raised);
+  color: var(--risk-high-text);
+  box-shadow: var(--elev-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.highlighted {
+  animation: edited-highlight var(--dur-toast) var(--ease);
+}
+
+@keyframes edited-highlight {
+  from { box-shadow: inset 0 0 0 var(--border-width-thick) var(--brand); background: var(--brand-tint); }
+  to { box-shadow: none; background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highlighted { animation: none; box-shadow: inset 0 0 0 var(--border-width-thick) var(--brand); }
+}

@@ -431,7 +431,7 @@ describe("toCreateExpenseInput — charges and treats", () => {
     });
     const input = toCreateExpenseInput(draft, save);
     expect(input?.charges).toEqual([
-      { amount: { kind: "fixed", amountMinor: -1_000 }, allocation: { mode: "single_payer", memberId: "m2" } },
+      { name: "Service", amount: { kind: "fixed", amountMinor: -1_000 }, allocation: { mode: "single_payer", memberId: "m2" } },
     ]);
   });
 

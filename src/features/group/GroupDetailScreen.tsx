@@ -1,14 +1,15 @@
 import { useRef, useState, type MutableRefObject } from "react";
 import { formatMoney, t } from "@/lib/i18n";
 import { systemClock } from "@/lib/storage/clock";
+import { expenseRepository } from "@/lib/storage/repositories";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
 import { GroupHeader, type GroupHeaderPosition } from "@/app/layout/GroupHeader/GroupHeader";
 import { Screen } from "@/app/layout/Screen/Screen";
 import { TabBar, type Tab } from "@/app/layout/TabBar/TabBar";
 import { Topbar, TopbarButton } from "@/app/layout/Topbar/Topbar";
 import { navigate, useRouteParams } from "@/routes/router";
-import { Button } from "@/shared/ui/Button/Button";
-import { LoadFailure } from "@/shared/system";
+import { Button, Toast } from "@/shared/ui";
+import { LoadFailure, useUndoQueue } from "@/shared/system";
 import { BalanceTab, useGroupBalance, type GroupBalanceState } from "@/features/settle";
 import { FilterBar } from "./FilterBar";
 import { useGroupDetail, type FilterMemberOption, type GroupDetailState, type TransactionListItem } from "./use-group-detail";
@@ -60,11 +61,14 @@ interface GroupDetailBodyProps {
   readonly highlightSignal: number;
   /** Filled by BalanceTab while its undo toast has pending items — GroupDetailScreen calls this before switching away from tab Saldo so the action becomes final instead of just disappearing (F4-01b). */
   readonly balanceCommitRef: MutableRefObject<(() => void) | undefined>;
+  readonly onEditExpense: (expenseId: string) => void;
+  readonly onDeleteExpense: (expenseId: string, title: string) => void;
+  readonly highlightedExpenseId?: string;
 }
 
 // Data lokal (IndexedDB) tidak pernah dapat spinner (F0-07) — keadaan
 // "loading" cuma berarti belum ada apapun buat dirender, bukan skeleton.
-function GroupDetailBody({ slug, state, activeTab, transactionFilter, members, balance, highlightSignal, balanceCommitRef }: GroupDetailBodyProps) {
+function GroupDetailBody({ slug, state, activeTab, transactionFilter, members, balance, highlightSignal, balanceCommitRef, onEditExpense, onDeleteExpense, highlightedExpenseId }: GroupDetailBodyProps) {
   if (state.status === "loading") return null;
   if (state.status === "error") {
     return (
@@ -104,6 +108,9 @@ function GroupDetailBody({ slug, state, activeTab, transactionFilter, members, b
         onAddExpense={() => navigate(`/g/${slug}/add`)}
         isFiltered={transactionFilter.isActive}
         onClearFilter={transactionFilter.clear}
+        onEditExpense={onEditExpense}
+        onDeleteExpense={onDeleteExpense}
+        highlightedExpenseId={highlightedExpenseId}
       />
     </>
   );
@@ -148,12 +155,16 @@ export function GroupDetailScreen() {
   const { slug = "" } = useRouteParams();
   const [activeTab, setActiveTab] = useState<TabId>("transactions");
   const [highlightSignal, setHighlightSignal] = useState(0);
+  const [refreshSignal, setRefreshSignal] = useState(0);
+  const [deleteError, setDeleteError] = useState(false);
   const balanceCommitRef = useRef<(() => void) | undefined>(undefined);
-  const state = useGroupDetail(slug);
-  const balance = useGroupBalance(slug);
+  const deleteUndo = useUndoQueue<{ readonly expenseId: string; readonly title: string }>(5000);
+  const state = useGroupDetail(slug, refreshSignal);
+  const balance = useGroupBalance(slug, refreshSignal);
   const items = state.status === "ready" ? state.items : EMPTY_ITEMS;
   const members = state.status === "ready" ? state.members : EMPTY_MEMBERS;
   const transactionFilter = useTransactionFilter(items);
+  const highlightedExpenseId = new URLSearchParams(window.location.search).get("edited") ?? undefined;
 
   if (state.status === "not-found") return <NotFoundScreen />;
 
@@ -162,6 +173,25 @@ export function GroupDetailScreen() {
     // undo toast has to become final here, not just vanish with the component.
     if (activeTab === "balance" && id !== "balance") balanceCommitRef.current?.();
     setActiveTab(id);
+  }
+
+  async function deleteExpense(expenseId: string, expenseTitle: string): Promise<void> {
+    setDeleteError(false);
+    try {
+      await expenseRepository.softDeleteExpense(expenseId);
+      setRefreshSignal((signal) => signal + 1);
+      deleteUndo.remove(
+        { id: expenseId, message: t("group.transaction.deleted", { title: expenseTitle }), data: { expenseId, title: expenseTitle } },
+        (deleted) => {
+          void expenseRepository.restoreExpense(deleted.expenseId)
+            .then(() => setRefreshSignal((signal) => signal + 1))
+            .catch(() => setDeleteError(true));
+        },
+        () => {},
+      );
+    } catch {
+      setDeleteError(true);
+    }
   }
 
   const title = state.status === "ready" ? state.group.name : t("group.detail.titleFallback", { slug });
@@ -194,7 +224,28 @@ export function GroupDetailScreen() {
         balance={balance}
         highlightSignal={highlightSignal}
         balanceCommitRef={balanceCommitRef}
+        onEditExpense={(expenseId) => navigate(`/g/${slug}/e/${expenseId}`)}
+        onDeleteExpense={(expenseId, expenseTitle) => void deleteExpense(expenseId, expenseTitle)}
+        highlightedExpenseId={highlightedExpenseId}
       />
+      {deleteUndo.items.length > 0 ? (
+        <div className={styles.undoToast}>
+          <Toast
+            message={deleteUndo.items.length > 1
+              ? t("group.transaction.deletedMany", { count: deleteUndo.items.length })
+              : deleteUndo.items.at(-1)?.message ?? ""}
+            subMessage={t(deleteUndo.items.length > 1
+              ? "group.transaction.deletedManySub"
+              : "group.transaction.deletedSub")}
+            secondsRemaining={deleteUndo.remainingSeconds}
+            secondsTotal={deleteUndo.totalSeconds}
+            count={deleteUndo.items.length}
+            onUndo={deleteUndo.undoLast}
+            onUndoAll={deleteUndo.items.length > 1 ? deleteUndo.undoAll : undefined}
+          />
+        </div>
+      ) : null}
+      {deleteError ? <div className={styles.deleteError} role="alert">{t("group.transaction.deleteFailed")}</div> : null}
     </Screen>
   );
 }

@@ -102,7 +102,7 @@ export function useExpenseDraft(init: DraftInit): UseExpenseDraftResult {
   // precedent as setMode (plan.md F3-02/F3-04). The payer isn't required to
   // be a checked member (spec.md 6.7), so this never checks membership.checked.
   function setPayer(memberId: string): void {
-    setDraft((current) => ({ ...current, payerMemberId: memberId }));
+    setDraft((current) => ({ ...current, payerMemberId: memberId, storedPayers: [] }));
   }
 
   function setWeight(memberId: string, weight: number): void {

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { t } from "@/lib/i18n";
+import { formatMoney, t } from "@/lib/i18n";
 import { Avatar, ListRow, Sheet } from "@/shared/ui";
 import { CheckIcon } from "@/shared/system";
 import type { ExpenseDraftMember } from "./expense-draft";
+import type { ExpensePayerRecord } from "@/lib/storage/records";
 import formStyles from "./AddExpenseScreen.module.css";
 import styles from "./PayerButton.module.css";
 
@@ -23,13 +24,15 @@ export interface PayerButtonProps {
    * narrowed to participants only. */
   readonly members: readonly ExpenseDraftMember[];
   readonly payerMemberId: string;
+  readonly storedPayers?: readonly ExpensePayerRecord[];
+  readonly currency: string;
   readonly onSelect: (memberId: string) => void;
 }
 
 // Shared by all five split modes (mockup-inventory: the "Dibayar" block is
 // identical across every Tambah_Pengeluaran.html row set) so the picker
 // markup and behavior live once instead of five times.
-export function PayerButton({ members, payerMemberId, onSelect }: PayerButtonProps) {
+export function PayerButton({ members, payerMemberId, storedPayers = [], currency, onSelect }: PayerButtonProps) {
   const [open, setOpen] = useState(false);
   const payer = members.find((member) => member.memberId === payerMemberId);
   if (payer === undefined) return null;
@@ -44,7 +47,14 @@ export function PayerButton({ members, payerMemberId, onSelect }: PayerButtonPro
       <div className={formStyles.sectionHeading}>{t("expense.payer.label")}</div>
       <button type="button" className={styles.button} onClick={() => setOpen(true)}>
         <Avatar initials={initialsFromName(payer.name)} color={`var(${payer.color})`} name={payer.name} />
-        <span className={styles.name}>{payer.name}</span>
+        <span className={styles.name}>
+          {storedPayers.length > 1
+            ? storedPayers.map((stored) => {
+                const name = members.find((member) => member.memberId === stored.memberId)?.name ?? "";
+                return `${name} ${formatMoney(stored.amountMinor, currency)}`;
+              }).join(", ")
+            : payer.name}
+        </span>
         <span className={styles.changeAffordance}>{t("expense.payer.changeAffordance")}</span>
       </button>
 
