@@ -90,7 +90,10 @@ describe("AllocationBar", () => {
         warnings={[{ code: "over_allocated", excessMinor: 2_000 }]}
       />,
     );
-    expect(screen.getByText(withoutNbsp(t("expense.warning.overAllocated", { amount: formatMoney(2_000, "IDR") })))).toBeInTheDocument();
+    const error = screen.getByRole("alert");
+    expect(error).toHaveTextContent(
+      withoutNbsp(t("expense.warning.overAllocated", { amount: formatMoney(2_000, "IDR") })),
+    );
     const segments = container.querySelectorAll('[style*="--m-1"], [style*="--m-2"]');
     const totalSegmentWidth = Array.from(segments).reduce((sum, el) => {
       const width = (el as HTMLElement).style.width;
