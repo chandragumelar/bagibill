@@ -172,7 +172,7 @@ export const id: LocaleDictionary = {
   "expense.treat.transferSentence": "{sponsor} menanggung bagian {beneficiary} sebesar {amount}",
   "expense.resultPanel.heading": "Rincian hasil",
   "expense.warning.underAllocated": "Sisa {amount} belum dialokasikan",
-  "expense.warning.overAllocated": "Kelebihan {amount} dari total",
+  "expense.warning.overAllocated": "Kelebihan {amount}",
   "expense.warning.negativeShare": "Ada bagian yang jadi minus",
   "expense.warning.adjustmentExceedsTotal": "Penyesuaian melebihi total {amount}, tidak bisa disimpan",
   "expense.warning.unclaimedItems": "Ada item yang belum diklaim",

@@ -6,7 +6,7 @@ import { db } from "@/lib/storage/schema";
 import { createDexieAdapter } from "@/lib/storage/adapter";
 import { expenseRepository } from "@/lib/storage/repositories";
 import { toCalculationInput as toEngineCalculationInput } from "@/lib/storage/expense-mapping";
-import { t, formatMoney } from "@/lib/i18n";
+import { t, formatGroupedDigits, formatMoney } from "@/lib/i18n";
 import { AppRouter } from "@/routes/router";
 import { AddExpenseScreen } from "./AddExpenseScreen";
 
@@ -507,6 +507,23 @@ describe("AddExpenseScreen", () => {
 
     expect(screen.getByText(t("expense.save.button"))).toBeDisabled();
     expect(screen.getAllByText(t("expense.result.amountsNotBalanced")).length).toBeGreaterThan(0);
+  });
+
+  it("allows an over-allocated Nominal value while typing but shows an error and disables save", async () => {
+    await seedGroup();
+    renderScreen();
+    await screen.findAllByText("Farhan Maulana");
+    typeAmount("10000");
+    switchToNominal();
+
+    const input = screen.getByLabelText(t("expense.amount.memberLabel", { name: "Farhan Maulana" }));
+    fireEvent.change(input, { target: { value: "500000" } });
+
+    expect(input).toHaveValue(formatGroupedDigits(500_000));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      t("expense.warning.overAllocated", { amount: renderedMoney(490_000, "IDR") }),
+    );
+    expect(screen.getByText(t("expense.save.button"))).toBeDisabled();
   });
 
   it("disables save on an out-of-tolerance Persen split, with a message naming the mismatch", async () => {

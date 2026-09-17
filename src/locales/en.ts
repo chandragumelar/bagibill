@@ -174,7 +174,7 @@ export const en: LocaleDictionary = {
   "expense.treat.transferSentence": "{sponsor} covers {beneficiary}'s share of {amount}",
   "expense.resultPanel.heading": "Result breakdown",
   "expense.warning.underAllocated": "{amount} left unallocated",
-  "expense.warning.overAllocated": "{amount} over the total",
+  "expense.warning.overAllocated": "Over by {amount}",
   "expense.warning.negativeShare": "Some shares went negative",
   "expense.warning.adjustmentExceedsTotal": "Adjustments exceed the total by {amount}, can't save yet",
   "expense.warning.unclaimedItems": "Some items are unclaimed",

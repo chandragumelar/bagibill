@@ -91,7 +91,7 @@ export function AllocationBar({ members, totalMinor, currency, warnings }: Alloc
         ) : null}
         <div className={styles.target} style={{ left: `${targetPercent.toFixed(3)}%` }} />
       </div>
-      <div className={readboxClass(state.kind)} role="status">
+      <div className={readboxClass(state.kind)} role={state.kind === "over" ? "alert" : "status"}>
         <span aria-hidden="true">{READBOX_ICON[state.kind]}</span>
         <span>{readboxText(state, currency)}</span>
       </div>
