@@ -14,7 +14,13 @@ beforeAll(async () => {
 });
 
 afterEach(async () => {
-  await db.groups.clear();
+  await Promise.all([
+    db.groups.clear(),
+    db.members.clear(),
+    db.expenses.clear(),
+    db.settlements.clear(),
+    db.activityLog.clear(),
+  ]);
 });
 
 describe("createGroup", () => {
@@ -49,6 +55,62 @@ describe("getGroupBySlug", () => {
     const group = await repository.createGroup({ name: "Trip", baseCurrency: "IDR", template: "trip" });
     await repository.deleteGroup(group.slug);
     expect(await repository.getGroupBySlug(group.slug)).toBeUndefined();
+  });
+
+  it("soft-deletes every record belonging to the deleted group at one timestamp", async () => {
+    const deletedAt = 5_000;
+    const repository = createGroupRepository(adapter, createFixedClock(deletedAt), createSequentialIdGenerator());
+    const group = await repository.createGroup({ name: "Trip", baseCurrency: "IDR", template: "trip" });
+    await adapter.members.put({ memberId: "m1", groupSlug: group.slug, name: "Andi", color: "--m-1", joinedAt: 1, seq: 0 });
+    await adapter.expenses.put({
+      expenseId: "e1",
+      groupSlug: group.slug,
+      title: "Makan",
+      category: "food",
+      date: 1,
+      notes: "",
+      currency: "IDR",
+      fxRate: 1,
+      amountTotalMinor: 1_000,
+      payers: [],
+      splitData: { mode: "evenly", memberIds: [] },
+      charges: [],
+      items: [],
+      treats: [],
+      attachments: [],
+      createdBy: "m1",
+      createdAt: 1,
+      updatedAt: 1,
+      seq: 0,
+    });
+    await adapter.settlements.put({
+      settlementId: "s1",
+      groupSlug: group.slug,
+      fromMemberId: "m1",
+      toMemberId: "m2",
+      amountMinor: 1_000,
+      currency: "IDR",
+      date: 1,
+      createdAt: 1,
+      seq: 0,
+    });
+    await adapter.activityLog.put({
+      logId: "l1",
+      groupSlug: group.slug,
+      actorMemberId: "m1",
+      action: "group.created",
+      targetId: group.slug,
+      at: 1,
+      seq: 0,
+    });
+
+    await repository.deleteGroup(group.slug);
+
+    await expect(adapter.groups.get(group.slug)).resolves.toMatchObject({ deletedAt });
+    await expect(adapter.members.get("m1")).resolves.toMatchObject({ deletedAt });
+    await expect(adapter.expenses.get("e1")).resolves.toMatchObject({ deletedAt });
+    await expect(adapter.settlements.get("s1")).resolves.toMatchObject({ deletedAt });
+    await expect(adapter.activityLog.get("l1")).resolves.toMatchObject({ deletedAt });
   });
 });
 

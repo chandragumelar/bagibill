@@ -74,14 +74,29 @@ export function createGroupRepository(
     await updateGroupSettings(slug, { archived: true });
   }
 
-  // Soft delete only, matching spec.md 5.2 — nothing at this layer is ever
-  // physically removed.
+  // Soft-deletes all records for one group at one timestamp. Cleanup retains
+  // the full history for the same 30-day window before permanent removal.
   async function deleteGroup(slug: string): Promise<void> {
-    const group = await adapter.groups.get(slug);
-    if (group === undefined) {
-      throw new Error("deleteGroup: no group found for the given slug");
-    }
-    await adapter.groups.put({ ...group, deletedAt: clock.now() });
+    await adapter.transaction(async () => {
+      const group = await adapter.groups.get(slug);
+      if (group === undefined) {
+        throw new Error("deleteGroup: no group found for the given slug");
+      }
+      const deletedAt = clock.now();
+      const [members, expenses, settlements, activityLog] = await Promise.all([
+        adapter.members.findBy("groupSlug", slug),
+        adapter.expenses.findBy("groupSlug", slug),
+        adapter.settlements.findBy("groupSlug", slug),
+        adapter.activityLog.findBy("groupSlug", slug),
+      ]);
+      await Promise.all([
+        adapter.groups.put({ ...group, deletedAt }),
+        adapter.members.putMany(members.map((member) => ({ ...member, deletedAt }))),
+        adapter.expenses.putMany(expenses.map((expense) => ({ ...expense, deletedAt }))),
+        adapter.settlements.putMany(settlements.map((settlement) => ({ ...settlement, deletedAt }))),
+        adapter.activityLog.putMany(activityLog.map((entry) => ({ ...entry, deletedAt }))),
+      ]);
+    });
   }
 
   return { createGroup, getGroupBySlug, listGroups, updateGroupSettings, archiveGroup, deleteGroup };

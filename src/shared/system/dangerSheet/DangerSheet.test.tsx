@@ -42,6 +42,12 @@ describe("DangerSheet", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("focuses the cancel action first when opened", () => {
+    render(<DangerSheet {...baseProps} open onClose={vi.fn()} onConfirm={vi.fn()} />);
+    vi.advanceTimersByTime(80);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Batal, simpan grupnya" }));
+  });
+
   it("fires onConfirm only after the hold gesture completes", () => {
     const onConfirm = vi.fn();
     render(<DangerSheet {...baseProps} open onClose={vi.fn()} onConfirm={onConfirm} />);

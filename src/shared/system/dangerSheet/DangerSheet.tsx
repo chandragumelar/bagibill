@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/shared/ui/Button/Button";
 import { Sheet } from "@/shared/ui/Sheet/Sheet";
 import { useFocusTrap } from "@/shared/system/focusTrap/useFocusTrap";
 import { HoldToDeleteButton } from "@/shared/system/holdToDelete/HoldToDeleteButton";
 import { WarnIcon } from "@/shared/system/icons";
 import styles from "@/shared/system/dangerSheet/DangerSheet.module.css";
+
+const INITIAL_FOCUS_DELAY_MS = 80;
 
 export interface DangerSheetProps {
   open: boolean;
@@ -42,7 +44,19 @@ export function DangerSheet({
   onConfirm,
 }: DangerSheetProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
   useFocusTrap(contentRef, open);
+
+  useEffect(() => {
+    if (!open) {
+      lastFocusRef.current?.focus();
+      return;
+    }
+    lastFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const timeoutId = window.setTimeout(() => cancelRef.current?.focus(), INITIAL_FOCUS_DELAY_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [open]);
 
   return (
     <Sheet open={open} onClose={onClose} title={title} subtitle={subtitle}>
@@ -58,7 +72,7 @@ export function DangerSheet({
         </p>
         <HoldToDeleteButton label={holdLabel} completingLabel={completingLabel} onComplete={onConfirm} />
         <p className={styles.hint}>{hint}</p>
-        <Button variant="secondary" onClick={onClose}>
+        <Button ref={cancelRef} variant="secondary" onClick={onClose}>
           {cancelLabel}
         </Button>
       </div>

@@ -8,15 +8,13 @@ import type {
   SettlementRecord,
 } from "./records";
 
-// No delete operation anywhere in this interface. Every deletion in this
-// app is a soft delete through deletedAt (spec.md 5.2) — offering a real
-// delete here would hand every future caller a door to break that rule
-// without meaning to. Permanent cleanup 30 days past deletedAt gets its own
-// path later, not this one.
+// App actions only soft-delete through deletedAt (spec.md 5.2). deleteMany
+// exists solely for storage-cleanup.ts, after its 30-day retention check.
 export interface TableAdapter<T> {
   get(key: string): Promise<T | undefined>;
   put(record: T): Promise<void>;
   putMany(records: readonly T[]): Promise<void>;
+  deleteMany(keys: readonly string[]): Promise<void>;
   findBy(index: string, value: string): Promise<readonly T[]>;
   findByRange(index: string, lower: readonly unknown[], upper: readonly unknown[]): Promise<readonly T[]>;
   all(): Promise<readonly T[]>;
@@ -41,6 +39,9 @@ function createTableAdapter<T>(table: Table<T, string>): TableAdapter<T> {
     },
     async putMany(records) {
       await table.bulkPut([...records]);
+    },
+    async deleteMany(keys) {
+      await table.bulkDelete([...keys]);
     },
     async findBy(index, value) {
       return table.where(index).equals(value).toArray();

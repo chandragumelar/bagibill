@@ -203,7 +203,7 @@ export function GroupDetailScreen() {
   return (
     <Screen
       header={
-        <GroupHeader title={title} onBack={() => navigate("/app")} onMenu={() => navigate(`/g/${slug}/members`)} position={position}>
+        <GroupHeader title={title} onBack={() => navigate("/app")} onMenu={() => navigate(`/g/${slug}/settings`)} position={position}>
           <TabBar tabs={tabs()} activeId={activeTab} onSelect={(id) => selectTab(id as TabId)} />
         </GroupHeader>
       }

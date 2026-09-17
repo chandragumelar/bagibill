@@ -1,0 +1,44 @@
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+  padding: var(--sp-4);
+  border: 1px solid var(--risk-high);
+  border-radius: var(--r-card);
+  background: var(--risk-high-tint);
+}
+
+.heading {
+  margin: 0;
+  color: var(--risk-high-text);
+  font-size: var(--fs-footnote);
+  font-weight: var(--fw-semibold);
+}
+
+.deleteButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--size-touch-min);
+  border: none;
+  border-radius: var(--r-btn);
+  background: var(--risk-high);
+  color: var(--on-risk-high);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-semibold);
+}
+
+.deleteButton svg {
+  width: var(--size-icon-inline);
+  height: var(--size-icon-inline);
+}
+
+.message {
+  margin: var(--sp-4) 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-footnote);
+}

@@ -6,6 +6,7 @@ import { createGroupRepository, type GroupRepository } from "./group-repository"
 import { createMemberRepository, type MemberRepository } from "./member-repository";
 import { createExpenseRepository, type ExpenseRepository } from "./expense-repository";
 import { createSettlementRepository, type SettlementRepository } from "./settlement-repository";
+import { purgeExpiredDeletedRecords as purgeExpiredRecords } from "./storage-cleanup";
 
 // Single composition root: one adapter/clock/id-generator wired once, three
 // repositories exported ready to use. The injection built into F2-02/F2-03
@@ -18,3 +19,7 @@ export const groupRepository: GroupRepository = createGroupRepository(adapter, s
 export const memberRepository: MemberRepository = createMemberRepository(adapter, systemClock, cryptoIdGenerator);
 export const expenseRepository: ExpenseRepository = createExpenseRepository(adapter, systemClock, cryptoIdGenerator);
 export const settlementRepository: SettlementRepository = createSettlementRepository(adapter, systemClock, cryptoIdGenerator);
+
+export function purgeExpiredDeletedRecords(): Promise<void> {
+  return purgeExpiredRecords(adapter, systemClock);
+}
