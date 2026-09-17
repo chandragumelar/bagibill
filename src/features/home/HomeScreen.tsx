@@ -1,10 +1,8 @@
 import { t } from "@/lib/i18n";
-import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
 import { Screen } from "@/app/layout/Screen/Screen";
 import { Topbar } from "@/app/layout/Topbar/Topbar";
 import { navigate } from "@/routes/router";
-import { Button } from "@/shared/ui/Button/Button";
-import { LoadFailure } from "@/shared/system";
+import { LoadFailure, PlusIcon } from "@/shared/system";
 import { EmptyGroups } from "./EmptyGroups";
 import { GroupCard } from "./GroupCard";
 import { useHomeGroups, type HomeGroupsState, type HomeGroupViewModel } from "./use-home-groups";
@@ -24,6 +22,7 @@ function GroupList({ groups }: GroupListProps) {
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>{t("home.section.groupsTitle")}</h2>
         <button type="button" className={styles.addLink} onClick={goToNewGroup}>
+          <PlusIcon />
           {t("home.section.addGroup")}
         </button>
       </div>
@@ -58,19 +57,9 @@ function HomeBody({ state }: HomeBodyProps) {
 
 export function HomeScreen() {
   const state = useHomeGroups();
-  const showBottomBar = state.status === "ready" && state.groups.length > 0;
 
   return (
-    <Screen
-      header={<Topbar title={t("route.title.home")} />}
-      bottomBar={
-        showBottomBar ? (
-          <BottomBar>
-            <Button onClick={goToNewGroup}>{t("home.bottomBar.newGroup")}</Button>
-          </BottomBar>
-        ) : undefined
-      }
-    >
+    <Screen header={<Topbar title={t("route.title.home")} />}>
       <HomeBody state={state} />
     </Screen>
   );

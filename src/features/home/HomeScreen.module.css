@@ -23,11 +23,25 @@
 .addLink {
   appearance: none;
   border: none;
-  background: none;
+  border-radius: var(--r-btn);
+  background: var(--brand);
   cursor: pointer;
   font-family: inherit;
-  color: var(--brand);
+  color: var(--on-brand);
   font-size: var(--fs-footnote);
   font-weight: var(--fw-semibold);
-  padding: var(--sp-1);
+  min-height: var(--size-control);
+  padding: var(--sp-2) var(--sp-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.addLink:hover {
+  background: var(--btn-bg-hover);
+}
+
+.addLink svg {
+  width: var(--size-icon-inline);
+  height: var(--size-icon-inline);
 }
