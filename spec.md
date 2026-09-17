@@ -223,7 +223,7 @@ Setiap pengeluaran punya satu mode split. Mode dipilih dari tab horizontal di la
 
 - Ketik angka per orang.
 - Baris status di bawah menampilkan sisa yang belum teralokasi secara realtime, dengan tombol "bagi sisanya rata".
-- Boleh melebihi total. Kalau lebih, app memberi peringatan tapi tidak memblokir.
+- Boleh melebihi total sambil mengetik — tidak ada keystroke yang ditolak atau nilai yang di-clamp. Begitu total kelebihan, baris status berganti dari nada peringatan jadi nada error dan tombol Simpan mati sampai nominal pas.
 
 ### 6.3 Persentase
 
