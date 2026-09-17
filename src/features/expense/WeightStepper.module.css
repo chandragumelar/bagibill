@@ -42,6 +42,7 @@
   appearance: none;
   border: none;
   background: none;
+  width: calc(var(--sp-7) + var(--sp-6) + var(--sp-1));
   min-width: var(--sp-7);
   height: var(--size-touch-min);
   text-align: center;

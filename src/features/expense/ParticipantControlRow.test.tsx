@@ -48,6 +48,31 @@ describe("ParticipantControlRow", () => {
     expect(trailingSlot?.querySelector('[data-testid="secondary"]')).toBeNull();
   });
 
+  it("keeps trailing controls independent from content when row must shrink", () => {
+    const { container } = render(
+      <ParticipantControlRow
+        leading={<span>avatar</span>}
+        name="Farhan Maulana Abdurrahman"
+        secondary={<span data-testid="money">IDR 25.000</span>}
+        trailing={
+          <div>
+            <button type="button">−</button>
+            <input aria-label="weight" />
+            <button type="button">+</button>
+          </div>
+        }
+      />,
+    );
+    const row = container.firstElementChild;
+    const contentSlot = row?.children[2];
+    const trailingSlot = row?.children[3];
+
+    expect(contentSlot?.textContent).toContain("IDR 25.000");
+    expect(trailingSlot?.querySelectorAll("button")).toHaveLength(2);
+    expect(trailingSlot?.querySelector("input")).not.toBeNull();
+    expect(contentSlot?.contains(trailingSlot ?? null)).toBe(false);
+  });
+
   it("omits the secondary slot's content entirely when not given", () => {
     const { container } = render(<ParticipantControlRow leading={<span>avatar</span>} name="Sarah" trailing={<button type="button">+</button>} />);
     expect(container.textContent).toBe("avatarSarah+");
