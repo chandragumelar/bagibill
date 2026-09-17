@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  min-width: 0;
 }
 
 .label {
@@ -20,8 +21,10 @@
 }
 
 .field {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 1 auto;
+  width: max-content;
+  min-width: 3ch;
+  max-width: 100%;
   height: var(--size-touch-min);
   border: 1px solid var(--border);
   border-radius: var(--r-field);

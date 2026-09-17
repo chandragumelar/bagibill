@@ -30,6 +30,13 @@ describe("MoneyInput", () => {
     expect(screen.getByLabelText<HTMLInputElement>("Nominal").value).toBe("200.000");
   });
 
+  it("keeps nine digits and grouped separators in the input display", () => {
+    render(<MoneyInput label="Nominal" prefix="Rp" amountMinor={500000000} onChange={vi.fn()} />);
+    const input = screen.getByLabelText<HTMLInputElement>("Nominal");
+    expect(input.value).toBe("500.000.000");
+    expect(input).toHaveAttribute("size", "11");
+  });
+
   it("uses the locale's own separator character — comma under en, not id's dot", () => {
     setLocale("en");
     render(<MoneyInput label="Nominal" prefix="Rp" amountMinor={200000} onChange={vi.fn()} />);

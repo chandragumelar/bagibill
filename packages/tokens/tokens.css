@@ -92,7 +92,9 @@
   --size-avatar-stack: 32px;         /* .avstack .av, identik DT + DS; BR pakai 30px, konvergen ke nilai 2-mockup (F3-10) */
   --size-avatar-stack-overlap: -8px; /* margin-left tumpuk avatar, identik DT + DS + BR (F3-10) */
   --size-control: 50px;     /* .btn min-height, identik DS + LS + KI */
+  --size-checkbox: 20px;
   --size-touch-min: 44px;   /* target sentuh minimum, CLAUDE.md Aksesibilitas */
+  --opacity-disabled: 0.6;
   --size-grab-w: 36px;      /* .grab lebar, identik DS + LS */
   --size-grab-h: 5px;       /* .grab tinggi, identik DS + LS */
   --size-sheet-max-h: 90%;  /* .sheet max-height, identik DS + LS */

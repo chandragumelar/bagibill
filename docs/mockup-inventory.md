@@ -145,7 +145,9 @@ Beda sumber dari 2.1: bukan dari audit `var(--x)` F0-02, tapi dari nilai literal
 | `--size-avatar` | 38px | `avatar()` BG — diameter avatar standalone |
 | `--size-avatar-sm` | 22px | `.k-avatar--sm` KI |
 | `--size-control` | 50px | `.btn`/`.k-btn` min-height, identik DS + LS + KI |
+| `--size-checkbox` | 20px | Kotak checkbox peserta di kartu daftar member, target sentuh tetap `--size-touch-min` |
 | `--size-touch-min` | 44px | Target sentuh minimum, CLAUDE.md Aksesibilitas (bukan dari mockup) |
+| `--opacity-disabled` | 0.6 | Baris peserta yang tidak ikut split |
 | `--r-sheet` | 20px | `.sheet` border-radius atas, identik DS + LS |
 | `--size-grab-w`, `--size-grab-h` | 36px, 5px | `.grab` handle sheet, identik DS + LS |
 | `--size-sheet-max-h` | 90% | `.sheet` max-height, identik DS + LS |

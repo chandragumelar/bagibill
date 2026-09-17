@@ -87,6 +87,7 @@ export function MoneyInput({ label, prefix, amountMinor, onChange, placeholder =
         type="text"
         inputMode="numeric"
         className={styles.field}
+        size={Math.max(displayValue.length, placeholder.length, 1)}
         value={displayValue}
         onChange={handleChange}
         placeholder={placeholder}

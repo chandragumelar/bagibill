@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { t, formatMoney } from "@/lib/i18n";
 import { BottomBar } from "@/app/layout/BottomBar/BottomBar";
 import { Screen } from "@/app/layout/Screen/Screen";
-import { Avatar, Button, ListRow, MoneyInput, TextInput } from "@/shared/ui";
+import { Avatar, Button, MoneyInput, TextInput } from "@/shared/ui";
 import { InlineFailure } from "@/shared/system";
 import { navigate } from "@/routes/router";
 import { systemClock } from "@/lib/storage/clock";
@@ -22,6 +22,7 @@ import { TreatEditor } from "./TreatEditor";
 import { PayerButton } from "./PayerButton";
 import { ExpenseChips } from "./ExpenseChips";
 import { ResultPanel } from "./ResultPanel";
+import { ParticipantToggleRow } from "./ParticipantToggleRow";
 import styles from "./AddExpenseScreen.module.css";
 
 // Six modes share one screen (mockup-inventory 1.1). Per item is the only
@@ -105,6 +106,7 @@ export function ExpenseFormRata({
 
   const checkedMembers = draft.members.filter((member) => member.checked);
   const checkedCount = checkedMembers.length;
+  const allMembersChecked = checkedCount === draft.members.length;
   const minShareMinor = result.ready ? Math.min(...result.calculation.sharesMinor) : 0;
 
   function shareFor(memberId: string): number | undefined {
@@ -193,9 +195,6 @@ export function ExpenseFormRata({
       <div className={styles.section}>
         <div className={styles.sectionHeadingRow}>
           <span className={styles.sectionHeading}>{t("expense.participants.heading", { count: checkedCount })}</span>
-          <button type="button" className={styles.selectAll} onClick={checkAllMembers}>
-            {t("expense.participants.selectAll")}
-          </button>
         </div>
 
         <div className={styles.modeGroup} role="group" aria-label={t("expense.mode.groupLabel")}>
@@ -218,31 +217,35 @@ export function ExpenseFormRata({
         </div>
 
         <div className={styles.participantList}>
+          <button type="button" className={styles.participantSelectAll} onClick={checkAllMembers}>
+            {t(allMembersChecked ? "expense.participants.clearAll" : "expense.participants.selectAll")}
+          </button>
           {draft.members.map((member) => {
             const shareMinor = shareFor(member.memberId);
             const isRounded = member.checked && shareMinor !== undefined && shareMinor > minShareMinor;
             return (
-              <ListRow
+              <ParticipantToggleRow
                 key={member.memberId}
-                onClick={() => toggleMember(member.memberId)}
+                checked={member.checked}
+                onToggle={() => toggleMember(member.memberId)}
+                name={member.name}
+                toggleLabel={t("expense.participants.toggleLabel", { name: member.name })}
                 leading={<Avatar initials={initialsFromName(member.name)} color={`var(${member.color})`} name={member.name} />}
+                secondary={
+                  isRounded ? (
+                    <span className={styles.roundingBadge}>
+                      {t("expense.rounding.badge", { amount: formatMoney(1, draft.currency) })}
+                    </span>
+                  ) : undefined
+                }
                 trailing={
                   member.checked ? (
                     <span className={`${styles.amount} bb-numeral`}>
-                      {shareMinor === undefined ? "—" : formatMoney(shareMinor, draft.currency)}
+                      {shareMinor === undefined ? "" : formatMoney(shareMinor, draft.currency)}
                     </span>
-                  ) : (
-                    <span className={`${styles.amount} ${styles.amountExcluded}`}>{t("expense.participants.excluded")}</span>
-                  )
+                  ) : undefined
                 }
-              >
-                <span className={styles.memberName}>{member.name}</span>
-                {isRounded ? (
-                  <span className={styles.roundingBadge}>
-                    {t("expense.rounding.badge", { amount: formatMoney(1, draft.currency) })}
-                  </span>
-                ) : null}
-              </ListRow>
+              />
             );
           })}
         </div>

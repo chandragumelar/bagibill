@@ -13,9 +13,10 @@ describe("ParticipantControlRow", () => {
       <ParticipantControlRow leading={<span>avatar</span>} name="Dimas Prasetyo" trailing={<button type="button">+</button>} />,
     );
     const row = container.firstElementChild;
-    expect(row?.children).toHaveLength(3);
+    expect(row?.children).toHaveLength(4);
 
-    const [leadingSlot, contentSlot, trailingSlot] = Array.from(row?.children ?? []);
+    const [toggleSlot, leadingSlot, contentSlot, trailingSlot] = Array.from(row?.children ?? []);
+    expect(toggleSlot?.querySelector('input[type="checkbox"]')).not.toBeNull();
     expect(leadingSlot?.textContent).toBe("avatar");
     expect(contentSlot?.textContent).toContain("Dimas Prasetyo");
     expect(trailingSlot?.textContent).toBe("+");
@@ -41,9 +42,9 @@ describe("ParticipantControlRow", () => {
       />,
     );
     const row = container.firstElementChild;
-    const contentSlot = row?.children[1];
+    const contentSlot = row?.children[2];
     expect(contentSlot?.querySelector('[data-testid="secondary"]')).not.toBeNull();
-    const trailingSlot = row?.children[2];
+    const trailingSlot = row?.children[3];
     expect(trailingSlot?.querySelector('[data-testid="secondary"]')).toBeNull();
   });
 
