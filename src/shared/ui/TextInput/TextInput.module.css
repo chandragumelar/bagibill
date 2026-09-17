@@ -23,7 +23,7 @@
   background: var(--surface);
   color: var(--text);
   font-family: inherit;
-  font-size: var(--fs-subhead);
+  font-size: var(--fs-body);
   outline: none;
   padding: 0 var(--sp-3);
 }
