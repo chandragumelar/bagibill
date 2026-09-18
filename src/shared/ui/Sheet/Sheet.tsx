@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import styles from "@/shared/ui/Sheet/Sheet.module.css";
 
 export interface SheetProps {
@@ -30,7 +31,7 @@ export function Sheet({ open, onClose, title, subtitle, children }: SheetProps) 
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className={styles.scrim} onClick={onClose}>
       <div
         className={styles.sheet}
@@ -48,6 +49,7 @@ export function Sheet({ open, onClose, title, subtitle, children }: SheetProps) 
         {subtitle ? <p className={styles.subtitle}>{subtitle}</p> : null}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
