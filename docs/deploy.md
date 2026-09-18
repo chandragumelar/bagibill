@@ -2,6 +2,8 @@
 
 Panduan buat orang yang belum pernah pakai Cloudflare Pages. Ini langkah manual, dijalankan sendiri di dashboard Cloudflare — bukan sesuatu yang agent kerjakan, karena agent nol punya kredensial akun Cloudflare.
 
+Status aktual: production aktif di `https://bagibill.pika-xu.com/` dan asset hash cocok dengan baseline `origin/main` `e7757b8`. Prosedur di bawah tetap menjadi rujukan deploy dan verifikasi berikutnya.
+
 Yang sudah siap di repo sebelum kamu mulai:
 
 - `public/_redirects` — fallback SPA (semua path balik ke `index.html`, status 200).
