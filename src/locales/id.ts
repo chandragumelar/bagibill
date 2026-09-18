@@ -34,6 +34,7 @@ export const id: LocaleDictionary = {
   "nav.back": "Kembali",
   "nav.menu": "Menu",
   "group.transaction.delete": "Hapus",
+  "group.transaction.edit": "Ubah",
   "group.transaction.rowMenu": "Menu untuk {title}",
   "group.transaction.deleted": "“{title}” dihapus",
   "group.transaction.deletedMany": "{count} transaksi dihapus",

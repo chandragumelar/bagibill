@@ -149,20 +149,40 @@
   cursor: pointer;
 }
 
-.deleteMenuItem {
+.menuPanel {
   position: absolute;
-  inset-block-start: var(--sp-9);
+  inset-block-start: calc(var(--sp-1) + var(--size-touch-min));
   inset-inline-end: var(--sp-2);
   z-index: 2;
-  min-height: var(--size-touch-min);
-  padding: 0 var(--sp-4);
   border: var(--border-width-thin) solid var(--border);
   border-radius: var(--r-btn);
   background: var(--surface-raised);
   color: var(--risk-high-text);
   box-shadow: var(--elev-2);
+  overflow: hidden;
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  min-width: var(--sp-9);
+  min-height: var(--size-touch-min);
+  padding: 0 var(--sp-4);
+  border: 0;
+  background: transparent;
+  color: var(--text);
   font: inherit;
+  text-align: start;
   cursor: pointer;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: var(--surface-sunken);
+}
+
+.deleteMenuItem {
+  color: var(--risk-high-text);
 }
 
 .highlighted {

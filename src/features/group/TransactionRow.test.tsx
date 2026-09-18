@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { t, formatMoney } from "@/lib/i18n";
+import { formatMoney, setLocale, t } from "@/lib/i18n";
 import { TransactionRow } from "./TransactionRow";
 import type { ExpenseTransactionRow, SettlementTransactionRow } from "./TransactionRow";
 
@@ -25,16 +25,83 @@ function expenseRow(overrides: Partial<ExpenseTransactionRow> = {}): ExpenseTran
 }
 
 describe("TransactionRow — expense variants", () => {
-  it("opens edit on row tap and exposes keyboard-readable delete menu", () => {
+  it("opens and closes the row menu without running an action", () => {
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     render(<TransactionRow row={expenseRow()} currency="IDR" onEdit={onEdit} onDelete={onDelete} />);
 
-    fireEvent.click(screen.getByText("Sate Padang Ajo Ramon"));
-    expect(onEdit).toHaveBeenCalledWith("e1");
+    const menuButton = screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang Ajo Ramon" }) });
+    fireEvent.click(menuButton);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+    fireEvent.click(menuButton);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["id", "Menu untuk Sate Padang Ajo Ramon", "Ubah", "Hapus"],
+    ["en", "Menu for Sate Padang Ajo Ramon", "Edit", "Delete"],
+  ] as const)("renders menu copy and accessible label in %s", (locale, menuLabel, editLabel, deleteLabel) => {
+    setLocale(locale);
+    render(<TransactionRow row={expenseRow()} currency="IDR" />);
+
+    fireEvent.click(screen.getByRole("button", { name: menuLabel }));
+    expect(screen.getByRole("menuitem", { name: editLabel })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: deleteLabel })).toBeInTheDocument();
+    setLocale("id");
+  });
+
+  it("selects Edit from the menu and opens the matching expense", () => {
+    const onEdit = vi.fn();
+    render(<TransactionRow row={expenseRow()} currency="IDR" onEdit={onEdit} />);
+
     fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang Ajo Ramon" }) }));
-    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.delete") }));
+    fireEvent.click(screen.getByRole("menuitem", { name: t("group.transaction.edit") }));
+    expect(onEdit).toHaveBeenCalledWith("e1");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("selects Delete from the menu for the matching expense", () => {
+    const onDelete = vi.fn();
+    render(<TransactionRow row={expenseRow()} currency="IDR" onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang Ajo Ramon" }) }));
+    fireEvent.click(screen.getByRole("menuitem", { name: t("group.transaction.delete") }));
     expect(onDelete).toHaveBeenCalledWith("e1", "Sate Padang Ajo Ramon");
+  });
+
+  it("selects the correct record when several expenses have menus", () => {
+    const onEdit = vi.fn();
+    render(
+      <>
+        <TransactionRow row={expenseRow()} currency="IDR" onEdit={onEdit} />
+        <TransactionRow row={expenseRow({ expenseId: "e2", title: "Kopi Kenangan" })} currency="IDR" onEdit={onEdit} />
+      </>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Kopi Kenangan" }) }));
+    fireEvent.click(screen.getByRole("menuitem", { name: t("group.transaction.edit") }));
+    expect(onEdit).toHaveBeenCalledWith("e2");
+  });
+
+  it("supports keyboard navigation and Escape closes without action", () => {
+    const onDelete = vi.fn();
+    render(<TransactionRow row={expenseRow()} currency="IDR" onDelete={onDelete} />);
+    const menuButton = screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang Ajo Ramon" }) });
+
+    fireEvent.click(menuButton);
+    const editItem = screen.getByRole("menuitem", { name: t("group.transaction.edit") });
+    const deleteItem = screen.getByRole("menuitem", { name: t("group.transaction.delete") });
+    expect(editItem).toHaveFocus();
+    fireEvent.keyDown(editItem, { key: "ArrowDown" });
+    expect(deleteItem).toHaveFocus();
+    fireEvent.keyDown(deleteItem, { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(menuButton).toHaveFocus();
+    expect(onDelete).not.toHaveBeenCalled();
   });
 
   it("deletes only after a left swipe passes 90px", () => {

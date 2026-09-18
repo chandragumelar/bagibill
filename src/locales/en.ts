@@ -33,6 +33,7 @@ export const en: LocaleDictionary = {
   "nav.back": "Back",
   "nav.menu": "Menu",
   "group.transaction.delete": "Delete",
+  "group.transaction.edit": "Edit",
   "group.transaction.rowMenu": "Menu for {title}",
   "group.transaction.deleted": "“{title}” deleted",
   "group.transaction.deletedMany": "{count} expenses deleted",
