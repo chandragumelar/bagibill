@@ -116,6 +116,11 @@
   background: var(--risk-high-tint);
 }
 
+.menuVisible {
+  overflow: visible;
+  z-index: 1;
+}
+
 .swipeFront {
   position: relative;
   background: var(--surface);
@@ -135,10 +140,29 @@
   font-weight: var(--fw-semibold);
 }
 
+.expenseRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--size-touch-min);
+  align-items: stretch;
+  background: var(--surface);
+}
+
+.menuSlot {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: var(--size-touch-min);
+  padding-block-start: var(--sp-1);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
 .menuButton {
-  position: absolute;
-  inset-block-start: var(--sp-1);
-  inset-inline-end: var(--sp-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
   width: var(--size-touch-min);
   height: var(--size-touch-min);
   border: 0;
@@ -151,8 +175,8 @@
 
 .menuPanel {
   position: absolute;
-  inset-block-start: calc(var(--sp-1) + var(--size-touch-min));
-  inset-inline-end: var(--sp-2);
+  inset-block-start: 100%;
+  inset-inline-end: 0;
   z-index: 2;
   border: var(--border-width-thin) solid var(--border);
   border-radius: var(--r-btn);

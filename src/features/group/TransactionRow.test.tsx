@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { formatMoney, setLocale, t } from "@/lib/i18n";
 import { TransactionRow } from "./TransactionRow";
 import type { ExpenseTransactionRow, SettlementTransactionRow } from "./TransactionRow";
+import styles from "./TransactionRow.module.css";
 
 function money(amountMinor: number): string {
   return formatMoney(amountMinor, "IDR").replace(/\u00a0/g, " ");
@@ -39,6 +40,30 @@ describe("TransactionRow — expense variants", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(onEdit).not.toHaveBeenCalled();
     expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("reserves a separate menu slot beside long transaction content", () => {
+    render(
+      <TransactionRow
+        row={expenseRow({
+          title: "Penginapan keluarga dekat pantai dengan biaya tambahan panjang",
+          foreignAmountMinor: 123_456_789,
+          foreignCurrency: "KWD",
+          effect: { kind: "owed", netMinor: -987_654_321 },
+        })}
+        currency="IDR"
+      />,
+    );
+
+    const menuButton = screen.getByRole("button", {
+      name: t("group.transaction.rowMenu", { title: "Penginapan keluarga dekat pantai dengan biaya tambahan panjang" }),
+    });
+    const menuSlot = menuButton.parentElement;
+    expect(menuSlot?.className).toContain(styles.menuSlot ?? "menuSlot");
+    expect(menuSlot?.parentElement?.className).toContain(styles.expenseRow ?? "expenseRow");
+    expect(menuSlot?.parentElement?.children).toHaveLength(2);
+    expect(menuSlot?.previousElementSibling?.tagName).toBe("BUTTON");
+    expect(menuSlot?.previousElementSibling).toHaveAttribute("type", "button");
   });
 
   it.each([
