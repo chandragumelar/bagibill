@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { setLocale } from "@/lib/i18n";
 import { MoneyInput, type MoneyInputProps } from "@/shared/ui/MoneyInput/MoneyInput";
+
+const moneyInputStyles = readFileSync(resolve(process.cwd(), "src/shared/ui/MoneyInput/MoneyInput.module.css"), "utf8");
+const designTokens = readFileSync(resolve(process.cwd(), "packages/tokens/tokens.css"), "utf8");
 
 // Dipakai buat kasus yang butuh nilai tampil beneran ikut update balik
 // (posisi kursor) — MoneyInput sendiri fully controlled, nol state
@@ -18,6 +23,14 @@ beforeEach(() => {
 });
 
 describe("MoneyInput", () => {
+  it("keeps nominal input at mobile auto-zoom minimum through shared token", () => {
+    expect(moneyInputStyles).toMatch(/\.field\s*\{[^}]*font-size:\s*var\(--fs-body\)/s);
+
+    const bodySizeMatch = designTokens.match(/--fs-body:\s*([\d.]+)px/);
+    expect(bodySizeMatch).not.toBeNull();
+    expect(Number(bodySizeMatch?.[1])).toBeGreaterThanOrEqual(16);
+  });
+
   it("shows nothing but the placeholder when the amount is zero", () => {
     render(<MoneyInput label="Nominal" prefix="Rp" amountMinor={0} onChange={vi.fn()} />);
     const input = screen.getByLabelText<HTMLInputElement>("Nominal");

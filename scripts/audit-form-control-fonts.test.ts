@@ -41,6 +41,7 @@ describe("auditFormControlFonts", () => {
 
     expect(tokenCss).toMatch(/--fs-body:\s*17px/);
     expect(globalCss).toContain('input:not([type="checkbox"])');
+    expect(globalCss).toContain(":is(");
     expect(globalCss).toContain("textarea");
     expect(globalCss).toContain("select");
     expect(globalCss).toContain("[contenteditable]");
