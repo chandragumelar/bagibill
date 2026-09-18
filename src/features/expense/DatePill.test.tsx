@@ -1,10 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { setLocale } from "@/lib/i18n";
 import { createFixedClock } from "@/lib/storage/clock";
 import { DatePill } from "./DatePill";
+import styles from "./DatePill.module.css";
 
 setLocale("id");
+
+const datePillStyles = readFileSync(resolve(process.cwd(), "src/features/expense/DatePill.module.css"), "utf8");
+const designTokens = readFileSync(resolve(process.cwd(), "packages/tokens/tokens.css"), "utf8");
+const datePillClass = styles.datePill ?? "datePill";
 
 const NOW_MS = new Date(2026, 8, 16, 12).getTime();
 
@@ -23,27 +30,40 @@ describe("DatePill", () => {
   it('shows "Hari ini" when the draft date is today', () => {
     const nowMs = createFixedClock(NOW_MS).now();
     render(<DatePill dateMs={nowMs} nowMs={nowMs} onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Pilih tanggal pengeluaran, saat ini Hari ini" })).toHaveTextContent("Hari ini");
+    expect(screen.getByLabelText("Pilih tanggal pengeluaran, saat ini Hari ini")).toHaveValue("2026-09-16");
   });
 
   it("shows a past date and accessible name in the active locale", () => {
     setLocale("en");
     render(<DatePill dateMs={new Date(2026, 8, 10).getTime()} nowMs={NOW_MS} onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Choose expense date, currently Sep 10" })).toHaveTextContent("Sep 10");
+    expect(screen.getByLabelText("Choose expense date, currently Sep 10")).toHaveValue("2026-09-10");
   });
 
-  it("opens the native picker from a focusable button", () => {
+  it("uses one directly tappable native date control with its active date name", () => {
     const { container } = render(<DatePill dateMs={NOW_MS} nowMs={NOW_MS} onChange={vi.fn()} />);
-    const button = screen.getByRole("button", { name: "Pilih tanggal pengeluaran, saat ini Hari ini" });
     const input = dateInput(container);
-    const showPicker = vi.fn();
-    input.showPicker = showPicker;
+    expect(container.querySelectorAll('input[type="date"]')).toHaveLength(1);
+    expect(container.querySelectorAll("button")).toHaveLength(0);
+    expect(input).toHaveAttribute("aria-label", "Pilih tanggal pengeluaran, saat ini Hari ini");
+    expect(input).not.toHaveAttribute("aria-hidden");
+    expect(input).not.toHaveAttribute("tabindex", "-1");
+    expect(input.parentElement).toHaveClass(datePillClass);
+  });
 
-    button.focus();
-    expect(button).toHaveFocus();
-    expect(button).toHaveAttribute("type", "button");
-    fireEvent.click(button);
-    expect(showPicker).toHaveBeenCalledOnce();
+  it("connects native input focus to the pill focus ring", () => {
+    const { container } = render(<DatePill dateMs={NOW_MS} nowMs={NOW_MS} onChange={vi.fn()} />);
+    const input = dateInput(container);
+    input.focus();
+    expect(input).toHaveFocus();
+    expect(input.parentElement).toHaveClass(datePillClass);
+    expect(datePillStyles).toMatch(/\.datePill:focus-within\s*\{[^}]*box-shadow:\s*var\(--focus-ring\)/s);
+  });
+
+  it("keeps native date input at mobile auto-zoom minimum", () => {
+    expect(datePillStyles).toMatch(/\.hiddenInput\s*\{[^}]*font-size:\s*var\(--fs-body\)/s);
+    const bodySizeMatch = designTokens.match(/--fs-body:\s*([\d.]+)px/);
+    expect(bodySizeMatch).not.toBeNull();
+    expect(Number(bodySizeMatch?.[1])).toBeGreaterThanOrEqual(16);
   });
 
   it("calls onChange with the picked date", () => {

@@ -1,4 +1,4 @@
-import { useRef, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import { formatDate, startOfDay, t } from "@/lib/i18n";
 import formStyles from "./AddExpenseScreen.module.css";
 import styles from "./DatePill.module.css";
@@ -18,18 +18,6 @@ function fromDateInputValue(value: string, fallbackMs: number): number {
   return Number.isNaN(parsedMs) ? fallbackMs : parsedMs;
 }
 
-// showPicker() isn't in every browser yet (Safari added it in 16.4) —
-// .click() on a date input opens the same native picker everywhere it
-// doesn't, so this is a fallback, not a second implementation.
-function openNativePicker(input: HTMLInputElement | null): void {
-  if (input === null) return;
-  if (typeof input.showPicker === "function") {
-    input.showPicker();
-    return;
-  }
-  input.click();
-}
-
 export interface DatePillProps {
   readonly dateMs: number;
   readonly nowMs: number;
@@ -41,7 +29,6 @@ export interface DatePillProps {
 // the picker's own `max` never offers one, and a typed value that slips past
 // `max` anyway (some browsers allow it) is clamped here too.
 export function DatePill({ dateMs, nowMs, onChange }: DatePillProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const dateLabel = startOfDay(dateMs) === startOfDay(nowMs)
     ? t("group.transaction.dayToday")
     : formatDate(new Date(startOfDay(dateMs)), { day: "numeric", month: "short" });
@@ -53,25 +40,16 @@ export function DatePill({ dateMs, nowMs, onChange }: DatePillProps) {
   }
 
   return (
-    <>
-      <button
-        type="button"
-        className={`${formStyles.chip} ${formStyles.chipButton}`}
-        aria-label={accessibleLabel}
-        onClick={() => openNativePicker(inputRef.current)}
-      >
-        {dateLabel}
-      </button>
+    <div className={`${formStyles.chip} ${styles.datePill}`}>
+      <span aria-hidden="true">{dateLabel}</span>
       <input
-        ref={inputRef}
         type="date"
         className={styles.hiddenInput}
+        aria-label={accessibleLabel}
         value={toDateInputValue(dateMs)}
         max={toDateInputValue(nowMs)}
         onChange={handleChange}
-        tabIndex={-1}
-        aria-hidden="true"
       />
-    </>
+    </div>
   );
 }
