@@ -318,6 +318,7 @@ grep -rn "tailwind" package.json src/
 - Setiap kontrol punya label yang terbaca screen reader. Nominal dibacakan lengkap dengan mata uangnya.
 - Fokus keyboard terlihat, ring-nya pakai `--focus-ring`, dan urutannya logis.
 - Kontrol tanggal yang membatasi sampai hari ini diuji di boundary tengah malam dan timezone ekstrem; nilai `max` harus memakai tanggal lokal device, bukan tanggal UTC.
+- Native date picker di iOS harus menerima tap langsung pada `input[type="date"]` yang menutupi seluruh pill; jangan menguji atau mengandalkan `showPicker()`, `.click()`, input 1px, `clip`, `aria-hidden`, atau `tabIndex={-1}` sebagai jalur pembuka.
 - iOS Safari: setiap input teks interaktif punya ukuran font efektif minimal 16px supaya fokus tidak memicu auto-zoom. Jangan mengakalinya dengan `user-scalable=no` atau membatasi `maximum-scale` di viewport.
 - Semua `input` text-entry, `textarea`, `select`, `[contenteditable]`, dan `[role="textbox"]` terlihat punya computed `font-size` minimal 16px pada viewport mobile; cek layar route utama dan route terpisah, termasuk sheet/modal.
 - `prefers-reduced-motion` dan `prefers-color-scheme` dihormati.
