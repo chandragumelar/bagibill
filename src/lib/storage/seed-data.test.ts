@@ -145,6 +145,22 @@ describe("Tiket masuk kawah (Trip Bromo)", () => {
   });
 });
 
+describe("Beli SIM card (Trip Bromo)", () => {
+  it("stores source USD minor units and converts only at calculation boundary", async () => {
+    const deps = makeDeps();
+    const summary = await seedSampleData(deps);
+    const tripBromo = requireGroup(summary, "Trip Bromo");
+    const expense = await findExpense(deps, tripBromo.slug, "Beli SIM card");
+    const input = toCalculationInput(expense, "IDR");
+    const calculation = calculateExpense(input);
+
+    expect(expense.currency).toBe("USD");
+    expect(expense.amountTotalMinor).toBe(1_000);
+    expect(input.totalMinor).toBe(158_000);
+    expect(calculation.sharesMinor.reduce((sum, shareMinor) => sum + shareMinor, 0)).toBe(158_000);
+  });
+});
+
 describe("Kopi di Cemoro (Trip Bromo)", () => {
   it("leaves Nadia at zero and moves her share onto Dimas via the person treat", async () => {
     const deps = makeDeps();

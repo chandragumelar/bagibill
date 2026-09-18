@@ -71,9 +71,9 @@ export interface ExpenseRepository {
 // now the only thing preventing that from being saved; making an unbalanced
 // non-byItems save visible after the fact is use-group-balance.ts's job
 // (excluded from the balance, counted, and shown as a warning there).
-function assertCalculable(expense: ExpenseRecord): void {
+function assertCalculable(expense: ExpenseRecord, baseCurrency: string): void {
   try {
-    calculateExpense(toCalculationInput(expense));
+    calculateExpense(toCalculationInput(expense, baseCurrency));
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`expense fails the calculation gate: ${reason}`);
@@ -94,7 +94,9 @@ export function createExpenseRepository(
       createdAt: now,
       updatedAt: now,
     };
-    assertCalculable(expense);
+    const group = await adapter.groups.get(expense.groupSlug);
+    if (group === undefined) throw new Error("createExpense: no group found for the given group");
+    assertCalculable(expense, group.baseCurrency);
     await adapter.expenses.put(expense);
     return expense;
   }
@@ -106,7 +108,9 @@ export function createExpenseRepository(
     }
     const updatedAt = Math.max(clock.now(), existing.updatedAt + 1);
     const updated: ExpenseRecord = { ...existing, ...patch, updatedAt };
-    assertCalculable(updated);
+    const group = await adapter.groups.get(updated.groupSlug);
+    if (group === undefined) throw new Error("updateExpense: no group found for the given group");
+    assertCalculable(updated, group.baseCurrency);
     await adapter.expenses.put(updated);
     return updated;
   }

@@ -100,9 +100,13 @@ type LedgerBuildOutcome =
 // canonical order, zero-filling members who weren't part of this expense —
 // computeGroupBalances requires every ledger to be exactly participantCount
 // long (K-42), not scoped down to who was actually in that expense.
-function buildLedger(expense: ExpenseRecord, canonicalIds: readonly string[]): LedgerBuildOutcome {
+function buildLedger(
+  expense: ExpenseRecord,
+  canonicalIds: readonly string[],
+  baseCurrency: string,
+): LedgerBuildOutcome {
   try {
-    const input = toCalculationInput(expense);
+    const input = toCalculationInput(expense, baseCurrency);
     const calculation = calculateExpense(input);
     if (calculation.netMinor === null) {
       // unclaimed_items is byItems-specific (K-31) — its presence is what
@@ -191,13 +195,17 @@ interface LedgerBuild {
   readonly uncountedExpenseCount: number;
 }
 
-function buildLedgers(expenses: readonly ExpenseRecord[], canonicalIds: readonly string[]): LedgerBuild {
+function buildLedgers(
+  expenses: readonly ExpenseRecord[],
+  canonicalIds: readonly string[],
+  baseCurrency: string,
+): LedgerBuild {
   const ledgers: ExpenseLedger[] = [];
   const origins: LedgerOrigin[] = [];
   let pendingClaimExpenseCount = 0;
   let uncountedExpenseCount = 0;
   for (const expense of expenses) {
-    const outcome = buildLedger(expense, canonicalIds);
+    const outcome = buildLedger(expense, canonicalIds, baseCurrency);
     if (outcome.kind === "pendingClaim") {
       pendingClaimExpenseCount++;
     } else if (outcome.kind === "broken") {
@@ -300,7 +308,7 @@ export function computeGroupBalanceState(
     origins: expenseOrigins,
     pendingClaimExpenseCount,
     uncountedExpenseCount,
-  } = buildLedgers(expenses, canonicalIds);
+  } = buildLedgers(expenses, canonicalIds, group.baseCurrency);
   const { ledgers: settlementLedgers, origins: settlementOrigins } = buildSettlementLedgers(settlements, canonicalIds);
   // Concatenation order here is the contract settlement-trace.ts's
   // traceMemberBalance relies on: ledgers[i] and origins[i] must describe

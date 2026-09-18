@@ -177,9 +177,10 @@ function chargeMetaFromRecord(charge: ChargeRecord): ExpenseChargeMeta {
 export function summarizeExpenseRecord(
   expense: ExpenseRecord,
   memberInfo: ReadonlyMap<string, ExpenseMemberInfo>,
+  baseCurrency = expense.currency,
 ): ExpenseSummary {
   const memberOrder = resolveMemberOrder(expense.splitData);
-  const calculation = calculateExpense(toCalculationInput(expense));
+  const calculation = calculateExpense(toCalculationInput(expense, baseCurrency));
   return buildExpenseSummary({
     memberOrder,
     memberInfo,

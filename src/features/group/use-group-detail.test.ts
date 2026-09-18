@@ -66,6 +66,26 @@ describe("useGroupDetail", () => {
     expect(result.current.items[0]?.row.kind).toBe("expense");
   });
 
+  it("shows foreign expense source amount while day subtotal uses base currency", async () => {
+    await seedGroup();
+    await expenseRepository.createExpense(
+      makeExpenseInput({
+        currency: "USD",
+        fxRate: 15_800,
+        amountTotalMinor: 1_000,
+        payers: [{ memberId: "m1", amountMinor: 1_000 }],
+      }),
+    );
+
+    const { result } = renderHook(() => useGroupDetail("g1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    if (result.current.status !== "ready") throw new Error("expected ready");
+
+    const item = result.current.items[0];
+    expect(item?.totalMinor).toBe(158_000);
+    expect(item?.row).toMatchObject({ foreignAmountMinor: 1_000, foreignCurrency: "USD" });
+  });
+
   it("reports not-found for a slug with no matching group", async () => {
     const { result } = renderHook(() => useGroupDetail("no-such-group"));
     await waitFor(() => expect(result.current.status).toBe("not-found"));

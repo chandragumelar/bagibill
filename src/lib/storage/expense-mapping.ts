@@ -15,6 +15,7 @@ import type {
   SplitDataRecord,
   TreatRecord,
 } from "./records";
+import { convertMinorToBaseCurrency } from "./expense-currency";
 
 type CalculateExpenseInput = Parameters<typeof calculateExpense>[0];
 
@@ -61,9 +62,10 @@ function requireItemIndex(itemIndex: ReadonlyMap<string, number>, itemId: string
 function buildEngineItems(
   items: readonly ExpenseItemRecord[],
   memberIndex: ReadonlyMap<string, number>,
+  convertMinor: (amountMinor: number) => number,
 ): readonly EngineExpenseItem[] {
   return items.map((item) => ({
-    unitPriceMinor: item.unitPriceMinor,
+    unitPriceMinor: convertMinor(item.unitPriceMinor),
     quantity: item.quantity,
     claims: item.claims.map((claim) => ({
       participantIndex: requireMemberIndex(memberIndex, claim.memberId, `item "${item.itemId}" claim`),
@@ -76,12 +78,13 @@ function buildSplitInput(
   splitData: SplitDataRecord,
   memberOrder: readonly string[],
   items: readonly EngineExpenseItem[],
+  convertMinor: (amountMinor: number) => number,
 ): SplitInput {
   switch (splitData.mode) {
     case "evenly":
       return { mode: "evenly", participantCount: memberOrder.length };
     case "byAmounts":
-      return { mode: "byAmounts", amountsMinor: splitData.entries.map((entry) => entry.amountMinor) };
+      return { mode: "byAmounts", amountsMinor: splitData.entries.map((entry) => convertMinor(entry.amountMinor)) };
     case "byPercentage":
       return { mode: "byPercentage", percentages: splitData.entries.map((entry) => entry.percent) };
     case "byWeights":
@@ -89,7 +92,7 @@ function buildSplitInput(
     case "byAdjustment":
       return {
         mode: "byAdjustment",
-        adjustmentsMinor: splitData.entries.map((entry) => entry.adjustmentMinor),
+        adjustmentsMinor: splitData.entries.map((entry) => convertMinor(entry.adjustmentMinor)),
       };
     case "byItems":
       return { mode: "byItems", participantCount: memberOrder.length, items };
@@ -124,9 +127,12 @@ function buildCharges(
   charges: readonly ChargeRecord[],
   memberIndex: ReadonlyMap<string, number>,
   itemIndex: ReadonlyMap<string, number>,
+  convertMinor: (amountMinor: number) => number,
 ): readonly ExtraCharge[] {
   return charges.map((charge) => ({
-    amount: charge.amount,
+    amount: charge.amount.kind === "fixed"
+      ? { kind: "fixed", amountMinor: convertMinor(charge.amount.amountMinor) }
+      : charge.amount,
     allocation: buildChargeAllocation(charge.allocation, memberIndex, itemIndex),
   }));
 }
@@ -135,6 +141,7 @@ function buildTreat(
   treat: TreatRecord,
   memberIndex: ReadonlyMap<string, number>,
   itemIndex: ReadonlyMap<string, number>,
+  convertMinor: (amountMinor: number) => number,
 ): Treat {
   if (treat.kind === "item") {
     return {
@@ -150,7 +157,7 @@ function buildTreat(
     `treat ${treat.kind} beneficiary`,
   );
   if (treat.kind === "partial") {
-    return { kind: "partial", sponsorIndex, beneficiaryIndex, amountMinor: treat.amountMinor };
+    return { kind: "partial", sponsorIndex, beneficiaryIndex, amountMinor: convertMinor(treat.amountMinor) };
   }
   return { kind: "person", sponsorIndex, beneficiaryIndex };
 }
@@ -159,19 +166,21 @@ function buildTreats(
   treats: readonly TreatRecord[],
   memberIndex: ReadonlyMap<string, number>,
   itemIndex: ReadonlyMap<string, number>,
+  convertMinor: (amountMinor: number) => number,
 ): readonly Treat[] {
-  return treats.map((treat) => buildTreat(treat, memberIndex, itemIndex));
+  return treats.map((treat) => buildTreat(treat, memberIndex, itemIndex, convertMinor));
 }
 
 function buildPaymentsMinor(
   payers: readonly ExpensePayerRecord[],
   memberIndex: ReadonlyMap<string, number>,
   memberCount: number,
+  convertMinor: (amountMinor: number) => number,
 ): readonly number[] {
   const amountsByIndex = new Map<number, number>();
   for (const payer of payers) {
     const index = requireMemberIndex(memberIndex, payer.memberId, "payers");
-    amountsByIndex.set(index, (amountsByIndex.get(index) ?? 0) + payer.amountMinor);
+    amountsByIndex.set(index, (amountsByIndex.get(index) ?? 0) + convertMinor(payer.amountMinor));
   }
   return Array.from({ length: memberCount }, (_, index) => amountsByIndex.get(index) ?? 0);
 }
@@ -181,17 +190,36 @@ function buildPaymentsMinor(
 // isn't actually a participant/item of this expense throws immediately,
 // naming the value and where it came from — silently dropping it would mean
 // money disappears from the breakdown without a trace.
-export function toCalculationInput(expense: ExpenseRecord): CalculateExpenseInput {
+export function toCalculationInput(expense: ExpenseRecord, baseCurrency = expense.currency): CalculateExpenseInput {
   const memberOrder = resolveMemberOrder(expense.splitData);
   const memberIndex = buildMemberIndex(memberOrder);
   const itemIndex = buildItemIndex(expense.items);
-  const engineItems = buildEngineItems(expense.items, memberIndex);
+  const convertMinor = (amountMinor: number) =>
+    convertMinorToBaseCurrency({
+      amountMinor,
+      fromCurrency: expense.currency,
+      baseCurrency,
+      fxRate: expense.fxRate,
+    });
+  const totalMinor = convertMinor(expense.amountTotalMinor);
+  const engineItems = buildEngineItems(expense.items, memberIndex, convertMinor);
+  if (expense.splitData.mode === "byItems") {
+    const itemTotalMinor = engineItems.reduce(
+      (sum, item) => sum + item.unitPriceMinor * item.quantity,
+      0,
+    );
+    if (itemTotalMinor !== totalMinor) {
+      throw new Error(
+        `toCalculationInput: converted item totals ${itemTotalMinor} do not match converted expense total ${totalMinor}`,
+      );
+    }
+  }
   return {
-    totalMinor: expense.amountTotalMinor,
-    split: buildSplitInput(expense.splitData, memberOrder, engineItems),
-    charges: buildCharges(expense.charges, memberIndex, itemIndex),
-    treats: buildTreats(expense.treats, memberIndex, itemIndex),
-    paymentsMinor: buildPaymentsMinor(expense.payers, memberIndex, memberOrder.length),
+    totalMinor,
+    split: buildSplitInput(expense.splitData, memberOrder, engineItems, convertMinor),
+    charges: buildCharges(expense.charges, memberIndex, itemIndex, convertMinor),
+    treats: buildTreats(expense.treats, memberIndex, itemIndex, convertMinor),
+    paymentsMinor: buildPaymentsMinor(expense.payers, memberIndex, memberOrder.length, convertMinor),
   };
 }
 

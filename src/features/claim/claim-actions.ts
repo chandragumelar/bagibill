@@ -77,12 +77,16 @@ export interface MyShareSummary {
 // already runs, K-64) instead of re-deriving item math by hand, so the
 // number shown here can never drift from what actually got saved —
 // including any charge or treat layered on top of the per-item split.
-export function computeMyShare(expense: ExpenseRecord, memberId: string): MyShareSummary | undefined {
+export function computeMyShare(
+  expense: ExpenseRecord,
+  memberId: string,
+  baseCurrency = expense.currency,
+): MyShareSummary | undefined {
   const memberOrder = resolveMemberOrder(expense.splitData);
   const myIndex = memberOrder.indexOf(memberId);
   if (myIndex === -1) return undefined;
 
-  const calculation = calculateExpense(toCalculationInput(expense));
+  const calculation = calculateExpense(toCalculationInput(expense, baseCurrency));
   const perItem = calculation.perItem ?? [];
   const items: MyItemShare[] = [];
   expense.items.forEach((item, itemIndex) => {
