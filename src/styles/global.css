@@ -19,6 +19,16 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* iOS Safari zooms focused text controls below minimum size. Keep this selector
+   global because feature controls can render inside sheets and route chunks. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+textarea,
+select,
+[contenteditable]:not([contenteditable="false"]),
+[role="textbox"] {
+  font-size: var(--fs-body);
+}
+
 /* Cincin fokus konsisten di seluruh app, terlihat, tidak cuma outline default. */
 :focus-visible {
   outline: none;

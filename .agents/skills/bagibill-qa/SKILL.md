@@ -319,6 +319,7 @@ grep -rn "tailwind" package.json src/
 - Fokus keyboard terlihat, ring-nya pakai `--focus-ring`, dan urutannya logis.
 - Kontrol tanggal yang membatasi sampai hari ini diuji di boundary tengah malam dan timezone ekstrem; nilai `max` harus memakai tanggal lokal device, bukan tanggal UTC.
 - iOS Safari: setiap input teks interaktif punya ukuran font efektif minimal 16px supaya fokus tidak memicu auto-zoom. Jangan mengakalinya dengan `user-scalable=no` atau membatasi `maximum-scale` di viewport.
+- Semua `input` text-entry, `textarea`, `select`, `[contenteditable]`, dan `[role="textbox"]` terlihat punya computed `font-size` minimal 16px pada viewport mobile; cek layar route utama dan route terpisah, termasuk sheet/modal.
 - `prefers-reduced-motion` dan `prefers-color-scheme` dihormati.
 
 ## 13. QA Kualitas Kode
