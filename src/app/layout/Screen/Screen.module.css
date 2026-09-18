@@ -1,14 +1,18 @@
 .screen {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   max-width: var(--size-column-max);
   margin: 0 auto;
   background: var(--surface);
+  overflow: hidden;
 }
 
 .body {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--sp-4);
 }
