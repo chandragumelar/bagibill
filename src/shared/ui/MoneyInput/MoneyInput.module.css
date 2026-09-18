@@ -33,7 +33,7 @@
   font-family: inherit;
   font-variant-numeric: tabular-nums;
   text-align: right;
-  font-size: var(--fs-subhead);
+  font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
   outline: none;
   padding: 0 var(--sp-3);

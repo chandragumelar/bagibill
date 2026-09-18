@@ -459,6 +459,14 @@ Tidak masuk: pengaturan grup lain, pemulihan, atau layar sampah.
 
 Selesai kalau: angka konfirmasi berasal dari data nyata, quick tap tidak menghapus, keyboard fokus tetap terjebak, hapus menyembunyikan grup dari Beranda, dan lima gerbang hijau. Tetap menunggu uji HP fisik sebelum dicentang.
 
+### F4-10 Cegah auto-zoom pada form control mobile
+
+Tergantung: F4-09.
+
+Isi: semua text-entry control dan select memakai token font minimal 16px pada viewport mobile. Audit computed font size memuat layar relevan dan melaporkan elemen di bawah batas.
+
+Selesai kalau: fokus form control tidak memicu auto-zoom, pinch zoom tetap aktif, audit 320/360/480px hijau untuk id/en, dan lima gerbang hijau. Tetap menunggu uji Safari iOS fisik sebelum dicentang.
+
 ---
 
 ## Setelah ini
