@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { t, dayLabel, formatMoney, startOfDay } from "@/lib/i18n";
-import { Button } from "@/shared/ui/Button/Button";
+import { Button, Sheet } from "@/shared/ui";
 import type { TransactionListItem } from "./use-group-detail";
 import { TransactionRow } from "./TransactionRow";
 import styles from "./TransactionList.module.css";
+import actionStyles from "./TransactionRow.module.css";
 
 interface DayGroup {
   readonly dayStartMs: number;
@@ -44,6 +46,7 @@ export interface TransactionListProps {
 }
 
 export function TransactionList({ items, currency, nowMs, onAddExpense, isFiltered, onClearFilter, onEditExpense, onDeleteExpense, highlightedExpenseId }: TransactionListProps) {
+  const [actionSheet, setActionSheet] = useState<{ expenseId: string; title: string; trigger: HTMLButtonElement } | undefined>();
   if (items.length === 0) {
     if (isFiltered === true && onClearFilter !== undefined) {
       return <FilteredEmpty onClearFilter={onClearFilter} />;
@@ -52,6 +55,26 @@ export function TransactionList({ items, currency, nowMs, onAddExpense, isFilter
   }
 
   const groups = groupByDay(items);
+
+  function closeActionSheet(): void {
+    const trigger = actionSheet?.trigger;
+    setActionSheet(undefined);
+    trigger?.focus();
+  }
+
+  function editExpense(): void {
+    const expenseId = actionSheet?.expenseId;
+    if (expenseId === undefined) return;
+    closeActionSheet();
+    onEditExpense?.(expenseId);
+  }
+
+  function deleteExpense(): void {
+    const target = actionSheet;
+    if (target === undefined) return;
+    closeActionSheet();
+    onDeleteExpense?.(target.expenseId, target.title);
+  }
 
   return (
     <div className={styles.list}>
@@ -63,19 +86,54 @@ export function TransactionList({ items, currency, nowMs, onAddExpense, isFilter
           </div>
           <div className={styles.dayCard}>
             {group.items.map((item) => (
-              <TransactionRow
+              <TransactionRowForList
                 key={item.key}
-                row={item.row}
+                item={item}
                 currency={currency}
                 onEdit={onEditExpense}
                 onDelete={onDeleteExpense}
                 highlighted={item.key === highlightedExpenseId}
+                actionSheet={actionSheet}
+                onActionMenuOpen={setActionSheet}
               />
             ))}
           </div>
         </div>
       ))}
+      <Sheet open={actionSheet !== undefined} onClose={closeActionSheet} title={actionSheet?.title ?? ""}>
+        <div className={actionStyles.actionSheetActions}>
+          <Button onClick={editExpense}>{t("group.transaction.edit")}</Button>
+          <button type="button" className={actionStyles.actionSheetDelete} onClick={deleteExpense}>
+            {t("group.transaction.delete")}
+          </button>
+        </div>
+      </Sheet>
     </div>
+  );
+}
+
+interface TransactionRowForListProps {
+  readonly item: TransactionListItem;
+  readonly currency: string;
+  readonly onEdit?: (expenseId: string) => void;
+  readonly onDelete?: (expenseId: string, title: string) => void;
+  readonly highlighted: boolean;
+  readonly actionSheet: { expenseId: string; title: string; trigger: HTMLButtonElement } | undefined;
+  readonly onActionMenuOpen: (target: { expenseId: string; title: string; trigger: HTMLButtonElement }) => void;
+}
+
+function TransactionRowForList({ item, currency, onEdit, onDelete, highlighted, actionSheet, onActionMenuOpen }: TransactionRowForListProps) {
+  const expenseId = item.row.kind === "expense" ? item.row.expenseId : undefined;
+  return (
+    <TransactionRow
+      row={item.row}
+      currency={currency}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      highlighted={highlighted}
+      actionMenuOpen={expenseId !== undefined && actionSheet?.expenseId === expenseId}
+      onActionMenuOpen={expenseId === undefined ? undefined : (trigger) => onActionMenuOpen({ expenseId, title: item.title, trigger })}
+    />
   );
 }
 

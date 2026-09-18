@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { t, formatMoney as formatMoneyRaw } from "@/lib/i18n";
 import { TransactionList } from "./TransactionList";
 import type { TransactionListItem } from "./use-group-detail";
@@ -46,6 +46,62 @@ function item(overrides: Partial<TransactionListItem> = {}): TransactionListItem
 }
 
 describe("TransactionList", () => {
+  it("opens one action sheet with full Edit and Delete actions", () => {
+    render(<TransactionList items={[item()]} currency="IDR" nowMs={NOW_MS} onAddExpense={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang" }) }));
+    const dialog = screen.getByRole("dialog", { name: "Sate Padang" });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
+    expect(screen.getByRole("button", { name: t("group.transaction.edit") })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t("group.transaction.delete") })).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("routes Edit and Delete to the selected expense and returns focus on close", () => {
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    render(<TransactionList items={[item()]} currency="IDR" nowMs={NOW_MS} onAddExpense={() => {}} onEditExpense={onEdit} onDeleteExpense={onDelete} />);
+    const trigger = screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang" }) });
+    fireEvent.click(trigger);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.edit") }));
+    expect(onEdit).toHaveBeenCalledWith("e1");
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.delete") }));
+    expect(onDelete).toHaveBeenCalledWith("e1", "Sate Padang");
+  });
+
+  it("closes from scrim and replaces an open sheet when another row opens", () => {
+    const items = [
+      item({ key: "e1", title: "Pertama", row: expenseRow({ expenseId: "e1", title: "Pertama" }) }),
+      item({ key: "e2", title: "Kedua", row: expenseRow({ expenseId: "e2", title: "Kedua" }) }),
+    ];
+    render(<TransactionList items={items} currency="IDR" nowMs={NOW_MS} onAddExpense={() => {}} />);
+    const firstTrigger = screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Pertama" }) });
+    fireEvent.click(firstTrigger);
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Kedua" }) }));
+    expect(screen.getByRole("dialog", { name: "Kedua" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Pertama" })).not.toBeInTheDocument();
+    const scrim = document.querySelector('[class*="scrim"]');
+    if (scrim === null) throw new Error("expected sheet scrim");
+    fireEvent.click(scrim);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it.each(["Pertama", "Tengah", "Terakhir"] as const)("opens action sheet for %s row", (title) => {
+    const items = ["Pertama", "Tengah", "Terakhir"].map((rowTitle) => item({
+      key: rowTitle,
+      title: rowTitle,
+      row: expenseRow({ expenseId: rowTitle, title: rowTitle }),
+    }));
+    render(<TransactionList items={items} currency="IDR" nowMs={NOW_MS} onAddExpense={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title }) }));
+    expect(screen.getByRole("dialog", { name: title })).toBeInTheDocument();
+  });
+
   it("renders the empty state with a working add-expense action", () => {
     const onAddExpense = vi.fn();
     render(<TransactionList items={[]} currency="IDR" nowMs={NOW_MS} onAddExpense={onAddExpense} />);

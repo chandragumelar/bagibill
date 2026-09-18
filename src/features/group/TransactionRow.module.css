@@ -116,11 +116,6 @@
   background: var(--risk-high-tint);
 }
 
-.menuVisible {
-  overflow: visible;
-  z-index: 1;
-}
-
 .swipeFront {
   position: relative;
   background: var(--surface);
@@ -173,40 +168,28 @@
   cursor: pointer;
 }
 
-.menuPanel {
-  position: absolute;
-  inset-block-start: 100%;
-  inset-inline-end: 0;
-  z-index: 2;
-  border: var(--border-width-thin) solid var(--border);
-  border-radius: var(--r-btn);
-  background: var(--surface-raised);
-  color: var(--risk-high-text);
-  box-shadow: var(--elev-2);
-  overflow: hidden;
+.actionSheetActions {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
 }
 
-.menuItem {
-  display: block;
+.actionSheetDelete {
   width: 100%;
-  min-width: var(--sp-9);
-  min-height: var(--size-touch-min);
-  padding: 0 var(--sp-4);
-  border: 0;
+  min-height: var(--size-control);
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--border-width-thin) solid var(--risk-high-text);
+  border-radius: var(--r-btn);
   background: transparent;
-  color: var(--text);
+  color: var(--risk-high-text);
   font: inherit;
-  text-align: start;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
 }
 
-.menuItem:hover,
-.menuItem:focus-visible {
-  background: var(--surface-sunken);
-}
-
-.deleteMenuItem {
-  color: var(--risk-high-text);
+.actionSheetDelete:hover,
+.actionSheetDelete:focus-visible {
+  background: var(--risk-high-tint);
 }
 
 .highlighted {

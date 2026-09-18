@@ -164,7 +164,7 @@ describe("GroupDetailScreen", () => {
     expect(screen.getByText(t("group.position.label")).parentElement).toHaveTextContent("5,000");
 
     fireEvent.click(screen.getByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang" }) }));
-    fireEvent.click(screen.getByRole("menuitem", { name: t("group.transaction.delete") }));
+    fireEvent.click(screen.getByRole("button", { name: t("group.transaction.delete") }));
     await waitFor(() => expect(screen.queryByRole("button", { name: t("group.transaction.rowMenu", { title: "Sate Padang" }) })).not.toBeInTheDocument());
     expect((await expenseRepository.listExpensesByGroup("g1", { includeDeleted: true }))[0]?.deletedAt).toBeDefined();
     expect(screen.getByText(t("group.position.label")).parentElement).toHaveTextContent("0");
