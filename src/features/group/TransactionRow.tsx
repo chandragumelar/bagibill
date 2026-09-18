@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { t, formatMoney } from "@/lib/i18n";
 import { Avatar } from "@/shared/ui/Avatar/Avatar";
 import { ListRow } from "@/shared/ui/ListRow/ListRow";
@@ -124,6 +124,9 @@ const DELETE_SWIPE_THRESHOLD_PX = 90;
 function ExpenseRow({ row, currency, onEdit, onDelete, highlighted }: ExpenseRowProps) {
   const [offsetPx, setOffsetPx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const menuId = useId();
   const startXRef = useRef<number | undefined>(undefined);
   const swipedRef = useRef(false);
   const titleClassName = row.effect.kind === "out" ? `${styles.title} ${styles.titleMuted}` : styles.title;
@@ -144,6 +147,36 @@ function ExpenseRow({ row, currency, onEdit, onDelete, highlighted }: ExpenseRow
     startXRef.current = undefined;
     setOffsetPx(0);
     if (shouldDelete) onDelete?.(row.expenseId, row.title);
+  }
+  useEffect(() => {
+    if (menuOpen) menuItemRefs.current[0]?.focus();
+  }, [menuOpen]);
+  function closeMenu(): void {
+    setMenuOpen(false);
+    menuButtonRef.current?.focus();
+  }
+  function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    const items = menuItemRefs.current.filter((item): item is HTMLButtonElement => item !== null);
+    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu();
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = (currentIndex + direction + items.length) % items.length;
+      items[nextIndex]?.focus();
+    }
+  }
+  function selectEdit(): void {
+    closeMenu();
+    onEdit?.(row.expenseId);
+  }
+  function selectDelete(): void {
+    closeMenu();
+    onDelete?.(row.expenseId, row.title);
   }
   return (
     <div className={`${styles.swipeWrap} ${highlighted === true ? styles.highlighted : ""}`}>
@@ -181,16 +214,36 @@ function ExpenseRow({ row, currency, onEdit, onDelete, highlighted }: ExpenseRow
         <button
           type="button"
           className={styles.menuButton}
+          ref={menuButtonRef}
           aria-label={t("group.transaction.rowMenu", { title: row.title })}
+          aria-controls={menuId}
+          aria-haspopup="menu"
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((open) => !open)}
         >
           ⋯
         </button>
         {menuOpen ? (
-          <button type="button" className={styles.deleteMenuItem} onClick={() => onDelete?.(row.expenseId, row.title)}>
-            {t("group.transaction.delete")}
-          </button>
+          <div id={menuId} className={styles.menuPanel} role="menu" onKeyDown={handleMenuKeyDown}>
+            <button
+              type="button"
+              className={styles.menuItem}
+              role="menuitem"
+              ref={(element) => { menuItemRefs.current[0] = element; }}
+              onClick={selectEdit}
+            >
+              {t("group.transaction.edit")}
+            </button>
+            <button
+              type="button"
+              className={`${styles.menuItem} ${styles.deleteMenuItem}`}
+              role="menuitem"
+              ref={(element) => { menuItemRefs.current[1] = element; }}
+              onClick={selectDelete}
+            >
+              {t("group.transaction.delete")}
+            </button>
+          </div>
         ) : null}
       </div>
     </div>
