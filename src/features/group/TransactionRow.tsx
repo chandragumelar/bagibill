@@ -179,7 +179,9 @@ function ExpenseRow({ row, currency, onEdit, onDelete, highlighted }: ExpenseRow
     onDelete?.(row.expenseId, row.title);
   }
   return (
-    <div className={`${styles.swipeWrap} ${highlighted === true ? styles.highlighted : ""}`}>
+    <div
+      className={`${styles.swipeWrap} ${highlighted === true ? styles.highlighted : ""} ${menuOpen ? styles.menuVisible : ""}`}
+    >
       <div className={styles.deleteBack}>{t("group.transaction.delete")}</div>
       <div
         className={styles.swipeFront}
@@ -189,62 +191,66 @@ function ExpenseRow({ row, currency, onEdit, onDelete, highlighted }: ExpenseRow
         onPointerUp={pointerEnd}
         onPointerCancel={pointerEnd}
       >
-        <ListRow
-          onClick={() => { if (!swipedRef.current) onEdit?.(row.expenseId); }}
-          leading={<Avatar initials={row.payerAvatarInitials} color={`var(${row.payerAvatarColor})`} />}
-          trailing={<EffectView effect={row.effect} currency={currency} />}
-        >
-          <div className={titleClassName}>{row.title}</div>
-          <div className={styles.meta}>
-            <span className={styles.payer}>{payerLabel(row)}</span>
-        {row.foreignAmountMinor !== undefined && row.foreignCurrency !== undefined ? (
-          <>
-            <span className={`${styles.payer} bb-numeral`}>· {formatMoney(row.foreignAmountMinor, row.foreignCurrency)}</span>
-            <span className={styles.fxBadge}>{row.foreignCurrency}</span>
-          </>
-        ) : null}
-        {row.isPerItemMode ? <span className={styles.mark}>{t("group.transaction.perItemBadge")}</span> : null}
-        {row.hasAttachment ? (
-          <span className={styles.mark} role="img" aria-label={t("group.transaction.attachmentLabel")}>
-            <PaperclipIcon />
-          </span>
-        ) : null}
-          </div>
-        </ListRow>
-        <button
-          type="button"
-          className={styles.menuButton}
-          ref={menuButtonRef}
-          aria-label={t("group.transaction.rowMenu", { title: row.title })}
-          aria-controls={menuId}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          ⋯
-        </button>
-        {menuOpen ? (
-          <div id={menuId} className={styles.menuPanel} role="menu" onKeyDown={handleMenuKeyDown}>
+        <div className={styles.expenseRow}>
+          <ListRow
+            onClick={() => { if (!swipedRef.current) onEdit?.(row.expenseId); }}
+            leading={<Avatar initials={row.payerAvatarInitials} color={`var(${row.payerAvatarColor})`} />}
+            trailing={<EffectView effect={row.effect} currency={currency} />}
+          >
+            <div className={titleClassName}>{row.title}</div>
+            <div className={styles.meta}>
+              <span className={styles.payer}>{payerLabel(row)}</span>
+              {row.foreignAmountMinor !== undefined && row.foreignCurrency !== undefined ? (
+                <>
+                  <span className={`${styles.payer} bb-numeral`}>· {formatMoney(row.foreignAmountMinor, row.foreignCurrency)}</span>
+                  <span className={styles.fxBadge}>{row.foreignCurrency}</span>
+                </>
+              ) : null}
+              {row.isPerItemMode ? <span className={styles.mark}>{t("group.transaction.perItemBadge")}</span> : null}
+              {row.hasAttachment ? (
+                <span className={styles.mark} role="img" aria-label={t("group.transaction.attachmentLabel")}>
+                  <PaperclipIcon />
+                </span>
+              ) : null}
+            </div>
+          </ListRow>
+          <div className={styles.menuSlot}>
             <button
               type="button"
-              className={styles.menuItem}
-              role="menuitem"
-              ref={(element) => { menuItemRefs.current[0] = element; }}
-              onClick={selectEdit}
+              className={styles.menuButton}
+              ref={menuButtonRef}
+              aria-label={t("group.transaction.rowMenu", { title: row.title })}
+              aria-controls={menuId}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
             >
-              {t("group.transaction.edit")}
+              ⋯
             </button>
-            <button
-              type="button"
-              className={`${styles.menuItem} ${styles.deleteMenuItem}`}
-              role="menuitem"
-              ref={(element) => { menuItemRefs.current[1] = element; }}
-              onClick={selectDelete}
-            >
-              {t("group.transaction.delete")}
-            </button>
+            {menuOpen ? (
+              <div id={menuId} className={styles.menuPanel} role="menu" onKeyDown={handleMenuKeyDown}>
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  role="menuitem"
+                  ref={(element) => { menuItemRefs.current[0] = element; }}
+                  onClick={selectEdit}
+                >
+                  {t("group.transaction.edit")}
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.menuItem} ${styles.deleteMenuItem}`}
+                  role="menuitem"
+                  ref={(element) => { menuItemRefs.current[1] = element; }}
+                  onClick={selectDelete}
+                >
+                  {t("group.transaction.delete")}
+                </button>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
     </div>
   );
