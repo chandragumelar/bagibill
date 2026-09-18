@@ -59,7 +59,7 @@ function ReadyBody({ state, currentMemberId, claim, unclaim, retrySave }: ReadyB
   }
 
   const creator = state.participants.find((participant) => participant.memberId === state.expense.createdBy);
-  const share = computeMyShare(state.expense, currentMemberId);
+  const share = computeMyShare(state.expense, currentMemberId, state.group.baseCurrency);
   const pendingItem = state.expense.items.find((item) => item.itemId === pendingShare?.itemId);
   const pendingClaimant = state.participants.find((participant) => participant.memberId === pendingShare?.claimantMemberId);
 
@@ -67,7 +67,7 @@ function ReadyBody({ state, currentMemberId, claim, unclaim, retrySave }: ReadyB
     return (
       <ClaimSummary
         expenseTitle={state.expense.title}
-        currency={state.expense.currency}
+        currency={state.group.baseCurrency}
         totalMinor={share?.totalMinor ?? 0}
         items={share?.items ?? []}
         onBack={() => setView("list")}

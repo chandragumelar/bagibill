@@ -134,11 +134,9 @@ export async function buildTripBromo(deps: SeedDeps, nowMs: number): Promise<Gro
     splitData: { mode: "evenly", memberIds: [sari.memberId, rio.memberId] },
     attachments: ["seed-receipt-oleh-oleh"],
   });
-  // amountTotalMinor stays in the group's base currency (IDR), not the
-  // expense's own "USD" — toCalculationInput/TransactionRow both read it
-  // straight through with no conversion, so this was ambiguous enough to
-  // write up rather than guess silently (progress.md Catatan lepas).
-  const SIM_CARD_AMOUNT_MINOR = 150_000;
+  // amountTotalMinor stays in expense currency. Mapping converts it to the
+  // group's base currency for calculation and balance.
+  const SIM_CARD_AMOUNT_MINOR = 1_000;
   await seedExpense(deps, {
     groupSlug: group.slug,
     title: "Beli SIM card",

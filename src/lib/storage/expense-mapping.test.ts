@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateExpense } from "@bagibill/split-engine";
 import { mapSharesToMembers, resolveMemberOrder, toCalculationInput } from "./expense-mapping";
+import { convertMinorToBaseCurrency } from "./expense-currency";
 import type { ExpenseRecord, SplitDataRecord } from "./records";
 
 function baseExpense(overrides: Partial<ExpenseRecord> = {}): ExpenseRecord {
@@ -78,6 +79,92 @@ describe("resolveMemberOrder", () => {
 });
 
 describe("round-trip per mode", () => {
+  it("converts foreign-currency totals into the group's base currency", () => {
+    const expense = baseExpense({
+      currency: "USD",
+      fxRate: 15_800,
+      amountTotalMinor: 1_000,
+      payers: [{ memberId: "m1", amountMinor: 1_000 }],
+    });
+
+    const input = toCalculationInput(expense, "IDR");
+
+    expect(input.totalMinor).toBe(158_000);
+    expect(input.paymentsMinor).toEqual([158_000, 0, 0]);
+  });
+
+  it("keeps same-currency amounts unchanged", () => {
+    const input = toCalculationInput(baseExpense({ amountTotalMinor: 12_345 }));
+    expect(input.totalMinor).toBe(12_345);
+  });
+
+  it("rounds converted fractional minor units half away from zero", () => {
+    expect(convertMinorToBaseCurrency({ amountMinor: 1, fromCurrency: "USD", baseCurrency: "IDR", fxRate: 150 })).toBe(2);
+    expect(convertMinorToBaseCurrency({ amountMinor: -1, fromCurrency: "USD", baseCurrency: "IDR", fxRate: 150 })).toBe(-2);
+  });
+
+  it("converts three-decimal currency into zero- and two-decimal currencies", () => {
+    expect(convertMinorToBaseCurrency({ amountMinor: 1_001, fromCurrency: "KWD", baseCurrency: "IDR", fxRate: 5_000 })).toBe(5_005);
+    expect(convertMinorToBaseCurrency({ amountMinor: 1_001, fromCurrency: "KWD", baseCurrency: "USD", fxRate: 2.5 })).toBe(250);
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])("rejects invalid fxRate %s with context", (fxRate) => {
+    expect(() => toCalculationInput(baseExpense({ currency: "USD", fxRate, amountTotalMinor: 100 }), "IDR"))
+      .toThrow(/Invalid fxRate.*USD.*IDR/);
+  });
+
+  it("rejects a missing fxRate instead of reinterpreting stored foreign data", () => {
+    const malformed = { ...baseExpense({ currency: "USD", amountTotalMinor: 100 }) };
+    Reflect.deleteProperty(malformed, "fxRate");
+    expect(() => toCalculationInput(malformed, "IDR")).toThrow(/Invalid fxRate.*USD.*IDR/);
+  });
+
+  it("uses stored snapshot rate and manual override deterministically", () => {
+    const expense = baseExpense({ currency: "USD", fxRate: 15_800, amountTotalMinor: 1_000 });
+    const changedProviderRate = 16_000;
+    expect(toCalculationInput(expense, "IDR").totalMinor).toBe(158_000);
+    expect(toCalculationInput({ ...expense, fxRate: changedProviderRate }, "IDR").totalMinor).toBe(160_000);
+  });
+
+  it("converts nominal split, fixed charge, partial treat, and item price at mapping boundary", () => {
+    const expense = baseExpense({
+      currency: "USD",
+      fxRate: 15_800,
+      amountTotalMinor: 1_000,
+      payers: [{ memberId: "m1", amountMinor: 1_000 }],
+      splitData: {
+        mode: "byAmounts",
+        entries: [
+          { memberId: "m1", amountMinor: 500 },
+          { memberId: "m2", amountMinor: 500 },
+          { memberId: "m3", amountMinor: 0 },
+        ],
+      },
+      charges: [{ amount: { kind: "fixed", amountMinor: 100 }, allocation: { mode: "even" } }],
+      treats: [{ kind: "partial", sponsorMemberId: "m1", beneficiaryMemberId: "m2", amountMinor: 100 }],
+      items: [{ itemId: "i1", name: "Item", unitPriceMinor: 1_000, quantity: 1, claims: [] }],
+    });
+    const input = toCalculationInput(expense, "IDR");
+
+    expect(input.totalMinor).toBe(158_000);
+    expect(input.split).toEqual({ mode: "byAmounts", amountsMinor: [79_000, 79_000, 0] });
+    expect(input.charges).toEqual([{ amount: { kind: "fixed", amountMinor: 15_800 }, allocation: { mode: "even" } }]);
+    expect(input.treats).toEqual([{ kind: "partial", sponsorIndex: 0, beneficiaryIndex: 1, amountMinor: 15_800 }]);
+    expect(input.paymentsMinor).toEqual([158_000, 0, 0]);
+  });
+
+  it("passes converted total and payments to engine with exact shares", () => {
+    const expense = baseExpense({
+      currency: "USD",
+      fxRate: 15_800,
+      amountTotalMinor: 1_000,
+      payers: [{ memberId: "m1", amountMinor: 1_000 }],
+    });
+    const calculation = calculateExpense(toCalculationInput(expense, "IDR"));
+    expect(calculation.sharesMinor.reduce((sum, shareMinor) => sum + shareMinor, 0)).toBe(158_000);
+    expect(calculation.netMinor?.reduce((sum, netMinor) => sum + netMinor, 0)).toBe(0);
+  });
+
   it("mode evenly: shares split equally and sum to the total", () => {
     const expense = baseExpense();
     const calc = calculateExpense(toCalculationInput(expense));

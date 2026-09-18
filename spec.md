@@ -179,8 +179,8 @@ Member
 
 Expense
   expenseId, groupSlug, title, category, date, notes,
-  currency, fxRate, amountTotal,
-  payers: [{ memberId, amount }],
+  currency, fxRate, amountTotalMinor,
+  payers: [{ memberId, amountMinor }],
   splitMode, splitData,
   charges: [{ type, mode, value, allocation, sponsorId }],
   items: [Item],
@@ -203,6 +203,9 @@ ActivityLog
 ### 5.2 Aturan penyimpanan
 
 - Angka uang disimpan sebagai integer minor unit (rupiah sebagai integer polos, dolar sebagai sen). Tidak pernah float.
+- `amountTotalMinor` adalah nominal asli dalam `Expense.currency`. `payers`, split nominal, biaya tetap, traktir sebagian, dan harga item memakai satuan minor yang sama.
+- `Group.baseCurrency` adalah mata uang split engine, saldo, dan settlement. `fxRate` adalah snapshot kurs dari satu unit mayor `Expense.currency` ke unit mayor `Group.baseCurrency`; kurs manual disimpan sebagai snapshot yang sama.
+- Mapping pengeluaran mengonversi seluruh nilai minor yang menghasilkan uang memakai rasio desimal integer deterministik. Hasil dikonversi ke minor unit mata uang dasar lalu dibulatkan setengah menjauh dari nol. Nominal dasar tidak disimpan sebagai field kedua.
 - Tanggal pengeluaran boleh hari ini atau tanggal yang sudah lewat, tidak boleh tanggal masa depan. Batas "hari ini" mengikuti timezone device dan waktu dibaca lewat abstraksi `Clock`.
 - Setiap perubahan menaikkan `seq` yang diberikan server. Client menggunakan ini untuk deteksi konflik.
 - Penghapusan adalah soft delete dengan `deletedAt`, dibersihkan permanen setelah 30 hari.
@@ -478,6 +481,7 @@ Finalisasi diblokir kalau masih ada item tanpa klaim, kecuali pembuat menekan "b
 - Picker mata uang: daftar terakhir dipakai di atas, pencarian berdasarkan kode, nama mata uang, atau nama negara, dan saran otomatis dari timezone device.
 - Tampilan bisa di-toggle antara mata uang asli dan mata uang grup di setiap baris.
 - Presisi desimal mengikuti standar per mata uang: 0 untuk IDR, JPY, KRW, VND; 2 untuk mayoritas; 3 untuk KWD, BHD, OMR.
+- Nominal asli tetap ditampilkan dalam `Expense.currency`; nominal dasar dipakai untuk split engine, saldo, settlement, dan subtotal grup.
 - Format angka mengikuti locale tampilan, bukan mata uang. Pemisah ribuan dan desimal tidak boleh tertukar.
 - Kripto tidak didukung.
 

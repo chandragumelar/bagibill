@@ -107,6 +107,9 @@ Untuk setiap mode, uji tiga kelas kasus: normal, batas, dan yang seharusnya dito
 - Override manual kurs bertahan setelah sync.
 - Format angka mengikuti locale tampilan, bukan mata uang. Pemisah ribuan dan desimal ga boleh ketuker.
 - Grup dengan tiga mata uang berbeda: saldo tetap benar dalam mata uang dasar.
+- Regression: `amountTotalMinor` tetap nominal asli; mapping membaca snapshot `fxRate` dan mengonversi total, payer, split nominal, biaya tetap, traktir sebagian, serta harga item ke `Group.baseCurrency` sebelum engine.
+- Regression: kurs nol, negatif, hilang, atau non-finite ditolak dengan konteks mata uang; pembulatan konversi setengah menjauh dari nol dan jumlah bagian tetap sama persis dengan total hasil konversi.
+- Regression: transaksi menampilkan nominal asli dan mata uang asli; seed foreign-currency tidak boleh menyimpan nominal dasar lalu memformatnya sebagai mata uang asing.
 
 ### 2.6 Konsistensi antar permukaan
 

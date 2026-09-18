@@ -1,21 +1,43 @@
 import "fake-indexeddb/auto";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { db } from "./schema";
 import { createDexieAdapter } from "./adapter";
 import { createFixedClock } from "./clock";
 import { createSequentialIdGenerator } from "./id";
 import { createExpenseRepository, type CreateExpenseInput } from "./expense-repository";
 
+const adapter = createDexieAdapter(db);
+
 beforeAll(async () => {
   await db.open();
 });
 
 afterEach(async () => {
-  await Promise.all([db.expenses.clear()]);
+  await Promise.all([db.groups.clear(), db.expenses.clear()]);
+});
+
+beforeEach(async () => {
+  await adapter.groups.put({
+    slug: "g1",
+    name: "Test Group",
+    baseCurrency: "IDR",
+    template: "blank",
+    createdAt: 1_000,
+    settings: { simplifyDebts: false, locked: false, archived: false },
+    seq: 0,
+  });
+  await adapter.groups.put({
+    slug: "g2",
+    name: "Other Group",
+    baseCurrency: "IDR",
+    template: "blank",
+    createdAt: 1_000,
+    settings: { simplifyDebts: false, locked: false, archived: false },
+    seq: 0,
+  });
 });
 
 function makeRepository() {
-  const adapter = createDexieAdapter(db);
   return {
     adapter,
     repository: createExpenseRepository(adapter, createFixedClock(1_000, 100), createSequentialIdGenerator("e-")),

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ExpenseMemberInfo } from "@/lib/expense-summary";
 import { summarizeExpenseRecord } from "@/lib/expense-summary";
 import { resolveMemberOrder } from "@/lib/storage/expense-mapping";
+import { convertMinorToBaseCurrency } from "@/lib/storage/expense-currency";
 import { expenseRepository, groupRepository, memberRepository } from "@/lib/storage/repositories";
 import type { ExpenseRecord, GroupRecord, MemberRecord } from "@/lib/storage/records";
 import type { FilterableTransaction } from "./transaction-filter";
@@ -86,7 +87,7 @@ function buildExpenseRow(
   currentMemberId: string,
 ): TransactionRowData {
   try {
-    const summary = summarizeExpenseRecord(expense, memberInfo);
+    const summary = summarizeExpenseRecord(expense, memberInfo, group.baseCurrency);
     const memberOrder = summary.members.map((member) => member.memberId);
     const netByMemberId = new Map(summary.members.map((member) => [member.memberId, member.netMinor]));
     const payerNames = expense.payers.map((payer) => memberInfo.get(payer.memberId)?.name ?? "");
@@ -136,12 +137,25 @@ function buildItems(
   return expenses.map((expense) => ({
     key: expense.expenseId,
     date: expense.date,
-    totalMinor: expense.amountTotalMinor,
+    totalMinor: safeBaseTotalMinor(expense, group.baseCurrency),
     title: expense.title,
     notes: expense.notes,
     participantMemberIds: resolveParticipantMemberIds(expense),
     row: buildExpenseRow(expense, group, memberInfo, currentMemberId),
   }));
+}
+
+function safeBaseTotalMinor(expense: ExpenseRecord, baseCurrency: string): number {
+  try {
+    return convertMinorToBaseCurrency({
+      amountMinor: expense.amountTotalMinor,
+      fromCurrency: expense.currency,
+      baseCurrency,
+      fxRate: expense.fxRate,
+    });
+  } catch {
+    return 0;
+  }
 }
 
 function buildMemberOptions(members: readonly MemberRecord[]): readonly FilterMemberOption[] {
