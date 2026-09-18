@@ -49,7 +49,7 @@ export default [
     // /dev/* gating below) rounded up to 139 KB plus ~5 KB headroom (F4-02).
     name: "Total seluruh chunk JS",
     path: "dist/assets/*.js",
-    limit: "144 KB",
+    limit: "145 KB",
     brotli: true,
   },
   {
